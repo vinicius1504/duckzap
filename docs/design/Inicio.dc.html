@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Duckzap — Início</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1F2B;--ink2:#566672;--line:#E3E8EB;--bg:#F6F7F4;--duck:#FFC42E;--duck2:#E9AA05;--ok:#17794F;--okbg:#E2F3EA;--warn:#7A4F00;--warnbg:#FFF0C7;--err:#B3261E;--errbg:#FCE7E5;--info:#1D5F8A;--infobg:#E2EFF8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid #0F1F2B;outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:#EEF1F2}
+.btn.p{background:var(--duck);border-color:var(--duck)}.btn.p:hover{background:var(--duck2)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;background:#EAEEF0;color:var(--ink2);white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.info{background:var(--infobg);color:var(--info)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px}
+.muted{color:var(--ink2)}
+.shell{display:flex;min-height:100vh}
+.rail{flex:0 0 88px;background:var(--ink);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ri{display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;padding:9px 0;border-radius:12px;color:#B9C6CE;font-size:11px;font-weight:600}
+.ri:hover{background:#1C3345;color:#fff}.ri.on{background:var(--duck);color:var(--ink)}
+.ri svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{height:64px;flex:0 0 64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.srch{display:flex;align-items:center;gap:10px;height:40px;width:min(420px,100%);border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink2)}
+.srch kbd{margin-left:auto;font:600 11px 'Plus Jakarta Sans',sans-serif;border:1px solid #C9D2D7;border-radius:6px;padding:2px 6px;background:#fff}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.seg{display:inline-flex;background:#EAEEF0;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;height:34px;padding:0 14px;border-radius:8px;font-weight:600;color:var(--ink2)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,31,43,.15)}
+@media(max-width:760px){.shell{flex-direction:column}.rail{flex:0 0 auto;flex-direction:row;width:100%;overflow-x:auto;padding:8px}.rail .sp{display:none}.srch span{display:none}.top{padding:0 12px}}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="rail" aria-label="Menu principal">
+    <a href="Inicio.dc.html" aria-label="Duckzap" style="margin:2px 0 14px"><svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="fill:initial;stroke:none;width:40px;height:40px"><rect width="32" height="32" rx="9" fill="#FFC42E"/><path d="M8 22c3 3.4 10 3.4 14-1l-2-4H9z" fill="#0F1F2B"/><circle cx="15" cy="13" r="6.5" fill="#0F1F2B"/><path d="M20.5 12l6 2.2-6 2.6z" fill="#FF8A2E"/><circle cx="13" cy="11.8" r="1.3" fill="#FFC42E"/></svg></a>
+    <a class="ri on" href="Inicio.dc.html" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Início</a>
+    <a class="ri" href="Conversas.dc.html"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Conversas</a>
+    <a class="ri" href="Clientes.dc.html"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 17c.6-2 2.2-3 4-3s3.4 1 4 3"/></svg>Clientes</a>
+    <a class="ri" href="Agenda.dc.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</a>
+    <a class="ri" href="Campanhas.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-3-7z"/></svg>Campanhas</a>
+    <a class="ri" href="Agentes.dc.html"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13v2M15 13v2"/><circle cx="12" cy="3.5" r="1"/></svg>Agentes</a>
+    <a class="ri" href="Canais.dc.html"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Canais</a>
+    <a class="ri" href="Equipe.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 3.3-6 7-6s6.5 2 7 6"/></svg>Equipe</a>
+    <a class="ri" href="Configuracoes.dc.html"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</a>
+    <div class="sp" style="flex:1"></div>
+    <a class="ri" href="Ajuda.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>Ajuda</a>
+  </nav>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header class="top">
+      <button class="srch" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Buscar clientes, conversas, ações…</span><kbd>Ctrl K</kbd></button>
+      <div style="flex:1"></div>
+      <a class="chip ok" href="Canais.dc.html"><span class="dot"></span>WhatsApp conectado</a>
+      <button class="ib" type="button" aria-label="Notificações, 3 novas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--duck);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span></button>
+      <button type="button" aria-label="Menu do usuário" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;height:44px;padding:0 4px;border-radius:10px"><span style="width:36px;height:36px;border-radius:50%;background:#0F1F2B;color:#FFC42E;font-weight:800;display:flex;align-items:center;justify-content:center">MA</span><span style="font-weight:600">Marina Alves</span></button>
+    </header>
+
+    <main style="padding:28px 32px 40px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+        <div>
+          <h1 style="font-size:28px;font-weight:800;letter-spacing:-.02em">Boa tarde, Marina</h1>
+          <p class="muted" style="margin-top:4px">Segunda-feira, 26 de outubro · Casa Alvorada Odontologia</p>
+        </div>
+        <div class="seg" role="group" aria-label="Período"><button type="button" class="on">Hoje</button><button type="button">7 dias</button><button type="button">30 dias</button><button type="button">Personalizado</button></div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+        <div style="flex:2 1 620px;min-width:0;display:flex;flex-direction:column;gap:24px">
+
+          <section class="card" style="padding:20px 20px 8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><h2 style="font-size:16px;font-weight:700">Precisa de você</h2><span class="chip warn">4 itens</span></div>
+            <ul style="list-style:none;margin:0;padding:0">
+              <li style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line);flex-wrap:wrap">
+                <span class="chip warn" style="width:96px;justify-content:center">Aguardando</span>
+                <div style="flex:1 1 240px"><strong>3 conversas esperam um atendente</strong><p class="muted">A mais antiga está há 18 min na fila</p></div>
+                <a class="btn sm" href="Conversas.dc.html">Ver conversas</a>
+              </li>
+              <li style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line);flex-wrap:wrap">
+                <span class="chip info" style="width:96px;justify-content:center">Sem resposta</span>
+                <div style="flex:1 1 240px"><strong>Carla Menezes sem resposta há 42 min</strong><p class="muted">“Consigo remarcar para quinta de manhã?”</p></div>
+                <a class="btn sm" href="Conversas.dc.html">Responder</a>
+              </li>
+              <li style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line);flex-wrap:wrap">
+                <span class="chip err" style="width:96px;justify-content:center">Canal</span>
+                <div style="flex:1 1 240px"><strong>Recepção 2 está desconectado</strong><p class="muted">Reconecte para não perder mensagens</p></div>
+                <a class="btn sm p" href="Canais.dc.html">Reconectar</a>
+              </li>
+              <li style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line);flex-wrap:wrap">
+                <span class="chip" style="width:96px;justify-content:center">Agenda</span>
+                <div style="flex:1 1 240px"><strong>2 agendamentos a confirmar amanhã</strong><p class="muted">Beatriz Souza às 09h · Lucas Prado às 15h30</p></div>
+                <a class="btn sm" href="Agenda.dc.html">Confirmar</a>
+              </li>
+            </ul>
+          </section>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:16px">
+            <div class="card" style="padding:16px"><p class="muted" style="font-size:13px">Conversas abertas</p><p style="font-size:28px;font-weight:800;margin-top:4px">24</p></div>
+            <div class="card" style="padding:16px"><p class="muted" style="font-size:13px">Novas hoje</p><p style="font-size:28px;font-weight:800;margin-top:4px">37</p></div>
+            <div class="card" style="padding:16px"><p class="muted" style="font-size:13px">Primeira resposta</p><p style="font-size:28px;font-weight:800;margin-top:4px">1 min 12 s</p></div>
+            <div class="card" style="padding:16px"><p class="muted" style="font-size:13px">Tempo de atendimento</p><p style="font-size:28px;font-weight:800;margin-top:4px">14 min</p></div>
+            <div class="card" style="padding:16px">
+              <p class="muted" style="font-size:13px">Quem resolveu</p>
+              <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin:14px 0 8px"><span style="width:68%;background:#0F1F2B"></span><span style="width:32%;background:#FFC42E"></span></div>
+              <p style="font-size:13px"><strong>68%</strong> IA · <strong>32%</strong> pessoas</p>
+            </div>
+          </div>
+
+          <section class="card" style="padding:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:16px;font-weight:700">Conversas por dia</h2><span class="muted" style="font-size:13px">Últimos 7 dias</span></div>
+            <svg viewBox="0 0 580 210" role="img" aria-label="Linha de conversas por dia: terça 31, quarta 38, quinta 35, sexta 44, sábado 19, domingo 12, segunda 37" style="width:100%;height:auto;margin-top:10px">
+              <g stroke="#E3E8EB" stroke-width="1"><path d="M30 170H570M30 125H570M30 80H570M30 35H570"/></g>
+              <g fill="#566672" font-size="11" font-family="Plus Jakarta Sans, sans-serif"><text x="4" y="174">0</text><text x="4" y="129">15</text><text x="4" y="84">30</text><text x="4" y="39">45</text>
+              <text x="26" y="195">Ter</text><text x="111" y="195">Qua</text><text x="196" y="195">Qui</text><text x="281" y="195">Sex</text><text x="366" y="195">Sáb</text><text x="451" y="195">Dom</text><text x="536" y="195">Seg</text></g>
+              <path d="M40 77L125 56L210 65L295 38L380 113L465 134L550 59V170H40z" fill="#FFC42E" opacity=".25"/>
+              <path d="M40 77L125 56L210 65L295 38L380 113L465 134L550 59" fill="none" stroke="#0F1F2B" stroke-width="2.5" stroke-linejoin="round"/>
+              <g fill="#fff" stroke="#0F1F2B" stroke-width="2.5"><circle cx="40" cy="77" r="4"/><circle cx="125" cy="56" r="4"/><circle cx="210" cy="65" r="4"/><circle cx="295" cy="38" r="4"/><circle cx="380" cy="113" r="4"/><circle cx="465" cy="134" r="4"/><circle cx="550" cy="59" r="4"/></g>
+            </svg>
+          </section>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:24px">
+            <section class="card" style="padding:20px">
+              <h2 style="font-size:16px;font-weight:700">Clientes por etapa</h2>
+              <div style="display:flex;align-items:center;gap:20px;margin-top:14px;flex-wrap:wrap">
+                <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label="Rosca: novos 35%, em conversa 30%, proposta 20%, fechados 15%">
+                  <g fill="none" stroke-width="18" transform="rotate(-90 66 66)">
+                    <circle cx="66" cy="66" r="52" stroke="#0F1F2B" stroke-dasharray="114.3 212.4"/>
+                    <circle cx="66" cy="66" r="52" stroke="#FFC42E" stroke-dasharray="98 228.7" stroke-dashoffset="-114.3"/>
+                    <circle cx="66" cy="66" r="52" stroke="#6F8DA1" stroke-dasharray="65.3 261.4" stroke-dashoffset="-212.3"/>
+                    <circle cx="66" cy="66" r="52" stroke="#D5DDE2" stroke-dasharray="49 277.7" stroke-dashoffset="-277.6"/>
+                  </g>
+                </svg>
+                <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px">
+                  <li style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#0F1F2B"></span>Novos <strong>35%</strong></li>
+                  <li style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#FFC42E"></span>Em conversa <strong>30%</strong></li>
+                  <li style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#6F8DA1"></span>Proposta <strong>20%</strong></li>
+                  <li style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#D5DDE2"></span>Fechados <strong>15%</strong></li>
+                </ul>
+              </div>
+            </section>
+            <section class="card" style="padding:20px">
+              <h2 style="font-size:16px;font-weight:700">Taxa de conversão</h2>
+              <p class="muted" style="font-size:13px">Conversas que viraram agendamento ou venda</p>
+              <div style="display:flex;align-items:flex-end;gap:16px;height:112px;margin-top:14px">
+                <div style="flex:1;text-align:center"><div style="height:52px;background:#D5DDE2;border-radius:6px 6px 0 0"></div><span style="font-size:12px">18%</span></div>
+                <div style="flex:1;text-align:center"><div style="height:64px;background:#D5DDE2;border-radius:6px 6px 0 0"></div><span style="font-size:12px">22%</span></div>
+                <div style="flex:1;text-align:center"><div style="height:56px;background:#D5DDE2;border-radius:6px 6px 0 0"></div><span style="font-size:12px">19%</span></div>
+                <div style="flex:1;text-align:center"><div style="height:80px;background:#FFC42E;border-radius:6px 6px 0 0"></div><span style="font-size:12px;font-weight:700">27%</span></div>
+              </div>
+              <div style="display:flex;gap:16px;margin-top:4px;font-size:12px" class="muted"><span style="flex:1;text-align:center">Sem 1</span><span style="flex:1;text-align:center">Sem 2</span><span style="flex:1;text-align:center">Sem 3</span><span style="flex:1;text-align:center">Sem 4</span></div>
+            </section>
+          </div>
+        </div>
+
+        <aside style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:24px">
+          <section class="card" style="padding:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:16px;font-weight:700">Minhas tarefas</h2><span class="muted" style="font-size:13px">2 abertas</span></div>
+            <form style="display:flex;gap:8px;margin:14px 0 6px"><label for="nt" style="position:absolute;left:-9999px">Nova tarefa</label><input id="nt" placeholder="Nova tarefa rápida…" style="flex:1;min-width:0;height:40px;border:1px solid #C9D2D7;border-radius:10px;padding:0 12px"><button class="btn p" type="button" aria-label="Adicionar tarefa" style="padding:0 12px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></form>
+            <ul style="list-style:none;margin:0;padding:0">
+              <li style="display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)"><input type="checkbox" aria-label="Concluir: Enviar orçamento ao Sr. Antônio" style="width:20px;height:20px;margin-top:2px;accent-color:#0F1F2B"><div style="flex:1"><p style="font-weight:600">Enviar orçamento ao Sr. Antônio</p><p class="muted" style="font-size:13px;margin-top:2px">Hoje, 16h · Rafael</p></div><span class="chip err">Urgente</span></li>
+              <li style="display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)"><input type="checkbox" aria-label="Concluir: Ligar para Beatriz sobre o retorno" style="width:20px;height:20px;margin-top:2px;accent-color:#0F1F2B"><div style="flex:1"><p style="font-weight:600">Ligar para Beatriz sobre o retorno</p><p class="muted" style="font-size:13px;margin-top:2px">Amanhã, 10h · Você</p></div><span class="chip warn">Alta</span></li>
+              <li style="display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)"><input type="checkbox" aria-label="Concluir: Atualizar tabela de preços" style="width:20px;height:20px;margin-top:2px;accent-color:#0F1F2B"><div style="flex:1"><p style="font-weight:600">Atualizar tabela de preços do agente</p><p class="muted" style="font-size:13px;margin-top:2px">Sexta · Você</p></div><span class="chip info">Média</span></li>
+              <li style="display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line);opacity:.7"><input type="checkbox" checked aria-label="Concluída: Responder avaliação do Google" style="width:20px;height:20px;margin-top:2px;accent-color:#0F1F2B"><div style="flex:1"><p style="font-weight:600;text-decoration:line-through">Responder avaliação do Google</p><p class="muted" style="font-size:13px;margin-top:2px">Concluída hoje</p></div><span class="chip">Baixa</span></li>
+            </ul>
+          </section>
+          <section class="card" style="padding:20px">
+            <h2 style="font-size:16px;font-weight:700">Conversas por atendente</h2>
+            <ul style="list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:14px;font-size:13px">
+              <li><div style="display:flex;justify-content:space-between"><span>Agente Duck (IA)</span><strong>96</strong></div><div style="height:10px;background:#EAEEF0;border-radius:5px;margin-top:6px"><div style="width:100%;height:10px;background:#FFC42E;border-radius:5px"></div></div></li>
+              <li><div style="display:flex;justify-content:space-between"><span>Marina Alves</span><strong>42</strong></div><div style="height:10px;background:#EAEEF0;border-radius:5px;margin-top:6px"><div style="width:44%;height:10px;background:#0F1F2B;border-radius:5px"></div></div></li>
+              <li><div style="display:flex;justify-content:space-between"><span>Rafael Costa</span><strong>35</strong></div><div style="height:10px;background:#EAEEF0;border-radius:5px;margin-top:6px"><div style="width:36%;height:10px;background:#0F1F2B;border-radius:5px"></div></div></li>
+              <li><div style="display:flex;justify-content:space-between"><span>Júlia Nogueira</span><strong>28</strong></div><div style="height:10px;background:#EAEEF0;border-radius:5px;margin-top:6px"><div style="width:29%;height:10px;background:#0F1F2B;border-radius:5px"></div></div></li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

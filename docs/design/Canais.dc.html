@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Duckzap — Canais</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1F2B;--ink2:#566672;--line:#E3E8EB;--bg:#F6F7F4;--duck:#FFC42E;--duck2:#E9AA05;--ok:#17794F;--okbg:#E2F3EA;--warn:#7A4F00;--warnbg:#FFF0C7;--err:#B3261E;--errbg:#FCE7E5;--info:#1D5F8A;--infobg:#E2EFF8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid #0F1F2B;outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:#EEF1F2}
+.btn.p{background:var(--duck);border-color:var(--duck)}.btn.p:hover{background:var(--duck2)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;background:#EAEEF0;color:var(--ink2);white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.info{background:var(--infobg);color:var(--info)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px}
+.muted{color:var(--ink2)}
+.shell{display:flex;min-height:100vh}
+.rail{flex:0 0 88px;background:var(--ink);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ri{display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;padding:9px 0;border-radius:12px;color:#B9C6CE;font-size:11px;font-weight:600}
+.ri:hover{background:#1C3345;color:#fff}.ri.on{background:var(--duck);color:var(--ink)}
+.ri svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{height:64px;flex:0 0 64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.srch{display:flex;align-items:center;gap:10px;height:40px;width:min(420px,100%);border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink2)}
+.srch kbd{margin-left:auto;font:600 11px 'Plus Jakarta Sans',sans-serif;border:1px solid #C9D2D7;border-radius:6px;padding:2px 6px;background:#fff}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.in{height:40px;width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:0 12px;background:#fff}
+.ta{width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:10px 12px;background:#fff;resize:vertical}
+.lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+table{border-collapse:collapse;width:100%;min-width:820px}
+th{text-align:left;font-size:12px;color:var(--ink2);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);background:#FAFBFA}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.step{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink2)}
+.step b{width:28px;height:28px;border-radius:50%;background:#EAEEF0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step.on{color:var(--ink)}.step.on b{background:var(--duck);color:var(--ink)}.step.done b{background:var(--ink);color:#fff}
+@media(max-width:760px){.shell{flex-direction:column}.rail{flex:0 0 auto;flex-direction:row;width:100%;overflow-x:auto;padding:8px}.rail .sp{display:none}.srch span{display:none}.top{padding:0 12px}}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="rail" aria-label="Menu principal">
+    <a href="Inicio.dc.html" aria-label="Duckzap" style="margin:2px 0 14px"><svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="fill:initial;stroke:none;width:40px;height:40px"><rect width="32" height="32" rx="9" fill="#FFC42E"/><path d="M8 22c3 3.4 10 3.4 14-1l-2-4H9z" fill="#0F1F2B"/><circle cx="15" cy="13" r="6.5" fill="#0F1F2B"/><path d="M20.5 12l6 2.2-6 2.6z" fill="#FF8A2E"/><circle cx="13" cy="11.8" r="1.3" fill="#FFC42E"/></svg></a>
+    <a class="ri" href="Inicio.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Início</a>
+    <a class="ri" href="Conversas.dc.html"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Conversas</a>
+    <a class="ri" href="Clientes.dc.html"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 17c.6-2 2.2-3 4-3s3.4 1 4 3"/></svg>Clientes</a>
+    <a class="ri" href="Agenda.dc.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</a>
+    <a class="ri" href="Campanhas.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-3-7z"/></svg>Campanhas</a>
+    <a class="ri" href="Agentes.dc.html"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13v2M15 13v2"/><circle cx="12" cy="3.5" r="1"/></svg>Agentes</a>
+    <a class="ri on" href="Canais.dc.html" aria-current="page"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Canais</a>
+    <a class="ri" href="Equipe.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 3.3-6 7-6s6.5 2 7 6"/></svg>Equipe</a>
+    <a class="ri" href="Configuracoes.dc.html"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</a>
+    <div class="sp" style="flex:1"></div>
+    <a class="ri" href="Ajuda.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>Ajuda</a>
+  </nav>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header class="top">
+      <button class="srch" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Buscar clientes, conversas, ações…</span><kbd>Ctrl K</kbd></button>
+      <div style="flex:1"></div>
+      <a class="chip warn" href="Canais.dc.html"><span class="dot"></span>1 canal desconectado</a>
+      <button class="ib" type="button" aria-label="Notificações, 3 novas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--duck);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span></button>
+      <button type="button" aria-label="Menu do usuário" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;height:44px;padding:0 4px;border-radius:10px"><span style="width:36px;height:36px;border-radius:50%;background:#0F1F2B;color:#FFC42E;font-weight:800;display:flex;align-items:center;justify-content:center">MA</span><span style="font-weight:600">Marina Alves</span></button>
+    </header>
+
+    <main style="padding:28px 32px 40px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+        <div><h1 style="font-size:28px;font-weight:800;letter-spacing:-.02em">Canais</h1><p class="muted" style="margin-top:4px">Os números e contas por onde seus clientes falam com você.</p></div>
+        <button class="btn p" type="button" onClick="{{ open }}">Novo canal</button>
+      </div>
+      <div role="alert" class="err" style="border-radius:10px;padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px"><strong>Recepção 2 está desconectado.</strong><span style="flex:1 1 200px">Mensagens deste número não chegam até reconectar.</span><button class="btn sm" type="button" style="background:#fff;color:var(--ink)">Reconectar agora</button></div>
+
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Canal</th><th>Tipo</th><th>Status</th><th>Número / conta</th><th>Equipe</th><th>Agente</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Recepção 1</strong> <span class="chip" style="background:var(--duck);color:var(--ink);margin-left:4px">Padrão</span></td><td>QR Code</td><td><span class="chip ok"><span class="dot"></span>Conectado</span></td><td>+55 67 3333-1020</td><td>Recepção</td><td>Agente Duck</td><td><button class="btn sm" type="button">Mensagens</button> <button class="btn sm" type="button">Desconectar</button></td></tr>
+            <tr><td><strong>Recepção 2</strong></td><td>QR Code</td><td><span class="chip err"><span class="dot"></span>Desconectado</span></td><td>+55 67 3333-1044</td><td>Recepção</td><td>Agente Duck</td><td><button class="btn sm p" type="button">Reconectar</button> <button class="btn sm" type="button">Mensagens</button></td></tr>
+            <tr><td><strong>Vendas</strong></td><td>API oficial</td><td><span class="chip ok"><span class="dot"></span>Conectado</span></td><td>+55 67 99900-1200</td><td>Vendas</td><td>Retorno de pacientes</td><td><button class="btn sm" type="button">Mensagens</button> <button class="btn sm" type="button">Desconectar</button></td></tr>
+            <tr><td><strong>@casaalvorada</strong></td><td>Instagram</td><td><span class="chip warn"><span class="dot"></span>Aguardando</span></td><td>Instagram profissional</td><td>Recepção</td><td>Instagram DM</td><td><button class="btn sm" type="button">Autorizar</button> <button class="btn sm" type="button" style="color:var(--err)">Excluir</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+        <section class="card" style="flex:2 1 520px;padding:22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="font-size:16px;font-weight:700">Mensagens do canal · Recepção 1</h2><button class="btn p sm" type="button">Salvar</button></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:14px">
+            <div><label class="lbl" for="m1">Boas-vindas</label><textarea class="ta" id="m1" rows="3">Olá! Você está falando com a Casa Alvorada. Como posso ajudar?</textarea></div>
+            <div><label class="lbl" for="m2">Fora do horário</label><textarea class="ta" id="m2" rows="3">Estamos fora do horário agora, mas já anotei sua mensagem. Retornamos amanhã às 8h.</textarea></div>
+            <div><label class="lbl" for="m3">Encerramento</label><textarea class="ta" id="m3" rows="3">Atendimento encerrado. Qualquer dúvida, é só chamar!</textarea></div>
+            <div><label class="lbl" for="m4">Avaliação</label><textarea class="ta" id="m4" rows="3">De 1 a 5, como foi seu atendimento?</textarea></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label for="ina">Transferir para a equipe após</label><select class="in" id="ina" style="width:140px"><option>10 min</option><option>30 min</option><option>1 hora</option></select><span class="muted">sem resposta do cliente</span></div>
+        </section>
+        <aside style="flex:1 1 280px;display:flex;flex-direction:column;gap:16px">
+          <section class="card" style="padding:18px"><div style="display:flex;justify-content:space-between"><strong>Limite do plano</strong><span class="chip warn">4 de 5 canais</span></div><div style="height:8px;background:#EAEEF0;border-radius:4px;margin:12px 0"><div style="width:80%;height:8px;background:var(--ink);border-radius:4px"></div></div><p class="muted" style="font-size:13px">Quando chegar a 5, será preciso mudar de plano para adicionar outro canal.</p><a class="btn sm" href="Configuracoes.dc.html" style="margin-top:12px">Ver planos</a></section>
+          <section class="card" style="padding:18px"><strong>Primeiro uso</strong><ol style="margin:8px 0 0;padding-left:18px;font-size:13px" class="muted"><li>Conecte um número</li><li>Vincule uma equipe</li><li>Escolha o agente que atende</li></ol></section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<sc-if value="{{ isOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:rgba(15,31,43,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20" role="dialog" aria-modal="true" aria-label="Novo canal">
+  <div class="card" style="width:min(560px,100%);padding:26px;display:flex;flex-direction:column;gap:18px;max-height:100%;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:20px;font-weight:800">Novo canal</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{ close }}" style="width:34px;height:34px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <ol style="list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:10px 22px"><li class="step done"><b>1</b>Tipo</li><li class="step done"><b>2</b>Nome</li><li class="step on" aria-current="step"><b>3</b>Conectar</li></ol>
+    <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:center">
+      <svg width="200" height="200" viewBox="-1 -1 27 27" role="img" aria-label="QR Code para conectar o WhatsApp" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;flex:0 0 auto"><path d="{{ qr }}" fill="#0F1F2B"/></svg>
+      <div style="flex:1 1 200px;display:flex;flex-direction:column;gap:8px">
+        <span class="chip info" style="align-self:flex-start">Aguardando leitura</span>
+        <p><strong>Abra o WhatsApp no celular</strong></p>
+        <p class="muted">Toque em Aparelhos conectados, depois em Conectar um aparelho e aponte a câmera para o código.</p>
+        <p class="muted" style="font-size:13px">O código expira em 0:42 e é renovado sozinho.</p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:8px"><button class="btn" type="button">Voltar</button><button class="btn" type="button" onClick="{{ close }}">Fechar</button></div>
+  </div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // QR decorativo determinístico (25x25): três marcadores de canto + módulos pseudoaleatórios
+    const N = 25, cells = [];
+    const finder = (x, y) => (x < 8 && y < 8) || (x > 16 && y < 8) || (x < 8 && y > 16);
+    let s = 7;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      if (finder(x, y)) continue;
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      if ((s >> 8) % 100 < 48) cells.push('M' + x + ' ' + y + 'h1v1h-1z');
+    }
+    const box = (x, y) => 'M' + x + ' ' + y + 'h7v7h-7zM' + (x + 1) + ' ' + (y + 1) + 'v5h5v-5zM' + (x + 2) + ' ' + (y + 2) + 'h3v3h-3z';
+    const qr = cells.join('') + box(0, 0) + box(18, 0) + box(0, 18);
+    return {
+      isOpen: !!this.state.open,
+      open: () => this.setState({ open: true }),
+      close: () => this.setState({ open: false }),
+      qr
+    };
+  }
+}
+</script>
+</body>
+</html>

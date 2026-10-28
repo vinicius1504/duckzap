@@ -1,0 +1,104 @@
+# Dependências para desenvolvimento local. Os apps rodam com `pnpm dev`.
+# Portas fora do padrão de propósito: não brigam com outros projetos da máquina.
+# Tudo preso a 127.0.0.1 — nada exposto na rede.
+name: duckzap-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    environment:
+      POSTGRES_USER: duckzap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: duckzap
+      # usado só pelo script de init, para criar o usuário da Evolution
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duckzap -d duckzap"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:9.0.6-alpine
+    command: ["valkey-server", "--appendonly", "yes", "--requirepass", "${VALKEY_PASSWORD:?defina no .env}"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 5s
+      retries: 10
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+    restart: unless-stopped
+
+  # Provedor de WhatsApp por QR (§3.6). Compartilha Postgres (banco próprio) e Valkey (prefixo próprio), como no §7.1.1.
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    environment:
+      SERVER_URL: http://localhost:8081
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina no .env}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:?defina no .env}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: duckzap_local
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://:${VALKEY_PASSWORD}@valkey:6379/1
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
+      LOG_LEVEL: ERROR,WARN,INFO
+      DEL_INSTANCE: "false"
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - evolution-instances:/evolution/instances
+    restart: unless-stopped
+
+  # Caixa de e-mail falsa: convites e recuperação de senha aparecem em http://localhost:8026
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    ports:
+      - "127.0.0.1:1026:1025"
+      - "127.0.0.1:8026:8025"
+    restart: unless-stopped
+
+  # Armazenamento de mídia (imagens, documentos e áudios das conversas). S3-compatível, igual ao Cloudflare R2 de produção.
+  # API S3 em http://localhost:9002 (o navegador faz PUT/GET direto nas URLs assinadas); console em http://localhost:9003.
+  # O bucket é criado na subida (MINIO_DEFAULT_BUCKETS). CORS: o navegador do app (localhost:3000) envia o arquivo direto.
+  # Imagem bitnamilegacy: a MinIO deixou de publicar imagens oficiais; esta é congelada e SÓ serve para desenvolvimento.
+  minio:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-duckzap}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-duckzap-dev-minio}
+      MINIO_DEFAULT_BUCKETS: ${MEDIA_STORAGE_BUCKET:-duckzap-media}
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
+      MINIO_BROWSER: "on"
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  valkey-data:
+  evolution-instances:
+  minio-data:

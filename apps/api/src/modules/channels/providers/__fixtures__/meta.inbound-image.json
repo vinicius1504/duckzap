@@ -1,0 +1,42 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5567999001200",
+              "phone_number_id": "106540352242922"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "João Lima"
+                },
+                "wa_id": "5567988887777"
+              }
+            ],
+            "messages": [
+              {
+                "from": "5567988887777",
+                "id": "wamid.HBgNNTU2Nzk4ODg4Nzc3FQIAEhgUM0EC",
+                "timestamp": "1793052660",
+                "type": "image",
+                "image": {
+                  "caption": "Receita",
+                  "mime_type": "image/jpeg",
+                  "sha256": "abc",
+                  "id": "1234567890"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

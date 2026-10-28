@@ -1,0 +1,13 @@
+{
+  "event": "connection.update",
+  "instance": "dz-test-instance",
+  "data": {
+    "instance": "dz-test-instance",
+    "state": "close",
+    "statusReason": 403
+  },
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-26T22:03:10.871Z",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED"
+}

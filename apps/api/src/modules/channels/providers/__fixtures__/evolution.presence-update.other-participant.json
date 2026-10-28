@@ -1,0 +1,17 @@
+{
+  "event": "presence.update",
+  "instance": "dz-test-instance",
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-27T14:00:00.000Z",
+  "sender": "556733331020@s.whatsapp.net",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED",
+  "data": {
+    "id": "5567999990000@s.whatsapp.net",
+    "presences": {
+      "5511988887777@s.whatsapp.net": {
+        "lastKnownPresence": "composing"
+      }
+    }
+  }
+}

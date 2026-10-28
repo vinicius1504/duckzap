@@ -1,0 +1,7 @@
+{
+  "extends": "@duckzap/config/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src", "scripts", "test", "drizzle.config.ts"]
+}

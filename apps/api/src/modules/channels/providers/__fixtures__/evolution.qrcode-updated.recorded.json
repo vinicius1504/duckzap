@@ -1,0 +1,16 @@
+{
+  "event": "qrcode.updated",
+  "instance": "dz-test-instance",
+  "data": {
+    "qrcode": {
+      "instance": "dz-test-instance",
+      "pairingCode": null,
+      "code": "2@p1s3CnES9AQRkxBdw3M6x0Mu3l08hJ/5+wMCqwYtqJYBpZ0+339Utzf0PIATLajX2U27S6Bt33HgOWxGaiyjP7pM7v9htjvjhPM=,i6PPOz6z6DoE7f2ZowgoyoSzXzBpwCQC/5X0hKBqnhA=,XRD92IqcZVrnivDb8ETPYri1pXbMcz6X49bx7OkkY2Q=,Yg3WgU1i2Zhf4Uj9ZNzQ556kv9ZHQTimDa6CY3J9A1k=",
+      "base64": "data:image/png;base64,REDACTED"
+    }
+  },
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-26T22:03:11.938Z",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED"
+}

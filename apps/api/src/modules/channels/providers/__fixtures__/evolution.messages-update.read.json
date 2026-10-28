@@ -1,0 +1,18 @@
+{
+  "event": "messages.update",
+  "instance": "dz-test-instance",
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-26T22:10:00.000Z",
+  "sender": "556733331020@s.whatsapp.net",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED",
+  "data": {
+    "messageId": "cmvpyuvye0001lt6jav17u9kh",
+    "keyId": "3EB0OUT000000000001",
+    "remoteJid": "5567999990000@s.whatsapp.net",
+    "fromMe": true,
+    "participant": "5567999990000@s.whatsapp.net",
+    "status": "READ",
+    "instanceId": "00000000-0000-0000-0000-000000000000"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@duckzap/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
+    "db:roles": "tsx --env-file-if-exists=.env scripts/setup-roles.ts",
+    "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "db:seed-admin": "tsx --env-file-if-exists=.env scripts/seed-admin.ts",
+    "db:setup": "pnpm db:migrate && pnpm db:roles && pnpm db:seed",
+    "test": "vitest run",
+    "db:wipe-dev": "tsx --env-file-if-exists=.env scripts/wipe-dev-data.ts",
+    "db:add-member": "tsx --env-file-if-exists=.env scripts/add-dev-member.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.4",
+    "postgres": "3.4.9"
+  },
+  "devDependencies": {
+    "@duckzap/config": "workspace:*",
+    "@types/node": "24.19.2",
+    "better-auth": "1.7.14",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

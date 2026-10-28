@@ -1,0 +1,1 @@
+ALTER TABLE "channels" ADD COLUMN "sign_messages" boolean DEFAULT true NOT NULL;

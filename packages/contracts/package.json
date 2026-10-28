@@ -1,0 +1,20 @@
+{
+  "name": "@duckzap/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@duckzap/config": "workspace:*",
+    "typescript": "5.9.3"
+  }
+}

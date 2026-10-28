@@ -1,0 +1,25 @@
+{
+  "event": "messages.upsert",
+  "instance": "dz-test-instance",
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-26T22:10:00.000Z",
+  "sender": "556733331020@s.whatsapp.net",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED",
+  "data": {
+    "key": {
+      "remoteJid": "5567999990000@s.whatsapp.net",
+      "fromMe": false,
+      "id": "3EB0C767D82A9F43B1E4"
+    },
+    "pushName": "Maria Souza",
+    "status": "DELIVERY_ACK",
+    "message": {
+      "conversation": "Oi, queria marcar uma limpeza"
+    },
+    "messageType": "conversation",
+    "messageTimestamp": 1793052600,
+    "instanceId": "00000000-0000-0000-0000-000000000000",
+    "source": "android"
+  }
+}

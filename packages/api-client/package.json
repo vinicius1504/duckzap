@@ -1,0 +1,21 @@
+{
+  "name": "@duckzap/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "4.13.14"
+  },
+  "devDependencies": {
+    "@duckzap/api": "workspace:*",
+    "@duckzap/config": "workspace:*",
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
+  }
+}

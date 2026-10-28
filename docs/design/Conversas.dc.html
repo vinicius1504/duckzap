@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Duckzap — Conversas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1F2B;--ink2:#566672;--line:#E3E8EB;--bg:#F6F7F4;--duck:#FFC42E;--duck2:#E9AA05;--ok:#17794F;--okbg:#E2F3EA;--warn:#7A4F00;--warnbg:#FFF0C7;--err:#B3261E;--errbg:#FCE7E5;--info:#1D5F8A;--infobg:#E2EFF8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid #0F1F2B;outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:#EEF1F2}
+.btn.p{background:var(--duck);border-color:var(--duck)}.btn.p:hover{background:var(--duck2)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;background:#EAEEF0;color:var(--ink2);white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.info{background:var(--infobg);color:var(--info)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px}
+.muted{color:var(--ink2)}
+.shell{display:flex;min-height:100vh}
+.rail{flex:0 0 88px;background:var(--ink);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ri{display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;padding:9px 0;border-radius:12px;color:#B9C6CE;font-size:11px;font-weight:600}
+.ri:hover{background:#1C3345;color:#fff}.ri.on{background:var(--duck);color:var(--ink)}
+.ri svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{height:64px;flex:0 0 64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.srch{display:flex;align-items:center;gap:10px;height:40px;width:min(420px,100%);border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink2)}
+.srch kbd{margin-left:auto;font:600 11px 'Plus Jakarta Sans',sans-serif;border:1px solid #C9D2D7;border-radius:6px;padding:2px 6px;background:#fff}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.seg{display:inline-flex;background:#EAEEF0;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;height:34px;padding:0 14px;border-radius:8px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,31,43,.15)}
+.av{width:40px;height:40px;border-radius:50%;background:#DCE4E8;color:var(--ink);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+.cv{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);width:100%;text-align:left;background:#fff;border-left:0;border-right:0;border-top:0}
+.cv.on{background:#FFF7DD}
+.in{height:40px;width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:0 12px;background:#fff}
+@media(max-width:760px){.shell{flex-direction:column}.rail{flex:0 0 auto;flex-direction:row;width:100%;overflow-x:auto;padding:8px}.rail .sp{display:none}.srch span{display:none}.top{padding:0 12px}}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="rail" aria-label="Menu principal">
+    <a href="Inicio.dc.html" aria-label="Duckzap" style="margin:2px 0 14px"><svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="fill:initial;stroke:none;width:40px;height:40px"><rect width="32" height="32" rx="9" fill="#FFC42E"/><path d="M8 22c3 3.4 10 3.4 14-1l-2-4H9z" fill="#0F1F2B"/><circle cx="15" cy="13" r="6.5" fill="#0F1F2B"/><path d="M20.5 12l6 2.2-6 2.6z" fill="#FF8A2E"/><circle cx="13" cy="11.8" r="1.3" fill="#FFC42E"/></svg></a>
+    <a class="ri" href="Inicio.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Início</a>
+    <a class="ri on" href="Conversas.dc.html" aria-current="page"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Conversas</a>
+    <a class="ri" href="Clientes.dc.html"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 17c.6-2 2.2-3 4-3s3.4 1 4 3"/></svg>Clientes</a>
+    <a class="ri" href="Agenda.dc.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</a>
+    <a class="ri" href="Campanhas.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-3-7z"/></svg>Campanhas</a>
+    <a class="ri" href="Agentes.dc.html"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13v2M15 13v2"/><circle cx="12" cy="3.5" r="1"/></svg>Agentes</a>
+    <a class="ri" href="Canais.dc.html"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Canais</a>
+    <a class="ri" href="Equipe.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 3.3-6 7-6s6.5 2 7 6"/></svg>Equipe</a>
+    <a class="ri" href="Configuracoes.dc.html"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</a>
+    <div class="sp" style="flex:1"></div>
+    <a class="ri" href="Ajuda.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>Ajuda</a>
+  </nav>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header class="top">
+      <button class="srch" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Buscar clientes, conversas, ações…</span><kbd>Ctrl K</kbd></button>
+      <div style="flex:1"></div>
+      <a class="chip ok" href="Canais.dc.html"><span class="dot"></span>WhatsApp conectado</a>
+      <button class="ib" type="button" aria-label="Notificações, 3 novas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--duck);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span></button>
+      <button type="button" aria-label="Menu do usuário" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;height:44px;padding:0 4px;border-radius:10px"><span style="width:36px;height:36px;border-radius:50%;background:#0F1F2B;color:#FFC42E;font-weight:800;display:flex;align-items:center;justify-content:center">MA</span><span style="font-weight:600">Marina Alves</span></button>
+    </header>
+
+    <main style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 24px;background:#fff;border-bottom:1px solid var(--line)">
+        <h1 style="font-size:20px;font-weight:800;letter-spacing:-.01em;margin-right:8px">Conversas</h1>
+        <div class="seg" role="group" aria-label="Visualização"><button type="button" class="{{ vLista }}" onClick="{{ goLista }}">Lista</button><button type="button" class="{{ vQuadro }}" onClick="{{ goQuadro }}">Quadro</button></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto">
+          <button class="btn sm" type="button">Canal: Todos</button><button class="btn sm" type="button">Equipe: Recepção</button><button class="btn sm" type="button">Etiqueta</button><button class="btn sm" type="button">Prioridade</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ isLista }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-wrap:wrap;min-height:760px">
+        <section style="flex:0 0 340px;min-width:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column">
+          <div style="padding:14px 16px 0"><div class="seg" role="tablist" style="width:100%"><button type="button" class="on" style="flex:1;padding:0 6px">Minhas</button><button type="button" style="flex:1;padding:0 6px">Aguardando <span class="chip warn" style="height:20px;padding:0 6px;margin-left:2px">3</span></button><button type="button" style="flex:1;padding:0 6px">Todas</button><button type="button" style="flex:1;padding:0 6px">Resolvidas</button></div></div>
+          <div style="padding:12px 16px"><label for="bc" style="position:absolute;left:-9999px">Buscar conversa</label><input class="in" id="bc" placeholder="Buscar por nome ou mensagem"></div>
+          <button class="cv on" type="button"><span class="av">CM</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>Carla Menezes</strong><span class="muted" style="font-size:12px">14:09</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Consigo remarcar para quinta de manhã?</span><span style="display:flex;gap:6px;margin-top:6px;align-items:center"><span class="chip warn">Aguardando</span><span class="chip" style="background:var(--duck);color:var(--ink)">2</span></span></span></button>
+          <button class="cv" type="button"><span class="av">RL</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>Roberto Lima</strong><span class="muted" style="font-size:12px">13:52</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Obrigado! Até amanhã</span><span style="margin-top:6px;display:flex;gap:6px"><span class="chip ok">IA atendendo</span></span></span></button>
+          <button class="cv" type="button"><span class="av">BS</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>Beatriz Souza</strong><span class="muted" style="font-size:12px">13:40</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Pode ser às 9h?</span><span style="margin-top:6px;display:flex;gap:6px"><span class="chip ok">IA atendendo</span></span></span></button>
+          <button class="cv" type="button"><span class="av" style="position:relative">LP<span style="position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;background:#0F1F2B;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;border:2px solid #fff">IG</span></span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>lucas.prado</strong><span class="muted" style="font-size:12px">13:12</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Qual o valor do clareamento?</span><span style="margin-top:6px;display:flex;gap:6px"><span class="chip ok">IA atendendo</span><span class="chip info">Instagram</span></span></span></button>
+          <button class="cv" type="button"><span class="av">AF</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>Antônio Ferreira</strong><span class="muted" style="font-size:12px">12:47</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Fico no aguardo do orçamento</span><span style="margin-top:6px;display:flex;gap:6px"><span class="chip">Humano · Marina</span><span class="chip" style="background:var(--duck);color:var(--ink)">1</span></span></span></button>
+          <button class="cv" type="button"><span class="av">FR</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><strong>Fernanda Rocha</strong><span class="muted" style="font-size:12px">11:58</span></span><span class="muted" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Foto enviada</span><span style="margin-top:6px;display:flex;gap:6px"><span class="chip">Humano · Rafael</span></span></span></button>
+        </section>
+
+        <section style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;background:var(--bg)">
+          <div style="background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+            <span class="av">CM</span>
+            <div style="flex:1 1 140px"><strong style="font-size:16px">Carla Menezes</strong><p class="muted" style="font-size:13px">WhatsApp · Recepção 1 · Etapa: Em conversa</p></div>
+            <button class="btn sm p" type="button">Assumir</button><button class="btn sm" type="button">Transferir</button><button class="btn sm" type="button">Agendar</button><button class="btn sm" type="button">Resolver</button>
+          </div>
+          <div style="background:#fff;border-bottom:1px solid var(--line);padding:10px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+            <div class="seg" role="group" aria-label="Modo da conversa"><button type="button" class="{{ m1 }}" onClick="{{ goIA }}">IA responde</button><button type="button" class="{{ m2 }}" onClick="{{ goCo }}">Copiloto (IA sugere)</button><button type="button" class="{{ m3 }}" onClick="{{ goHu }}">Só humano</button></div>
+            <span class="muted" style="font-size:13px;flex:1 1 200px">{{ modeHint }}</span>
+            <span class="chip info">Follow-up em 2 h</span><button class="btn sm" type="button">Pausar</button>
+          </div>
+          <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:10px;overflow:auto">
+            <span class="chip" style="align-self:center">Hoje</span>
+            <div style="align-self:flex-start;max-width:70%;background:#fff;border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:10px 14px">Oi, boa tarde! Queria remarcar minha limpeza de quinta<span class="muted" style="display:block;font-size:11px;text-align:right">14:02</span></div>
+            <div style="align-self:flex-end;max-width:70%;background:#0F1F2B;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px">Boa tarde, Carla! Claro, posso ajudar. Qual dia e horário ficam melhores para você?<span style="display:flex;justify-content:flex-end;gap:6px;font-size:11px;color:#C5D1D8;align-items:center">Agente Duck · IA · 14:02 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFC42E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="Lida"><path d="M2 12l5 5L18 6M12 16l1 1L22 7"/></svg></span></div>
+            <div style="align-self:flex-start;max-width:70%;background:#fff;border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:10px 14px">Consigo remarcar para quinta de manhã?<span class="muted" style="display:block;font-size:11px;text-align:right">14:05</span></div>
+            <div style="align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+              <button type="button" aria-label="Ouvir áudio" style="width:36px;height:36px;border-radius:50%;border:0;background:#0F1F2B;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="#FFC42E" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
+              <svg width="116" height="24" viewBox="0 0 116 24" aria-hidden="true"><path d="M4 10v4M10 6v12M16 9v6M22 3v18M28 8v8M34 11v2M40 5v14M46 9v6M52 7v10M58 11v2M64 4v16M70 8v8M76 10v4M82 6v12M88 9v6M94 11v2M100 7v10M106 10v4M112 8v8" stroke="#566672" stroke-width="3" stroke-linecap="round"/></svg>
+              <span class="muted" style="font-size:12px">0:14 · 14:09</span>
+            </div>
+            <div style="align-self:center;background:var(--infobg);color:var(--info);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">Carla pediu para falar com uma pessoa · conversa na fila de espera</div>
+            <div style="align-self:flex-end;max-width:70%;background:#FFF0C7;border:1px dashed #B88A1E;border-radius:12px;padding:10px 14px"><span style="font-size:11px;font-weight:800;color:var(--warn);text-transform:uppercase;letter-spacing:.04em">Nota interna · só a equipe vê</span><p style="margin-top:2px">Rafael: Carla prefere horários antes das 10h e já remarcou duas vezes.</p></div>
+            <div style="align-self:flex-end;max-width:70%;background:#fff;border:1px solid #E7A39E;border-radius:14px 14px 4px 14px;padding:10px 14px">Quinta às 9h30 está livre. Posso confirmar?<span class="err" style="display:flex;align-items:center;gap:8px;margin-top:6px;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:600">Não enviada. <button type="button" style="border:0;background:transparent;font-weight:800;text-decoration:underline;padding:0;color:inherit">Tentar de novo</button></span></div>
+          </div>
+          <div style="position:relative;background:#fff;border-top:1px solid var(--line);padding:12px 20px 16px">
+            <div class="card" style="position:absolute;left:20px;bottom:calc(100% - 4px);width:min(420px,calc(100% - 40px));padding:6px;box-shadow:0 8px 24px rgba(15,31,43,.14)">
+              <p class="muted" style="font-size:12px;font-weight:700;padding:6px 10px">Respostas rápidas</p>
+              <button type="button" style="display:block;width:100%;text-align:left;border:0;background:#FFF7DD;border-radius:8px;padding:8px 10px"><strong>/horarios</strong> <span class="muted">Horários disponíveis</span><span class="muted" style="display:block;font-size:12px">Atendemos de segunda a sexta, das 8h às 18h…</span></button>
+              <button type="button" style="display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px"><strong>/endereco</strong> <span class="muted">Endereço e como chegar</span></button>
+              <button type="button" style="display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px"><strong>/confirmar</strong> <span class="muted">Confirmação de consulta</span></button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center">
+              <div class="seg"><button type="button" class="on" style="height:30px">Responder</button><button type="button" style="height:30px">Nota interna</button></div>
+              <button class="btn sm" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Sugerir resposta</button>
+              <button class="ib" type="button" aria-label="Sugestão útil" style="width:32px;height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.2 2.6L12.8 9H19a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17.7 20H7"/></svg></button>
+              <button class="ib" type="button" aria-label="Sugestão ruim" style="width:32px;height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:scaleY(-1)"><path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.2 2.6L12.8 9H19a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17.7 20H7"/></svg></button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="ib" type="button" aria-label="Anexar arquivo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"/></svg></button>
+              <button class="ib" type="button" aria-label="Emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg></button>
+              <label for="msg" style="position:absolute;left:-9999px">Mensagem</label>
+              <input class="in" id="msg" value="/horarios" style="height:44px;flex:1">
+              <button class="ib" type="button" aria-label="Gravar áudio"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+              <button class="btn p" type="button" aria-label="Enviar" style="height:44px;width:48px;padding:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-7 18-3-7z"/></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <aside style="flex:0 0 320px;min-width:0;background:#fff;border-left:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px"><span class="av" style="width:72px;height:72px;flex-basis:72px;font-size:22px">CM</span><strong style="font-size:18px;margin-top:6px">Carla Menezes</strong><span class="muted">+55 67 99812-3456</span><span class="muted">carla.menezes@email.com</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"><span class="chip ok">Cliente</span><span class="chip info">Retorno</span><span class="chip">Aceita disparos</span></div>
+          <div><h3 style="font-size:13px;font-weight:700;margin-bottom:6px">Próximo agendamento</h3><div class="card" style="padding:12px"><strong>Quinta, 29/10 · 09h</strong><p class="muted" style="font-size:13px">Limpeza · Dra. Helena · a remarcar</p></div></div>
+          <div><h3 style="font-size:13px;font-weight:700;margin-bottom:6px">Tarefas do cliente</h3><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" style="width:18px;height:18px;margin-top:2px;accent-color:#0F1F2B"><span>Oferecer horários antes das 10h<span class="muted" style="display:block;font-size:12px">Hoje</span></span></label></div>
+          <div><h3 style="font-size:13px;font-weight:700;margin-bottom:6px">Notas</h3><p class="muted">Prefere manhã. Alergia a látex registrada na ficha.</p></div>
+          <div><h3 style="font-size:13px;font-weight:700;margin-bottom:6px">Histórico</h3><ul style="list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-direction:column;gap:6px"><li style="display:flex;justify-content:space-between"><span>Remarcação de limpeza</span><span class="muted">12/10</span></li><li style="display:flex;justify-content:space-between"><span>Dúvida sobre clareamento</span><span class="muted">28/09</span></li><li style="display:flex;justify-content:space-between"><span>Primeiro contato</span><span class="muted">03/09</span></li></ul></div>
+          <a class="btn sm" href="Clientes.dc.html" style="margin-top:auto">Editar dados do cliente</a>
+        </aside>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isQuadro }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;padding:20px 24px;display:flex;gap:16px;overflow-x:auto;align-items:flex-start;min-height:760px">
+        <section style="flex:0 0 300px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="font-size:14px;font-weight:700">Novos</h2><span class="chip">3</span></div><div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="padding:12px"><strong>lucas.prado</strong><p class="muted" style="font-size:13px">Qual o valor do clareamento?</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip ok">IA atendendo</span><span class="muted" style="font-size:12px">há 1 h</span></div></div>
+          <div class="card" style="padding:12px"><strong>Daniela Prates</strong><p class="muted" style="font-size:13px">Vocês atendem convênio?</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip ok">IA atendendo</span><span class="muted" style="font-size:12px">há 12 min</span></div></div>
+          <div class="card" style="padding:12px"><strong>Eduardo Matos</strong><p class="muted" style="font-size:13px">Bom dia, preciso de uma urgência</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip warn">Aguardando</span><span class="muted" style="font-size:12px">há 4 min</span></div></div>
+        </div></section>
+        <section style="flex:0 0 300px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="font-size:14px;font-weight:700">Em conversa</h2><span class="chip">4</span></div><div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="padding:12px;border-color:var(--duck);box-shadow:0 0 0 2px #FFC42E55"><strong>Carla Menezes</strong><p class="muted" style="font-size:13px">Consigo remarcar para quinta de manhã?</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip warn">Aguardando</span><span class="muted" style="font-size:12px">há 18 min</span></div></div>
+          <div class="card" style="padding:12px"><strong>Beatriz Souza</strong><p class="muted" style="font-size:13px">Pode ser às 9h?</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip ok">IA atendendo</span><span class="muted" style="font-size:12px">há 30 min</span></div></div>
+          <div class="card" style="padding:12px"><strong>Fernanda Rocha</strong><p class="muted" style="font-size:13px">Foto enviada</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip">Rafael</span><span class="muted" style="font-size:12px">há 2 h</span></div></div>
+        </div></section>
+        <section style="flex:0 0 300px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="font-size:14px;font-weight:700">Proposta</h2><span class="chip">2</span></div><div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="padding:12px"><strong>Antônio Ferreira</strong><p class="muted" style="font-size:13px">Fico no aguardo do orçamento</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip">Marina</span><span class="muted" style="font-size:12px">há 1 h 20</span></div></div>
+          <div class="card" style="padding:12px"><strong>Helena Bastos</strong><p class="muted" style="font-size:13px">Vou conversar com meu marido e retorno</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip">Rafael</span><span class="muted" style="font-size:12px">ontem</span></div></div>
+        </div></section>
+        <section style="flex:0 0 300px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="font-size:14px;font-weight:700">Fechados</h2><span class="chip">2</span></div><div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="padding:12px"><strong>Roberto Lima</strong><p class="muted" style="font-size:13px">Obrigado! Até amanhã</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip ok">Resolvida pela IA</span><span class="muted" style="font-size:12px">13:52</span></div></div>
+          <div class="card" style="padding:12px"><strong>Paula Neves</strong><p class="muted" style="font-size:13px">Consulta confirmada para sexta</p><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="chip ok">Resolvida pela IA</span><span class="muted" style="font-size:12px">11:20</span></div></div>
+        </div></section>
+      </div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.state.mode ?? 'ia';
+    const view = this.state.view ?? 'lista';
+    const hints = {
+      ia: 'O Agente Duck responde sozinho e chama uma pessoa se precisar.',
+      co: 'A IA escreve a sugestão e você decide se envia.',
+      hu: 'A IA fica de fora: só a equipe responde.'
+    };
+    return {
+      isLista: view === 'lista',
+      isQuadro: view === 'quadro',
+      vLista: view === 'lista' ? 'on' : '',
+      vQuadro: view === 'quadro' ? 'on' : '',
+      goLista: () => this.setState({ view: 'lista' }),
+      goQuadro: () => this.setState({ view: 'quadro' }),
+      m1: mode === 'ia' ? 'on' : '',
+      m2: mode === 'co' ? 'on' : '',
+      m3: mode === 'hu' ? 'on' : '',
+      goIA: () => this.setState({ mode: 'ia' }),
+      goCo: () => this.setState({ mode: 'co' }),
+      goHu: () => this.setState({ mode: 'hu' }),
+      modeHint: hints[mode]
+    };
+  }
+}
+</script>
+</body>
+</html>

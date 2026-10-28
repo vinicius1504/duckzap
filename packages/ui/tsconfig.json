@@ -1,0 +1,4 @@
+{
+  "extends": "@duckzap/config/tsconfig/react-library.json",
+  "include": ["src"]
+}

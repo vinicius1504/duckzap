@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Duckzap — Agenda</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1F2B;--ink2:#566672;--line:#E3E8EB;--bg:#F6F7F4;--duck:#FFC42E;--duck2:#E9AA05;--ok:#17794F;--okbg:#E2F3EA;--warn:#7A4F00;--warnbg:#FFF0C7;--err:#B3261E;--errbg:#FCE7E5;--info:#1D5F8A;--infobg:#E2EFF8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid #0F1F2B;outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:#EEF1F2}
+.btn.p{background:var(--duck);border-color:var(--duck)}.btn.p:hover{background:var(--duck2)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;background:#EAEEF0;color:var(--ink2);white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.info{background:var(--infobg);color:var(--info)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px}
+.muted{color:var(--ink2)}
+.shell{display:flex;min-height:100vh}
+.rail{flex:0 0 88px;background:var(--ink);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ri{display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;padding:9px 0;border-radius:12px;color:#B9C6CE;font-size:11px;font-weight:600}
+.ri:hover{background:#1C3345;color:#fff}.ri.on{background:var(--duck);color:var(--ink)}
+.ri svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{height:64px;flex:0 0 64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.srch{display:flex;align-items:center;gap:10px;height:40px;width:min(420px,100%);border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink2)}
+.srch kbd{margin-left:auto;font:600 11px 'Plus Jakarta Sans',sans-serif;border:1px solid #C9D2D7;border-radius:6px;padding:2px 6px;background:#fff}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.seg{display:inline-flex;background:#EAEEF0;border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;height:34px;padding:0 14px;border-radius:8px;font-weight:600;color:var(--ink2)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,31,43,.15)}
+.in{height:40px;width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:0 12px;background:#fff}
+.day{position:relative;height:616px;border-left:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 55px,var(--line) 55px,var(--line) 56px)}
+.ev{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 8px;font-size:12px;line-height:1.3;overflow:hidden;text-align:left;border:0}
+.mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.mcell{min-height:104px;padding:8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;display:flex;flex-direction:column;gap:4px}
+.mcell.out{background:#FAFBFA}.mcell.out b{color:#6B7A85}
+.mcell b{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:700;font-size:13px}
+.mcell.today b{background:var(--duck)}
+.me{font-size:11px;font-weight:600;border-radius:6px;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th{text-align:left;font-size:12px;color:var(--ink2);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);background:#FAFBFA}
+td{padding:12px;border-bottom:1px solid var(--line)}
+@media(max-width:760px){.shell{flex-direction:column}.rail{flex:0 0 auto;flex-direction:row;width:100%;overflow-x:auto;padding:8px}.rail .sp{display:none}.srch span{display:none}.top{padding:0 12px}}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="rail" aria-label="Menu principal">
+    <a href="Inicio.dc.html" aria-label="Duckzap" style="margin:2px 0 14px"><svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="fill:initial;stroke:none;width:40px;height:40px"><rect width="32" height="32" rx="9" fill="#FFC42E"></rect><path d="M8 22c3 3.4 10 3.4 14-1l-2-4H9z" fill="#0F1F2B"></path><circle cx="15" cy="13" r="6.5" fill="#0F1F2B"></circle><path d="M20.5 12l6 2.2-6 2.6z" fill="#FF8A2E"></path><circle cx="13" cy="11.8" r="1.3" fill="#FFC42E"></circle></svg></a>
+    <a class="ri" href="Inicio.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg>Início</a>
+    <a class="ri" href="Conversas.dc.html"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"></path></svg>Conversas</a>
+    <a class="ri" href="Clientes.dc.html"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><circle cx="12" cy="10" r="2.5"></circle><path d="M8 17c.6-2 2.2-3 4-3s3.4 1 4 3"></path></svg>Clientes</a>
+    <a class="ri on" href="Agenda.dc.html" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Agenda</a>
+    <a class="ri" href="Campanhas.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-3-7z"></path></svg>Campanhas</a>
+    <a class="ri" href="Agentes.dc.html"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"></rect><path d="M12 4v4M9 13v2M15 13v2"></path><circle cx="12" cy="3.5" r="1"></circle></svg>Agentes</a>
+    <a class="ri" href="Canais.dc.html"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Canais</a>
+    <a class="ri" href="Equipe.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.5-4 3.3-6 7-6s6.5 2 7 6"></path></svg>Equipe</a>
+    <a class="ri" href="Configuracoes.dc.html"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg>Ajustes</a>
+    <div class="sp" style="flex:1"></div>
+    <a class="ri" href="Ajuda.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"></path></svg>Ajuda</a>
+  </nav>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header class="top">
+      <button class="srch" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><span>Buscar clientes, conversas, ações…</span><kbd>Ctrl K</kbd></button>
+      <div style="flex:1"></div>
+      <a class="chip ok" href="Canais.dc.html"><span class="dot"></span>WhatsApp conectado</a>
+      <button class="ib" type="button" aria-label="Notificações, 3 novas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"></path></svg><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--duck);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span></button>
+      <button type="button" aria-label="Menu do usuário" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;height:44px;padding:0 4px;border-radius:10px"><span style="width:36px;height:36px;border-radius:50%;background:#0F1F2B;color:#FFC42E;font-weight:800;display:flex;align-items:center;justify-content:center">MA</span><span style="font-weight:600">Marina Alves</span></button>
+    </header>
+
+    <main style="padding:28px 32px 40px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <h1 style="font-size:28px;font-weight:800;letter-spacing:-.02em">Agenda</h1>
+          <button class="btn sm" type="button">Hoje</button>
+          <button class="ib" type="button" aria-label="Período anterior" style="width:32px;height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+          <button class="ib" type="button" aria-label="Próximo período" style="width:32px;height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button>
+          <strong style="font-size:16px">{{ periodo }}</strong>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="seg" role="group" aria-label="Visão"><button type="button" class="{{ v1 }}" onClick="{{ go1 }}">Mês</button><button type="button" class="{{ v2 }}" onClick="{{ go2 }}">Semana</button><button type="button" class="{{ v3 }}" onClick="{{ go3 }}">Lista</button></div>
+          <button class="btn" type="button">Responsável: Todos</button><button class="btn" type="button">Tipo: Todos</button>
+          <button class="btn p" type="button">Novo agendamento</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+        <section style="flex:1 1 680px;min-width:0;display:flex;flex-direction:column;gap:12px">
+          <div role="status" class="warn" style="border-radius:10px;padding:10px 14px;font-weight:600">Conflito de horário: Dra. Helena tem dois agendamentos na quinta, às 09h e às 09h30.</div>
+
+          <sc-if value="{{ isSemana }}" hint-placeholder-val="{{ true }}">
+          <div class="card" style="overflow-x:auto">
+            <div style="min-width:820px">
+              <div style="display:grid;grid-template-columns:56px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:#FAFBFA">
+                <span></span>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Seg</span><br><strong style="display:inline-flex;width:30px;height:30px;border-radius:50%;background:var(--duck);align-items:center;justify-content:center">26</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Ter</span><br><strong style="font-size:16px">27</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Qua</span><br><strong style="font-size:16px">28</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Qui</span><br><strong style="font-size:16px">29</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Sex</span><br><strong style="font-size:16px">30</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Sáb</span><br><strong style="font-size:16px">31</strong></div>
+                <div style="padding:10px;text-align:center"><span class="muted" style="font-size:12px">Dom</span><br><strong style="font-size:16px">1</strong></div>
+              </div>
+              <div style="display:grid;grid-template-columns:56px repeat(7,minmax(0,1fr))">
+                <div class="muted" style="font-size:11px;text-align:right;padding-right:8px;display:flex;flex-direction:column"><span style="height:56px">08h</span><span style="height:56px">09h</span><span style="height:56px">10h</span><span style="height:56px">11h</span><span style="height:56px">12h</span><span style="height:56px">13h</span><span style="height:56px">14h</span><span style="height:56px">15h</span><span style="height:56px">16h</span><span style="height:56px">17h</span><span style="height:56px">18h</span></div>
+                <div class="day">
+                  <button class="ev ok" type="button" style="top:28px;height:52px"><strong>08:30 Consulta</strong><br>Roberto Lima · Confirmado</button>
+                  <button class="ev" type="button" style="top:336px;height:52px;background:var(--warnbg);color:var(--warn)"><strong>14:00 Avaliação</strong><br>Daniela Prates · Pendente</button>
+                  <button class="ev" type="button" style="top:448px;height:52px;background:#EAEEF0;color:var(--ink2)"><strong>16:00 Retorno</strong><br>Fernanda Rocha · Concluído</button>
+                  <div style="position:absolute;left:0;right:0;top:459px;height:2px;background:var(--err)"></div>
+                </div>
+                <div class="day">
+                  <button class="ev warn" type="button" style="top:56px;height:46px"><strong>09:00 Limpeza</strong><br>Beatriz Souza · A confirmar</button>
+                  <button class="ev warn" type="button" style="top:420px;height:56px"><strong>15:30 Clareamento</strong><br>Lucas Prado · A confirmar</button>
+                </div>
+                <div class="day">
+                  <button class="ev ok" type="button" style="top:112px;height:84px"><strong>10:00 Canal</strong><br>Antônio Ferreira · Confirmado</button>
+                </div>
+                <div class="day">
+                  <button class="ev err" type="button" style="top:56px;height:44px;right:30%"><strong>09:00 Limpeza</strong><br>Carla M. · Remarcar</button>
+                  <button class="ev info" type="button" style="top: 114px; height: 52px; left: 34%; box-shadow: 0 0 0 2px var(--err); position: absolute"><strong>09:30 Revisão</strong><br>Paula N. · Conflito</button>
+                  <button class="ev ok" type="button" style="top:336px;height:56px"><strong>14:00 Restauração</strong><br>Helena Bastos · Confirmado</button>
+                </div>
+                <div class="day">
+                  <button class="ev ok" type="button" style="top:0;height:52px"><strong>08:00 Manutenção</strong><br>Paula Neves · Confirmado</button>
+                  <button class="ev" type="button" style="top:168px;height:52px;background:#EAEEF0;color:var(--ink2);text-decoration:line-through"><strong>11:00 Avaliação</strong><br>Cancelado</button>
+                </div>
+                <div class="day" style="background-color:#FAFBFA"></div>
+                <div class="day" style="background-color:#FAFBFA"></div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isMes }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="overflow-x:auto">
+            <div style="min-width:760px">
+              <div class="mg" style="background:#FAFBFA;border-bottom:1px solid var(--line)"><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Seg</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Ter</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Qua</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Qui</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Sex</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Sáb</span><span class="muted" style="padding:10px;font-size:12px;font-weight:700">Dom</span></div>
+              <div class="mg">
+                <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+                  <div class="mcell {{ c.cls }}"><b>{{ c.n }}</b>
+                    <sc-for list="{{ c.evs }}" as="e" hint-placeholder-count="1"><span class="me {{ e.cls }}">{{ e.t }}</span></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isLista }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Quando</th><th>Cliente</th><th>Tipo</th><th>Responsável</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><strong>Seg 26 · 14:00</strong></td><td>Daniela Prates</td><td>Avaliação · 30 min</td><td>Dra. Helena</td><td><span class="chip warn">Pendente</span></td><td><button class="btn sm" type="button">Detalhes</button></td></tr>
+                <tr><td><strong>Ter 27 · 09:00</strong></td><td>Beatriz Souza</td><td>Limpeza · 45 min</td><td>Dra. Helena</td><td><span class="chip warn">Pendente</span></td><td><button class="btn sm p" type="button">Confirmar</button></td></tr>
+                <tr><td><strong>Ter 27 · 15:30</strong></td><td>Lucas Prado</td><td>Clareamento · 60 min</td><td>Dr. Paulo</td><td><span class="chip warn">Pendente</span></td><td><button class="btn sm p" type="button">Confirmar</button></td></tr>
+                <tr><td><strong>Qua 28 · 10:00</strong></td><td>Antônio Ferreira</td><td>Canal · 90 min</td><td>Dr. Paulo</td><td><span class="chip ok">Confirmado</span></td><td><button class="btn sm" type="button">Detalhes</button></td></tr>
+                <tr><td><strong>Qui 29 · 09:00</strong></td><td>Carla Menezes</td><td>Limpeza · 45 min</td><td>Dra. Helena</td><td><span class="chip err">A remarcar</span></td><td><a class="btn sm" href="Conversas.dc.html">Abrir conversa</a></td></tr>
+                <tr><td><strong>Qui 29 · 14:00</strong></td><td>Helena Bastos</td><td>Restauração · 60 min</td><td>Dr. Paulo</td><td><span class="chip ok">Confirmado</span></td><td><button class="btn sm" type="button">Detalhes</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          </sc-if>
+        </section>
+
+        <aside style="flex:0 1 320px;min-width:280px;display:flex;flex-direction:column;gap:16px">
+          <section class="card" style="padding:18px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:15px;font-weight:700">Google Calendar</h2><span class="chip ok"><span class="dot"></span>Sincronizado</span></div>
+            <p class="muted" style="margin:8px 0 12px">Calendário “Casa Alvorada” · última sincronização há 3 min</p>
+            <div style="display:flex;gap:8px"><button class="btn sm" type="button">Trocar calendário</button><button class="btn sm" type="button">Desconectar</button></div>
+          </section>
+          <section class="card" style="padding:18px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:15px;font-weight:700">Tipos de atendimento</h2><button class="btn sm" type="button">Novo</button></div>
+            <ul style="list-style:none;margin:10px 0 0;padding:0;font-size:13px">
+              <li style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><span style="flex:1"><strong>Limpeza</strong><br><span class="muted">45 min</span></span><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked="" style="width:18px;height:18px;accent-color:#0F1F2B"> Ativo</label></li>
+              <li style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><span style="flex:1"><strong>Avaliação</strong><br><span class="muted">30 min</span></span><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked="" style="width:18px;height:18px;accent-color:#0F1F2B"> Ativo</label></li>
+              <li style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><span style="flex:1"><strong>Clareamento</strong><br><span class="muted">60 min</span></span><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked="" style="width:18px;height:18px;accent-color:#0F1F2B"> Ativo</label></li>
+              <li style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><span style="flex:1"><strong>Canal</strong><br><span class="muted">90 min</span></span><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked="" style="width:18px;height:18px;accent-color:#0F1F2B"> Ativo</label></li>
+              <li style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)"><span style="flex:1"><strong>Ortodontia (promoção)</strong><br><span class="muted">30 min</span></span><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" style="width:18px;height:18px;accent-color:#0F1F2B"> Ativo</label></li>
+            </ul>
+          </section>
+          <section class="card" style="padding:18px">
+            <h2 style="font-size:15px;font-weight:700">Lembretes</h2>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+              <label class="muted" for="ant" style="font-size:13px;font-weight:600">Avisar o cliente</label>
+              <select class="in" id="ant"><option>24 horas antes</option><option>2 horas antes</option></select>
+              <label class="muted" for="msg" style="font-size:13px;font-weight:600">Mensagem</label>
+              <textarea id="msg" rows="3" style="border:1px solid #C9D2D7;border-radius:10px;padding:10px 12px;resize:vertical">Oi, {nome}! Passando para lembrar da sua consulta amanhã às {hora}. Responda 1 para confirmar.</textarea>
+              <button class="btn p" type="button">Salvar lembrete</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const v = this.state.v ?? 'semana';
+    const evs = {
+      19: [['09h Roberto', 'ok']], 20: [['10h Daniela', 'ok'], ['15h Paula', 'ok']], 21: [['14h Helena', 'ok']], 22: [['09h Beatriz', 'ok']], 23: [['11h Lucas', 'ok']],
+      26: [['08h30 Roberto', 'ok'], ['14h Daniela', 'warn'], ['16h Fernanda', '']], 27: [['09h Beatriz', 'warn'], ['15h30 Lucas', 'warn']], 28: [['10h Antônio', 'ok']],
+      29: [['09h Carla', 'err'], ['09h30 Paula', 'info'], ['14h Helena', 'ok']], 30: [['08h Paula', 'ok']]
+    };
+    const cells = [];
+    for (let i = 0; i < 35; i++) {
+      // grade começa na segunda 28/09: 3 dias de setembro, 31 de outubro, 1 de novembro
+      let n, out = false;
+      if (i < 3) { n = 28 + i; out = true; }
+      else if (i < 34) { n = i - 2; }
+      else { n = 1; out = true; }
+      const day = out ? 0 : n;
+      const list = (evs[day] || []).map((e) => ({ t: e[0], cls: e[1] || '' }));
+      cells.push({ n, cls: (out ? 'out ' : '') + (!out && n === 26 ? 'today' : ''), evs: list });
+    }
+    return {
+      isSemana: v === 'semana', isMes: v === 'mes', isLista: v === 'lista',
+      v1: v === 'mes' ? 'on' : '', v2: v === 'semana' ? 'on' : '', v3: v === 'lista' ? 'on' : '',
+      go1: () => this.setState({ v: 'mes' }), go2: () => this.setState({ v: 'semana' }), go3: () => this.setState({ v: 'lista' }),
+      periodo: v === 'mes' ? 'Outubro de 2026' : '26 de outubro – 1 de novembro',
+      cells
+    };
+  }
+}
+</script>
+</body>
+</html>

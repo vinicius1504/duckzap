@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Duckzap — Agentes de IA</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1F2B;--ink2:#566672;--line:#E3E8EB;--bg:#F6F7F4;--duck:#FFC42E;--duck2:#E9AA05;--ok:#17794F;--okbg:#E2F3EA;--warn:#7A4F00;--warnbg:#FFF0C7;--err:#B3261E;--errbg:#FCE7E5;--info:#1D5F8A;--infobg:#E2EFF8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.45 'Plus Jakarta Sans',system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid #0F1F2B;outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600;white-space:nowrap}
+.btn:hover{background:#EEF1F2}
+.btn.p{background:var(--duck);border-color:var(--duck)}.btn.p:hover{background:var(--duck2)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;background:#EAEEF0;color:var(--ink2);white-space:nowrap}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.err{background:var(--errbg);color:var(--err)}.info{background:var(--infobg);color:var(--info)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px}
+.muted{color:var(--ink2)}
+.shell{display:flex;min-height:100vh}
+.rail{flex:0 0 88px;background:var(--ink);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ri{display:flex;flex-direction:column;align-items:center;gap:3px;width:72px;padding:9px 0;border-radius:12px;color:#B9C6CE;font-size:11px;font-weight:600}
+.ri:hover{background:#1C3345;color:#fff}.ri.on{background:var(--duck);color:var(--ink)}
+.ri svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.top{height:64px;flex:0 0 64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.srch{display:flex;align-items:center;gap:10px;height:40px;width:min(420px,100%);border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink2)}
+.srch kbd{margin-left:auto;font:600 11px 'Plus Jakarta Sans',sans-serif;border:1px solid #C9D2D7;border-radius:6px;padding:2px 6px;background:#fff}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:transparent;height:44px;padding:0 14px;font-weight:600;color:var(--ink2);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--duck)}
+.in{height:40px;width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:0 12px;background:#fff}
+.ta{width:100%;border:1px solid #C9D2D7;border-radius:10px;padding:10px 12px;background:#fff;resize:vertical}
+.lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.ag{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px}
+.ag.on{border-color:var(--duck);box-shadow:0 0 0 2px #FFC42E88}
+@media(max-width:760px){.shell{flex-direction:column}.rail{flex:0 0 auto;flex-direction:row;width:100%;overflow-x:auto;padding:8px}.rail .sp{display:none}.srch span{display:none}.top{padding:0 12px}}
+</style>
+</helmet>
+<div class="shell">
+  <nav class="rail" aria-label="Menu principal">
+    <a href="Inicio.dc.html" aria-label="Duckzap" style="margin:2px 0 14px"><svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" style="fill:initial;stroke:none;width:40px;height:40px"><rect width="32" height="32" rx="9" fill="#FFC42E"/><path d="M8 22c3 3.4 10 3.4 14-1l-2-4H9z" fill="#0F1F2B"/><circle cx="15" cy="13" r="6.5" fill="#0F1F2B"/><path d="M20.5 12l6 2.2-6 2.6z" fill="#FF8A2E"/><circle cx="13" cy="11.8" r="1.3" fill="#FFC42E"/></svg></a>
+    <a class="ri" href="Inicio.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Início</a>
+    <a class="ri" href="Conversas.dc.html"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Conversas</a>
+    <a class="ri" href="Clientes.dc.html"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 17c.6-2 2.2-3 4-3s3.4 1 4 3"/></svg>Clientes</a>
+    <a class="ri" href="Agenda.dc.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</a>
+    <a class="ri" href="Campanhas.dc.html"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-3-7z"/></svg>Campanhas</a>
+    <a class="ri on" href="Agentes.dc.html" aria-current="page"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13v2M15 13v2"/><circle cx="12" cy="3.5" r="1"/></svg>Agentes</a>
+    <a class="ri" href="Canais.dc.html"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Canais</a>
+    <a class="ri" href="Equipe.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-4 3.3-6 7-6s6.5 2 7 6"/></svg>Equipe</a>
+    <a class="ri" href="Configuracoes.dc.html"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</a>
+    <div class="sp" style="flex:1"></div>
+    <a class="ri" href="Ajuda.dc.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>Ajuda</a>
+  </nav>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header class="top">
+      <button class="srch" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Buscar clientes, conversas, ações…</span><kbd>Ctrl K</kbd></button>
+      <div style="flex:1"></div>
+      <a class="chip ok" href="Canais.dc.html"><span class="dot"></span>WhatsApp conectado</a>
+      <button class="ib" type="button" aria-label="Notificações, 3 novas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg><span style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--duck);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span></button>
+      <button type="button" aria-label="Menu do usuário" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;height:44px;padding:0 4px;border-radius:10px"><span style="width:36px;height:36px;border-radius:50%;background:#0F1F2B;color:#FFC42E;font-weight:800;display:flex;align-items:center;justify-content:center">MA</span><span style="font-weight:600">Marina Alves</span></button>
+    </header>
+
+    <main style="padding:28px 32px 40px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+        <div><h1 style="font-size:28px;font-weight:800;letter-spacing:-.02em">Agentes de IA</h1><p class="muted" style="margin-top:4px">Cada agente tem um trabalho: atender, retomar conversas, agendar ou responder no Instagram.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Gerador guiado</button><button class="btn p" type="button">Novo agente</button></div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+        <aside style="flex:0 1 280px;min-width:240px;display:flex;flex-direction:column;gap:10px">
+          <button class="ag on" type="button"><div style="display:flex;justify-content:space-between;gap:8px"><strong>Agente Duck</strong><span class="chip ok">Ativo</span></div><p class="muted" style="font-size:13px;margin-top:2px">Atendimento · Recepção</p><span class="chip" style="margin-top:8px;background:var(--duck);color:var(--ink)">Padrão</span></button>
+          <button class="ag" type="button"><div style="display:flex;justify-content:space-between;gap:8px"><strong>Retorno de pacientes</strong><span class="chip ok">Ativo</span></div><p class="muted" style="font-size:13px;margin-top:2px">Follow-up · Recepção, Vendas</p></button>
+          <button class="ag" type="button"><div style="display:flex;justify-content:space-between;gap:8px"><strong>Agendamento</strong><span class="chip ok">Ativo</span></div><p class="muted" style="font-size:13px;margin-top:2px">Agenda · Recepção</p></button>
+          <button class="ag" type="button"><div style="display:flex;justify-content:space-between;gap:8px"><strong>Instagram DM</strong><span class="chip warn">Pausado</span></div><p class="muted" style="font-size:13px;margin-top:2px">Direct do Instagram</p></button>
+          <button class="ag" type="button"><div style="display:flex;justify-content:space-between;gap:8px"><strong>Comentários</strong><span class="chip">Inativo</span></div><p class="muted" style="font-size:13px;margin-top:2px">Comentários do Instagram</p></button>
+          <section class="card" style="padding:14px;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><strong>Copiloto</strong><span class="chip ok">Ligado</span></div>
+            <p class="muted" style="font-size:13px;margin:4px 0 10px">Sugere respostas para a equipe nas equipes Recepção e Vendas.</p>
+            <p style="font-size:13px">Feedback recebido: <strong>84</strong> úteis · <strong>11</strong> ruins</p>
+            <button class="btn sm" type="button" style="margin-top:10px">Configurar copiloto</button>
+          </section>
+        </aside>
+
+        <section class="card" style="flex:2 1 460px;min-width:0;padding:6px 22px 22px">
+          <div class="tabs" role="tablist"><button type="button" class="{{ a1 }}" onClick="{{ g1 }}">Perfil</button><button type="button" class="{{ a2 }}" onClick="{{ g2 }}">Conhecimento</button><button type="button" class="{{ a3 }}" onClick="{{ g3 }}">Comportamento</button><button type="button" class="{{ a4 }}" onClick="{{ g4 }}">Follow-up</button><button type="button" class="{{ a5 }}" onClick="{{ g5 }}">Agenda</button><button type="button" class="{{ a6 }}" onClick="{{ g6 }}">Avançado</button></div>
+
+          <sc-if value="{{ t1 }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:16px;padding-top:20px">
+            <div><label class="lbl" for="n">Nome do agente</label><input class="in" id="n" value="Agente Duck"></div>
+            <div><label class="lbl" for="d">O que ele faz</label><input class="in" id="d" value="Atende pacientes, tira dúvidas e encaminha para a equipe quando necessário"></div>
+            <div><span class="lbl">Tom de voz</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" type="button" style="background:var(--ink);color:#fff">Amigável</button><button class="btn sm" type="button">Formal</button><button class="btn sm" type="button">Direto</button></div></div>
+            <div><label class="lbl" for="r">Resumo da empresa</label><textarea class="ta" id="r" rows="4">A Casa Alvorada é uma clínica odontológica em Campo Grande. Atendemos de segunda a sexta, das 8h às 18h. Trabalhamos com limpeza, clareamento, restauração e tratamento de canal.</textarea></div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ t2 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:16px;padding-top:20px">
+            <div><label class="lbl" for="p">Produtos e serviços</label><textarea class="ta" id="p" rows="4">Limpeza (45 min) · Avaliação (30 min) · Clareamento (60 min) · Restauração (60 min) · Canal (90 min)</textarea></div>
+            <div><label class="lbl" for="f">Perguntas frequentes</label><textarea class="ta" id="f" rows="4">Aceitamos convênio? Aceitamos Unimed e Odontoprev. Particular: parcelamos em até 6x.</textarea></div>
+            <div style="border:2px dashed #C9D2D7;border-radius:12px;padding:18px;text-align:center" class="muted">Arraste documentos aqui (PDF, DOCX, TXT)</div>
+            <div class="card" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span><strong>tabela-de-precos-2026.pdf</strong><br><span class="muted" style="font-size:12px">2 páginas · lido pelo agente</span></span><button class="btn sm" type="button">Remover</button></div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ t3 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px;padding-top:20px">
+            <div><label class="lbl" for="q">Quando o agente responde</label><select class="in" id="q"><option>Sempre, em qualquer horário</option><option>Só fora do horário de atendimento</option><option>Só quando ninguém responder em 5 min</option></select></div>
+            <div><span class="lbl">Chamar uma pessoa quando</span>
+              <label style="display:flex;gap:10px;margin-bottom:6px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> O cliente pedir para falar com alguém</label>
+              <label style="display:flex;gap:10px;margin-bottom:6px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Houver reclamação ou urgência</label>
+              <label style="display:flex;gap:10px"><input type="checkbox" style="width:18px;height:18px;accent-color:#0F1F2B"> A pergunta não estiver no conhecimento do agente</label></div>
+            <div><label class="lbl" for="cr">Jeito de responder</label><div style="display:flex;align-items:center;gap:12px"><span class="muted" style="font-size:13px">Mais preciso</span><input type="range" id="cr" min="0" max="10" value="3" style="flex:1;accent-color:#0F1F2B"><span class="muted" style="font-size:13px">Mais criativo</span></div></div>
+            <div><label class="lbl" for="lm">Limite de mensagens seguidas do agente</label><input class="in" id="lm" type="number" value="8" style="max-width:140px"></div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ t4 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding-top:20px">
+            <p class="muted">Se o cliente parar de responder, o agente retoma a conversa nesta sequência.</p>
+            <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"><span class="chip" style="flex:0 0 auto">Após 2 h</span><div style="flex:1 1 220px"><strong>Gerada pela IA</strong><p class="muted" style="font-size:13px">Pergunta se ficou alguma dúvida sobre o que foi conversado</p></div><button class="btn sm" type="button">Editar</button></div>
+            <div class="card" style="padding:14px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"><span class="chip" style="flex:0 0 auto">Após 24 h</span><div style="flex:1 1 220px"><strong>Mensagem fixa</strong><p class="muted" style="font-size:13px">“Oi, {nome}! Ainda posso te ajudar a marcar seu horário?”</p></div><button class="btn sm" type="button">Editar</button></div>
+            <button class="btn" type="button" style="align-self:flex-start">Adicionar etapa</button>
+            <label style="display:flex;gap:10px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Respeitar o horário comercial</label>
+            <label style="display:flex;gap:10px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Parar a sequência quando o cliente responder</label>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ t5 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding-top:20px">
+            <label style="display:flex;gap:10px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Este agente pode marcar horários na Agenda</label>
+            <span class="lbl" style="margin:0">Tipos de atendimento que ele pode marcar</span>
+            <label style="display:flex;gap:10px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Limpeza · 45 min</label>
+            <label style="display:flex;gap:10px"><input type="checkbox" checked style="width:18px;height:18px;accent-color:#0F1F2B"> Avaliação · 30 min</label>
+            <label style="display:flex;gap:10px"><input type="checkbox" style="width:18px;height:18px;accent-color:#0F1F2B"> Canal · 90 min (só a equipe marca)</label>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ t6 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding-top:20px">
+            <div class="warn" style="border-radius:10px;padding:10px 14px">Área avançada. Mudar o prompt completo pode alterar o jeito como o agente responde.</div>
+            <div><label class="lbl" for="pr">Prompt completo</label><textarea class="ta" id="pr" rows="8" style="font-family:ui-monospace,Menlo,monospace;font-size:13px">Você é o Agente Duck, assistente da Casa Alvorada Odontologia. Responda em português, de forma amigável e objetiva. Nunca invente preços. Quando o cliente pedir um horário, ofereça no máximo dois.</textarea></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Voltar à versão anterior</button><button class="btn" type="button">Desativar agente</button></div>
+          </div>
+          </sc-if>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px"><button class="btn" type="button">Descartar</button><button class="btn p" type="button">Salvar e ativar</button></div>
+        </section>
+
+        <aside class="card" style="flex:1 1 320px;min-width:280px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center"><div><strong>Simulador</strong><p class="muted" style="font-size:12px">Teste aqui. Nada é enviado a clientes.</p></div><button class="btn sm" type="button">Reiniciar</button></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px;background:#F3F1EA;min-height:420px">
+            <div style="align-self:flex-end;background:#FFC42E;border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:80%">Vocês aceitam Unimed?</div>
+            <div style="align-self:flex-start;background:#fff;border-radius:14px 14px 14px 4px;padding:8px 12px;max-width:85%">Aceitamos sim! Atendemos Unimed e Odontoprev. Quer que eu veja um horário para você?</div>
+            <div style="align-self:flex-end;background:#FFC42E;border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:80%">Quero uma limpeza na sexta</div>
+            <div style="align-self:flex-start;background:#fff;border-radius:14px 14px 14px 4px;padding:8px 12px;max-width:85%">Na sexta tenho 08h30 ou 14h. Qual prefere?</div>
+          </div>
+          <form style="padding:12px;border-top:1px solid var(--line);display:flex;gap:8px"><label for="sm" style="position:absolute;left:-9999px">Mensagem de teste</label><input class="in" id="sm" placeholder="Escreva como se fosse o cliente"><button class="btn p" type="button" aria-label="Enviar teste" style="padding:0 12px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-7 18-3-7z"/></svg></button></form>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.state.tab ?? 1;
+    const o = {};
+    for (let i = 1; i <= 6; i++) {
+      o['t' + i] = t === i;
+      o['a' + i] = t === i ? 'on' : '';
+      o['g' + i] = () => this.setState({ tab: i });
+    }
+    return o;
+  }
+}
+</script>
+</body>
+</html>

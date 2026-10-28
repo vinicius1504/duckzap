@@ -1,0 +1,138 @@
+/*
+ * Tokens de design (INSTRUCTIONS §2.1). Cores só daqui: os componentes usam as
+ * utilitárias geradas (bg-surface, text-ink-2, border-line…), nunca hex solto.
+ */
+@source "../src";
+
+:root {
+  color-scheme: light;
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-2: #eaeef0;
+  --surface-hover: #eef1f2;
+  --line: #e3e8eb;
+  --field: #c9d2d7;
+  --ink: #0f1f2b;
+  --ink2: #566672;
+  --duck: #ffc42e;
+  --duck2: #e9aa05;
+  --duck-beak: #ff8a2e;
+  --on-duck: #0f1f2b;
+  --ok: #17794f;
+  --okbg: #e2f3ea;
+  --warn: #7a4f00;
+  --warnbg: #fff0c7;
+  --err: #b3261e;
+  --errbg: #fce7e5;
+  --info: #1d5f8a;
+  --infobg: #e2eff8;
+  --rail: #0f1f2b;
+  --rail-fg: #b9c6ce;
+  --rail-hover: #1c3345;
+  --focus: #0f1f2b;
+  --logo-plate: #0f1f2b;
+  --logo-duck: #ffc42e;
+}
+
+/* tema escuro: automático pelo sistema, a menos que o usuário fixe o claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b151d;
+    --surface: #13212c;
+    --surface-2: #1c2e3b;
+    --surface-hover: #1a2b38;
+    --line: #26394a;
+    --field: #3a5062;
+    --ink: #e8eef1;
+    --ink2: #a3b4bf;
+    --ok: #6fd6a2;
+    --okbg: #10301f;
+    --warn: #ffd27a;
+    --warnbg: #3a2c08;
+    --err: #ffa198;
+    --errbg: #3b1512;
+    --info: #94cbf0;
+    --infobg: #0f2a3d;
+    --rail: #07111a;
+    --rail-hover: #16293a;
+    --focus: #ffc42e;
+    --logo-plate: #ffc42e;
+    --logo-duck: #0f1f2b;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b151d;
+  --surface: #13212c;
+  --surface-2: #1c2e3b;
+  --surface-hover: #1a2b38;
+  --line: #26394a;
+  --field: #3a5062;
+  --ink: #e8eef1;
+  --ink2: #a3b4bf;
+  --ok: #6fd6a2;
+  --okbg: #10301f;
+  --warn: #ffd27a;
+  --warnbg: #3a2c08;
+  --err: #ffa198;
+  --errbg: #3b1512;
+  --info: #94cbf0;
+  --infobg: #0f2a3d;
+  --rail: #07111a;
+  --rail-hover: #16293a;
+  --focus: #ffc42e;
+  --logo-plate: #ffc42e;
+  --logo-duck: #0f1f2b;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink2);
+  --color-duck: var(--duck);
+  --color-duck-2: var(--duck2);
+  --color-duck-beak: var(--duck-beak);
+  --color-on-duck: var(--on-duck);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--okbg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warnbg);
+  --color-err: var(--err);
+  --color-err-bg: var(--errbg);
+  --color-info: var(--info);
+  --color-info-bg: var(--infobg);
+  --color-rail: var(--rail);
+  --color-rail-fg: var(--rail-fg);
+  --color-rail-hover: var(--rail-hover);
+
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+
+  --radius-control: 10px;
+  --radius-card: 14px;
+}
+
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
