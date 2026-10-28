@@ -78,6 +78,13 @@
       "when": 1793210580302,
       "tag": "0010_media_files",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793225946191,
+      "tag": "0011_plan_pro",
+      "breakpoints": true
     }
   ]
 }

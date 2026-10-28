@@ -5,6 +5,7 @@ import { Button } from "@duckzap/ui/components/button";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
+import { QrCode } from "@duckzap/ui/components/qr-code";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -230,12 +231,15 @@ function TwoFactorStep({
 
       {enrollment ? (
         <Alert tone="warn">
-          <strong>Primeiro acesso:</strong> o 2FA é obrigatório. No app autenticador, adicione uma conta
-          com esta chave (entrada manual) e digite o código gerado:{" "}
+          <strong>Primeiro acesso:</strong> o 2FA é obrigatório. No app autenticador, leia o QR Code abaixo
+          ou adicione uma conta com esta chave (entrada manual), e digite o código gerado:{" "}
           <code className="break-all font-bold">{enrollment.secret}</code>{" "}
           <a href={enrollment.otpauthUri} className="underline">
             abrir no app
           </a>
+          <div className="mt-3 flex justify-center">
+            <QrCode value={enrollment.otpauthUri} label="QR Code para o app autenticador" size={168} />
+          </div>
         </Alert>
       ) : null}
 
