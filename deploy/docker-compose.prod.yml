@@ -1,0 +1,408 @@
+# DuckChat em produção (VPS única: Docker + Caddy). INSTRUCTIONS.md §7 e docs/runbooks/deploy.md.
+#
+# Uso (na VPS, dentro de /opt/duckchat/deploy; o ./deploy.sh faz isto por você):
+#   cp .env.production.example .env   # preencha; ./check-env.sh recusa valores de exemplo
+#   IMAGE_TAG=<sha do commit> docker compose up -d --remove-orphans --wait
+#
+# Regras do desenho:
+#  - Só o Caddy publica portas (80/443). Postgres, Valkey, Evolution, API, web, admin e realtime ficam em redes internas.
+#  - Imagens NOSSAS vêm do GHCR, construídas no GitHub Actions (nunca build na VPS), fixadas pela tag do commit (IMAGE_TAG).
+#  - Configuração só por variáveis de ambiente (arquivo .env ao lado deste); nenhum segredo no repositório nem nas imagens.
+#  - Mídia vai para o Cloudflare R2 (MEDIA_STORAGE_*); não há MinIO nem disco local de arquivos de clientes.
+#  - Limites de memória pensados para a KVM 1 (4 GB): somam ~3,1 GB só se TUDO chegar ao teto ao mesmo tempo, o que não é o
+#    uso normal. Na KVM 2 sobra folga; ajuste os mem_limit abaixo ao subir de plano.
+
+name: duckchat
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# endurecimento dos nossos serviços Node: sem privilégios, raiz somente leitura (só /tmp grava), sem capacidades extras
+x-node-service: &node-service
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging: *logging
+  stop_grace_period: 20s
+
+networks:
+  # Caddy, apps e API. Tem saída para a internet (ACME, Anthropic, SMTP, R2, Meta).
+  frontend:
+  # Dados e Evolution. SEM saída para a internet (internal): Postgres e Valkey não falam com o mundo.
+  backend:
+    internal: true
+  # Só para quem precisa SAIR para a internet e também está no backend: Evolution (WhatsApp) e backup (R2).
+  outbound:
+
+volumes:
+  postgres-data:
+  valkey-data:
+  evolution-instances:
+  caddy-data:
+  caddy-config:
+
+services:
+  # ───────────────────────── borda ─────────────────────────
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    ports:
+      # TCP apenas: com a Cloudflare na frente, HTTP/3 até a origem não é necessário
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?defina APP_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?defina ADMIN_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL}
+      TLS_MODE: ${TLS_MODE:-origin}
+      ORIGIN_LOCK: ${ORIGIN_LOCK:-cloudflare}
+      MAX_BODY_SIZE: ${MAX_BODY_SIZE:-32MB}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      # certificado de origem da Cloudflare (TLS_MODE=origin): origin.pem e origin.key; a pasta não vai para o Git
+      - ./certs:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [frontend]
+    depends_on:
+      web: { condition: service_started }
+      admin: { condition: service_started }
+      api: { condition: service_started }
+      realtime: { condition: service_started }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:2019/config/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging: *logging
+    mem_limit: 96m
+
+  # ───────────────────────── aplicações ─────────────────────────
+  web:
+    <<: *node-service
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-web:${IMAGE_TAG:?defina IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=384
+      # chamadas servidor→API pela rede interna (não passam pela Cloudflare)
+      API_INTERNAL_URL: http://api:4000
+      WEB_URL: https://${APP_DOMAIN}
+      # Origem(ns) do armazenamento de mídia na CSP (connect-src/img-src/media-src): o navegador envia (PUT) e lê direto do R2 por URL
+      # assinada, sem passar pelo Caddy. Tem de ser a origem das URLs assinadas: o endereço PÚBLICO se houver, senão o do endpoint.
+      # Lida a cada requisição (sem rebuild). Vazio = mídia desligada.
+      MEDIA_STORAGE_PUBLIC_ENDPOINT: ${MEDIA_STORAGE_PUBLIC_ENDPOINT:-${MEDIA_STORAGE_ENDPOINT:-}}
+    networks: [frontend]
+    depends_on:
+      api: { condition: service_healthy }
+    mem_limit: 512m
+
+  admin:
+    <<: *node-service
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-admin:${IMAGE_TAG:?defina IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      API_INTERNAL_URL: http://api:4000
+      ADMIN_URL: https://${ADMIN_DOMAIN}
+    networks: [frontend]
+    depends_on:
+      api: { condition: service_healthy }
+    mem_limit: 256m
+
+  api:
+    <<: *node-service
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-api:${IMAGE_TAG:?defina IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      NODE_OPTIONS: --max-old-space-size=384
+      DATABASE_URL: postgres://duckzap_app:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD}@postgres:5432/duckzap
+      ADMIN_DATABASE_URL: postgres://duckzap_admin:${ADMIN_DB_PASSWORD:?defina ADMIN_DB_PASSWORD}@postgres:5432/duckzap
+      REDIS_URL: redis://:${VALKEY_PASSWORD:?defina VALKEY_PASSWORD}@valkey:6379
+      # origens públicas (https). O navegador chega na API por https://APP_DOMAIN/api (o Caddy tira o /api).
+      # Esta é a "URL base do Better Auth": o código usa PUBLIC_API_URL (não existe BETTER_AUTH_URL).
+      PUBLIC_API_URL: https://${APP_DOMAIN}/api
+      WEB_URL: https://${APP_DOMAIN}
+      WEB_ORIGINS: https://${APP_DOMAIN}
+      ADMIN_ORIGINS: https://${ADMIN_DOMAIN}
+      # atrás do Caddy (que reescreve X-Forwarded-For com o IP real): a API pode confiar no cabeçalho
+      TRUST_PROXY: "true"
+      ADMIN_TRUST_PROXY: "true"
+      REQUIRE_2FA_FOR_ADMINS: ${REQUIRE_2FA_FOR_ADMINS:-true}
+      ADMIN_REQUIRE_ACTIVATION_CODE: ${ADMIN_REQUIRE_ACTIVATION_CODE:-true}
+      # sem mocks, sem Mailpit, sem OpenAPI público
+      OPENAPI_PUBLIC: "false"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?defina BETTER_AUTH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?defina ENCRYPTION_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:?defina LLM_PROVIDER}
+      LLM_API_KEY: ${LLM_API_KEY:?defina LLM_API_KEY}
+      SMTP_URL: ${SMTP_URL:?defina SMTP_URL}
+      MAIL_FROM: ${MAIL_FROM:?defina MAIL_FROM}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:?defina SUPPORT_EMAIL}
+      # WhatsApp por QR: a API fala com a Evolution e a Evolution chama o webhook da API, ambos pela rede interna
+      EVOLUTION_URL: http://evolution:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+      EVOLUTION_WEBHOOK_BASE_URL: http://api:4000
+      # as campanhas rodam dentro da API (apps/worker ainda não existe); ver CAMPAIGNS_SCHEDULER no .env.production.example
+      CAMPAIGNS_SCHEDULER: ${CAMPAIGNS_SCHEDULER:-inline}
+      # ── Opcionais: sem valor (null) o Compose só repassa a variável se ela estiver preenchida no .env; vazia ou ausente
+      # não chega ao contêiner e vale o padrão do código. ──
+      ENCRYPTION_KEYS:
+      LLM_MODEL_SMART:
+      LLM_MODEL_FAST:
+      LLM_MODEL_BEST:
+      LLM_EFFORT_FAST:
+      LLM_EFFORT_SMART:
+      LLM_EFFORT_BEST:
+      LLM_TIMEOUT_MS:
+      LLM_FALLBACK_PROVIDER:
+      LLM_FALLBACK_API_KEY:
+      LLM_FALLBACK_MODEL_FAST:
+      LLM_FALLBACK_MODEL_SMART:
+      LLM_FALLBACK_MODEL_BEST:
+      META_APP_SECRET:
+      META_GRAPH_URL:
+      PUBLIC_WEBHOOK_BASE_URL:
+      ADMIN_IP_ALLOWLIST:
+      MEDIA_STORAGE_ENDPOINT:
+      MEDIA_STORAGE_PUBLIC_ENDPOINT:
+      MEDIA_STORAGE_REGION:
+      MEDIA_STORAGE_BUCKET:
+      MEDIA_STORAGE_ACCESS_KEY_ID:
+      MEDIA_STORAGE_SECRET_ACCESS_KEY:
+      MEDIA_STORAGE_FORCE_PATH_STYLE:
+      MEDIA_SEND_MODE:
+      AGENTS_SIMULATOR_PER_MINUTE:
+      AGENTS_GENERATOR_PER_MINUTE:
+      AGENTS_URL_ALLOWLIST:
+      AGENTS_CHUNK_CHARS:
+      CONVERSATIONS_BURST_WINDOW_MS:
+      CONVERSATIONS_BURST_MAX_WAIT_MS:
+      CONVERSATIONS_AI_TURNS_PER_MINUTE:
+      CONVERSATIONS_SUGGESTIONS_PER_MINUTE:
+      CONVERSATIONS_SWEEP_INTERVAL_MS:
+      CONVERSATIONS_REOPEN_WINDOW_DAYS:
+      CAMPAIGNS_SWEEP_SECONDS:
+      CAMPAIGNS_VARIATIONS_PER_MINUTE:
+      CHANNELS_QR_TTL_SECONDS:
+      CHANNELS_SEND_BURST_OFFICIAL:
+      CHANNELS_SEND_BURST_QR:
+      CHANNELS_SEND_PER_SECOND_OFFICIAL:
+      CHANNELS_SEND_PER_SECOND_QR:
+      CHANNELS_WEBHOOK_BURST:
+      CHANNELS_WEBHOOK_PER_SECOND:
+      PRESENCE_ENABLED:
+      PRESENCE_WEBHOOK_SYNC:
+      BACKGROUND_JOBS:
+      INBOUND_REPROCESS_SECONDS:
+      INBOUND_PURGE_HOURS:
+      INBOUND_RETENTION_DAYS:
+      SUSPENSION_SWEEP_MINUTES:
+    networks: [frontend, backend]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    mem_limit: 512m
+
+  realtime:
+    <<: *node-service
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-realtime:${IMAGE_TAG:?defina IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=96
+      REALTIME_PORT: "4001"
+      REALTIME_HOST: 0.0.0.0
+      REDIS_URL: redis://:${VALKEY_PASSWORD:?defina VALKEY_PASSWORD}@valkey:6379
+      API_INTERNAL_URL: http://api:4000
+      WEB_ORIGINS: https://${APP_DOMAIN}
+      # 4001 só é alcançável pelo Caddy (rede interna, sem ports): o X-Forwarded-For que ele reescreve é confiável
+      REALTIME_TRUST_PROXY: "true"
+    networks: [frontend, backend]
+    depends_on:
+      valkey: { condition: service_healthy }
+    mem_limit: 160m
+
+  # Serviço de uso único: aplica as migrations e (re)cria os papéis do banco antes da API subir. Idempotente.
+  # Usa a imagem da API (leva db/scripts/migrate.js e setup-roles.js). Roda com o DONO do banco, que só ele conhece.
+  # Ordem: papéis -> migrations -> papéis. As migrations 0002+ fazem GRANT para duckzap_app, que PRECISA existir antes
+  # (num banco vazio o migrate falha sem isto); depois do migrate, os papéis recebem os grants das tabelas novas.
+  migrate:
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-api:${IMAGE_TAG:?defina IMAGE_TAG}
+    restart: "no"
+    command: ["sh", "-c", "node db/scripts/setup-roles.js && node db/scripts/migrate.js && node db/scripts/setup-roles.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_ADMIN_URL: postgres://duckzap:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@postgres:5432/duckzap
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?defina APP_DB_PASSWORD}
+      ADMIN_DB_PASSWORD: ${ADMIN_DB_PASSWORD:?defina ADMIN_DB_PASSWORD}
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *logging
+    networks: [backend]
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 256m
+
+  # ───────────────────────── dados ─────────────────────────
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    restart: unless-stopped
+    # ajuste para ~640 MB de teto (KVM 1); na KVM 2 pode dobrar shared_buffers e effective_cache_size
+    command:
+      - postgres
+      - -c
+      - shared_buffers=160MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=48MB
+      - -c
+      - max_connections=100
+      - -c
+      - wal_compression=on
+      - -c
+      - log_min_duration_statement=1000
+    environment:
+      POSTGRES_USER: duckzap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: duckzap
+      # usado só pelo script de init (1ª criação do volume), que cria o banco e o usuário da Evolution
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD:?defina EVOLUTION_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # o deploy.sh envia esta pasta junto (../docker/postgres/init); o init só roda quando o volume está vazio
+      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duckzap -d duckzap"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
+    shm_size: 128m
+    stop_grace_period: 60s
+    mem_limit: 640m
+
+  valkey:
+    image: valkey/valkey:9.0.6-alpine@sha256:187679e3bd4036959631e3f03983ab2ba503ab21e6fd0454d508e909db2ee989
+    restart: unless-stopped
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${VALKEY_PASSWORD:?defina VALKEY_PASSWORD}
+      - --maxmemory
+      - 128mb
+      # fila e Pub/Sub não podem perder dado por falta de espaço: erro em vez de despejar chaves
+      - --maxmemory-policy
+      - noeviction
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+    volumes:
+      - valkey-data:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
+    mem_limit: 192m
+
+  # Provedor de WhatsApp por QR (§3.6). Banco próprio no mesmo Postgres e prefixo próprio no Valkey (§7.1.1).
+  # Sem porta publicada: só a API o alcança. Para ver o painel dele, use túnel SSH (docs/runbooks/deploy.md).
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7@sha256:1bd8afc4a6cf48822e6cf02469aeae7bd35a12a6b616eacd1291926307f4d339
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    environment:
+      SERVER_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:?defina EVOLUTION_DB_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: duckchat_prod
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://:${VALKEY_PASSWORD}@valkey:6379/1
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
+      LOG_LEVEL: ERROR,WARN
+      DEL_INSTANCE: "false"
+    volumes:
+      - evolution-instances:/evolution/instances
+    networks: [backend, outbound]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
+    mem_limit: 640m
+
+  # ───────────────────────── backup ─────────────────────────
+  # pg_dump diário, cifrado com age (só a chave PÚBLICA fica aqui) e enviado ao Cloudflare R2 (rclone). Sem cron do sistema:
+  # o próprio contêiner dorme até a hora marcada. Imagem construída pelo CI (deploy/backup.Dockerfile).
+  backup:
+    image: ${IMAGE_REGISTRY:?defina IMAGE_REGISTRY}/duckchat-backup:${IMAGE_TAG:?defina IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      PGHOST: postgres
+      PGUSER: duckzap
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_DATABASES: ${BACKUP_DATABASES:-duckzap evolution}
+      BACKUP_HOUR: ${BACKUP_HOUR:-03:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?defina BACKUP_AGE_RECIPIENT (chave pública age)}
+      BACKUP_R2_ENDPOINT: ${BACKUP_R2_ENDPOINT:?defina BACKUP_R2_ENDPOINT}
+      BACKUP_R2_BUCKET: ${BACKUP_R2_BUCKET:?defina BACKUP_R2_BUCKET}
+      BACKUP_R2_ACCESS_KEY_ID: ${BACKUP_R2_ACCESS_KEY_ID:?defina BACKUP_R2_ACCESS_KEY_ID}
+      BACKUP_R2_SECRET_ACCESS_KEY: ${BACKUP_R2_SECRET_ACCESS_KEY:?defina BACKUP_R2_SECRET_ACCESS_KEY}
+      BACKUP_HEARTBEAT_URL: ${BACKUP_HEARTBEAT_URL:-}
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *logging
+    networks: [backend, outbound]
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 192m

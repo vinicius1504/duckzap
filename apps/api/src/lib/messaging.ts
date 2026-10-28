@@ -19,6 +19,10 @@ export type ProviderCapabilities = {
   window24h: boolean;
   /** Presença "digitando…": `sendPresence`, `OutboundMessage.typingMs` e eventos `presence` de entrada. */
   presence: boolean;
+  /** Aceita mídia como base64 no envio (`OutboundMessage.mediaBase64`), sem precisar de URL pública. Padrão: não. */
+  mediaBase64?: boolean;
+  /** Sabe baixar a mídia recebida (`downloadMedia`). Padrão: não. */
+  downloadMedia?: boolean;
 };
 
 /** Teto (ms) de "digitando…" antes de entregar uma mensagem; vale para o schema, os adaptadores e os chamadores. */
@@ -37,6 +41,10 @@ export const outboundMessageSchema = z.object({
   kind: z.enum(["text", "image", "audio", "document", "template"]),
   text: z.string().max(4096).optional(),
   mediaUrl: z.url().optional(),
+  /** Alternativa à URL (só provedores com `capabilities().mediaBase64`): conteúdo do arquivo em base64 PURO (sem `data:`). */
+  mediaBase64: z.string().max(30_000_000).optional(),
+  /** Tipo do arquivo (mídia por base64). */
+  mimeType: z.string().max(120).optional(),
   /** Legenda/nome do arquivo (mídia). */
   filename: z.string().max(255).optional(),
   /** Só `kind: "template"` (API oficial: único formato permitido fora da janela de 24 h). */
@@ -132,6 +140,9 @@ export class ProviderError extends Error {
   }
 }
 
+/** Arquivo baixado do provedor (mídia recebida). Os bytes ainda NÃO foram conferidos: quem chama valida tipo e tamanho. */
+export type DownloadedMedia = { bytes: Buffer; mimeType: string | undefined; fileName: string | undefined };
+
 /** Credenciais do canal já decifradas (a cifra vive no módulo Canais). */
 export type ChannelCredentials = Record<string, string>;
 export type ChannelRef = {
@@ -193,4 +204,9 @@ export interface MessagingProvider {
    * Falha de rede/recusa lança `ProviderError`; nomes e números são dado pessoal e nunca vão para log.
    */
   listContacts?(channel: ChannelRef): Promise<ProviderContact[]>;
+  /**
+   * Opcional (capacidade `downloadMedia`): baixa a mídia de uma mensagem RECEBIDA. `externalId` é o `mediaRef` do evento.
+   * Passa de `maxBytes` ou falha de rede/recusa: lança `ProviderError`. O conteúdo é do cliente e nunca vai para log.
+   */
+  downloadMedia?(channel: ChannelRef, input: { externalId: string; maxBytes: number; timeoutMs?: number }): Promise<DownloadedMedia>;
 }

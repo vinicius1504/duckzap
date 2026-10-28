@@ -7,6 +7,7 @@ import { loadEnv, withoutEmpty } from "./env";
 import { startBackgroundJobs, stopBackgroundJobs } from "./jobs";
 import { createMailer } from "./lib/mailer";
 import { closeRealtime, initRealtime } from "./lib/realtime";
+import { getMediaRuntime } from "./modules/media/runtime";
 
 /** Tempo máximo para encerrar com calma (requisições em andamento, jobs, pool) antes de forçar a saída. */
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -48,6 +49,9 @@ server.on("error", (error: NodeJS.ErrnoException) => {
       : `Falha ao abrir a porta ${env.PORT}: ${error.message}`,
   );
 });
+
+// mídia das conversas: sem MEDIA_STORAGE_* o envio e o recebimento de arquivos ficam desligados (o resto segue normal)
+console.log(getMediaRuntime().storage ? `[media] armazenamento de arquivos ligado (envio ao WhatsApp: ${getMediaRuntime().sendMode})` : "[media] armazenamento de arquivos desligado (defina MEDIA_STORAGE_*)");
 
 // jobs em segundo plano (varredura de campanhas, IA vencida, eventos de entrada); param no shutdown
 startBackgroundJobs({ db, llm });

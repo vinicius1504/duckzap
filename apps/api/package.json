@@ -15,6 +15,7 @@
     "test": "vitest run",
     "llm:smoke": "tsx --env-file-if-exists=.env scripts/llm-smoke.ts",
     "whatsapp:smoke": "tsx --env-file-if-exists=.env scripts/whatsapp-contacts-smoke.ts",
+    "media:orphans": "tsx --env-file-if-exists=.env scripts/media-orphans.ts",
     "eval:comprehension": "tsx --env-file-if-exists=.env scripts/eval-comprehension.ts",
     "eval:scheduling": "tsx --env-file-if-exists=.env scripts/eval-scheduling.ts",
     "generate:sample": "tsx --env-file-if-exists=.env scripts/generate-agent-sample.ts"

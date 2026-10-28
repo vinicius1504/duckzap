@@ -4,9 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # o deploy.yml reaproveita esta CI como portão antes de construir as imagens
+  workflow_call:
 
+# github.workflow entra no grupo: quando chamada pelo deploy.yml, esta CI não cancela (nem é cancelada por) a da própria branch
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -28,6 +31,15 @@ jobs:
       - run: pnpm typecheck
       # testes unitários (sem Postgres): os de integração são ignorados quando as variáveis *_INTEGRATION não estão ligadas
       - run: pnpm test:unit
+
+  # Arquivos de deploy: o compose de produção resolve, o Caddyfile é válido e os scripts não têm erro de sintaxe.
+  # Usa valores falsos gerados na hora (deploy/validate.sh); não toca em servidor nenhum.
+  deploy-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash deploy/validate.sh
 
   # Integração com Postgres de verdade (RLS, constraints). Banco descartável do próprio job; nunca toca em outro.
   integration:

@@ -11,6 +11,8 @@ import { interpretReminderReply } from "../appointments/logic";
 import { isSendingPausedForOrg } from "../channels/sending";
 import { findChannel, type ChannelRow } from "../channels/repo";
 import { effectiveConsentStatus } from "../contacts/consent";
+import type { InboundMediaPort, PreparedInboundMedia } from "../media/inbound";
+import { linkToMessage } from "../media/service";
 import { newId, type ServiceCtx } from "../contacts/result";
 import { registerConsentReply, registerOptOut, touchContactInteraction, upsertContactByPhone, ensureDefaultTags } from "../contacts/service";
 import { defaultBusinessHours } from "../settings/defaults";
@@ -38,6 +40,8 @@ export type InboundDeps = {
   config: ConversationsConfig;
   /** Agenda a resposta da IA depois da janela da rajada. Padrão: temporizador do processo; um worker/fila o substitui. */
   scheduleAiTurn(organizationId: string, conversationId: string, delayMs: number): void;
+  /** Baixa e guarda a mídia recebida (imagem/áudio/documento) antes de gravar a mensagem. Sem isto a mídia entra "indisponível". */
+  media?: InboundMediaPort;
   now(): Date;
   log: { warn(message: string, meta?: Record<string, unknown>): void };
 };
@@ -211,6 +215,28 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
   const { organizationId } = context;
   const now = deps.now();
 
+  // mídia recebida: baixa/guarda ANTES da transação da mensagem (o download é lento e não pode segurar o lock da conversa).
+  // Falha aqui nunca derruba a mensagem: ela entra com o texto/legenda e o anexo "indisponível".
+  const prepared: PreparedInboundMedia = deps.media ? await deps.media.prepare(deps.db, context, event) : { state: "none" };
+  const storedFile = prepared.state === "stored" ? prepared.file : null;
+
+  let outcome: MessageOutcome;
+  try {
+    outcome = await storeMessage(deps, context, event, prepared, now);
+  } catch (error) {
+    if (storedFile) await deps.media?.discard(deps.db, organizationId, storedFile);
+    throw error;
+  }
+  // a mensagem não foi gravada (repetida, contato inválido…): o arquivo recém-guardado não tem dono
+  if (storedFile && outcome.kind !== "stored") await deps.media?.discard(deps.db, organizationId, storedFile);
+
+  // depois do commit: o temporizador só dispara o que já está gravado (`ai_due_at` é a fonte da verdade; a varredura cobre quedas)
+  if (outcome.kind === "stored" && outcome.aiScheduled) deps.scheduleAiTurn(organizationId, outcome.conversationId, outcome.aiScheduled.delayMs);
+  return outcome;
+}
+
+async function storeMessage(deps: InboundDeps, context: InboundContext, event: Extract<InboundEvent, { type: "message" }>, prepared: PreparedInboundMedia, now: Date): Promise<MessageOutcome> {
+  const { organizationId } = context;
   const outcome = await withOrgRealtime(deps.db, organizationId, async (tx): Promise<MessageOutcome> => {
     const channel = await findChannel(tx, organizationId, context.channelId);
     if (!channel) return { kind: "ignored", reason: "no_channel" };
@@ -257,8 +283,16 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
     const { conv, created, reopened } = await findOrCreateConversation(tx, deps, organizationId, channel, contact.id, now);
 
     // 6. grava a mensagem (idempotente por canal+externalId)
-    const kind = event.kind === "other" ? "text" : event.kind;
-    const body = event.kind === "other" ? (text ?? "[tipo de mensagem não suportado]") : (text ?? "");
+    // arquivo de tipo não aceito (ou com conteúdo diferente do tipo): vira aviso em texto, sem guardar nada
+    const unsupportedFile = prepared.state === "unsupported";
+    const kind = event.kind === "other" || unsupportedFile ? "text" : event.kind;
+    const body = unsupportedFile
+      ? `${text ? `${text}
+` : ""}[arquivo não suportado]`
+      : event.kind === "other"
+        ? (text ?? "[tipo de mensagem não suportado]")
+        : (text ?? "");
+    const file = prepared.state === "stored" ? prepared.file : null;
     const createdAt = new Date(Math.min(new Date(event.at).getTime(), now.getTime()));
     const stored = await tx
       .insert(messages)
@@ -272,9 +306,17 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
         externalId: event.externalId,
         body,
         media:
-          event.kind === "text" || event.kind === "other"
+          event.kind === "text" || event.kind === "other" || unsupportedFile
             ? null
-            : { fileName: null, mimeType: MEDIA_MIME[event.kind] ?? "application/octet-stream", sizeBytes: null, durationSeconds: null, url: null, mediaRef: event.mediaRef ?? null },
+            : {
+                fileName: file?.fileName ?? null,
+                mimeType: file?.mimeType ?? MEDIA_MIME[event.kind] ?? "application/octet-stream",
+                sizeBytes: file?.sizeBytes ?? null,
+                durationSeconds: null,
+                url: null,
+                mediaId: file?.id ?? null,
+                mediaRef: event.mediaRef ?? null,
+              },
         senderKind: "contact",
         senderName: contact.name,
         createdAt,
@@ -284,6 +326,7 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
       .returning({ id: messages.id });
     const messageId = stored[0]?.id;
     if (!messageId) return { kind: "ignored", reason: "duplicate" };
+    if (file) await linkToMessage(tx, file.id, messageId);
 
     // 7. contabilidade da conversa
     const activeAgent = await loadActiveAgent(tx, organizationId, conv.agentId);
@@ -298,7 +341,7 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
       lastMessageAt: createdAt,
       lastMessagePreview: previewOf(body),
       lastMessageKind: lastMessageKindOf(kind),
-      lastMessageFileName: null,
+      lastMessageFileName: file?.fileName ?? null,
       lastMessageDurationSeconds: null,
       lastMessageDirection: "in",
       lastInboundAt: createdAt,
@@ -409,9 +452,6 @@ export async function handleMessage(deps: InboundDeps, context: InboundContext, 
     await tx.update(conversations).set({ aiDueAt: due.dueAt, aiBurstStartedAt: due.startedAt }).where(eq(conversations.id, conv.id));
     return { kind: "stored", conversationId: conv.id, messageId, optOut: false, consent: null, aiScheduled: { delayMs: Math.max(0, due.dueAt.getTime() - now.getTime()) } };
   });
-
-  // depois do commit: o temporizador só dispara o que já está gravado (`ai_due_at` é a fonte da verdade; a varredura cobre quedas)
-  if (outcome.kind === "stored" && outcome.aiScheduled) deps.scheduleAiTurn(organizationId, outcome.conversationId, outcome.aiScheduled.delayMs);
   return outcome;
 }
 

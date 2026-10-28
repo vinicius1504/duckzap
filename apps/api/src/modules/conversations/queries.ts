@@ -20,6 +20,7 @@ import { effectiveConsentStatus } from "../contacts/consent";
 import { ensureDefaultTags } from "../contacts/service";
 import { isGuid } from "../contacts/http";
 import { newId, type ServiceCtx } from "../contacts/result";
+import { signMessageMedia, type SignedMedia } from "../media/service";
 import { OPEN_STATUSES, isVisibleTo, lastMessageKindOf, likePattern, type Viewer } from "./logic";
 
 const { conversations, messages, contacts, contactTags, tags, channels, teams, teamMembers, agents, agentVersions, member, user, memberProfiles, quickReplies } = schema;
@@ -159,9 +160,14 @@ export const mediaSchema = z.object({
   sizeBytes: z.number().int().nullable().catch(null),
   durationSeconds: z.number().int().nullable().catch(null),
   url: z.string().nullable().catch(null),
+  mediaId: z.string().nullable().catch(null),
 });
 
-export function toMessage(row: MessageRow, contactName: string): Message {
+/**
+ * Linha → contrato. A URL do anexo NUNCA vem do JSON gravado (referência crua do provedor ou texto do cliente): só de `signed`,
+ * a URL assinada curta do arquivo guardado (`signMessageMedia`). Sem `signed` (sem armazenamento, arquivo apagado) é null.
+ */
+export function toMessage(row: MessageRow, contactName: string, signed?: SignedMedia): Message {
   const kind = z.enum(["text", "audio", "image", "document", "note", "event"]).catch("text").parse(row.kind);
   const direction = row.direction === "out" ? "out" : row.direction === "in" ? "in" : "internal";
   const media = row.media ? mediaSchema.safeParse(row.media) : null;
@@ -173,8 +179,6 @@ export function toMessage(row: MessageRow, contactName: string): Message {
         : row.senderKind === "agent"
           ? { kind: "agent" as const, id: row.senderId, name: row.senderName }
           : { kind: "system" as const, id: null, name: row.senderName || "Duckzap" };
-  // só devolvemos URL de arquivo que o próprio produto guardou (https); referência crua do provedor nunca sai
-  const safeUrl = media?.success && media.data.url && /^https:\/\//i.test(media.data.url) ? media.data.url : null;
   return {
     id: row.id,
     conversationId: row.conversationId,
@@ -182,7 +186,7 @@ export function toMessage(row: MessageRow, contactName: string): Message {
     direction,
     author,
     body: row.body,
-    attachment: media?.success ? { ...media.data, url: safeUrl } : null,
+    attachment: media?.success ? { ...media.data, url: signed?.url ?? null, mediaId: signed?.mediaId ?? media.data.mediaId } : null,
     status: direction === "out" ? messageStatusSchema.catch("sent").parse(row.status) : null,
     failureReason: row.error,
     createdAt: iso(row.createdAt),
@@ -363,6 +367,12 @@ async function contactProfile(tx: Transaction, ctx: ServiceCtx, contact: Contact
   };
 }
 
+/** Mensagens → contrato, com as URLs assinadas dos anexos (uma consulta só). Chame apenas depois de checar a visibilidade da conversa. */
+export async function toMessages(tx: Transaction, organizationId: string, rows: MessageRow[], contactName: string): Promise<Message[]> {
+  const signed = await signMessageMedia(tx, organizationId, rows.filter((r) => r.media).map((r) => r.id));
+  return rows.map((r) => toMessage(r, contactName, signed.get(r.id)));
+}
+
 export async function getConversationDetail(tx: Transaction, ctx: ConvCtx, id: string, now = new Date()): Promise<ConversationDetail | null> {
   const row = await findVisibleConversation(tx, ctx, id);
   if (!row) return null;
@@ -378,7 +388,7 @@ export async function getConversationDetail(tx: Transaction, ctx: ConvCtx, id: s
     .limit(MAX_THREAD_MESSAGES);
   return {
     conversation: summary,
-    messages: thread.reverse().map((m) => toMessage(m, contact.name)),
+    messages: await toMessages(tx, ctx.organizationId, thread.reverse(), contact.name),
     contact: await contactProfile(tx, ctx, contact, now),
   };
 }

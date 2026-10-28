@@ -1,0 +1,149 @@
+name: Deploy
+
+# Constrói as 5 imagens (api, web, admin, realtime, backup), publica no GHCR com a tag do commit e, SÓ DEPOIS de uma
+# aprovação humana (environment "production" com revisores obrigatórios), faz o deploy na VPS por SSH.
+# Nada é construído na VPS: ela só baixa as imagens. Passo a passo e como configurar: docs/runbooks/deploy.md.
+#
+# Segredos (Settings > Environments > production > Secrets) — nenhum é impresso no log:
+#   VPS_HOST             endereço da VPS (IP ou nome)
+#   VPS_USER             usuário de deploy na VPS (não-root; do grupo docker)
+#   VPS_SSH_KEY          chave PRIVADA SSH exclusiva do deploy (ed25519), sem passphrase
+#   VPS_SSH_KNOWN_HOSTS  linha(s) da chave pública do servidor (ssh-keyscan -t ed25519 <host>, conferida por você)
+#   VPS_SSH_PORT         (opcional) porta SSH, se não for 22
+# Variáveis (Settings > Environments > production > Variables):
+#   APP_DOMAIN                  domínio do app (para a verificação pública depois do deploy)
+#   NEXT_PUBLIC_REALTIME_URL    (opcional) só se o realtime ficar em outro host; vazio = wss://<mesmo host>/ws
+# O GITHUB_TOKEN (automático) publica no GHCR e, por alguns minutos, deixa a VPS baixar as imagens; nenhum PAT é guardado.
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Fazer o deploy na VPS depois de publicar as imagens (desmarque para só construir)"
+        type: boolean
+        default: true
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# um deploy por vez; um novo não interrompe um que já está rodando
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # portão: typecheck, testes e validação dos arquivos de deploy (o mesmo ci.yml)
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: api, file: apps/api/Dockerfile }
+          - { name: web, file: apps/web/Dockerfile }
+          - { name: admin, file: apps/admin/Dockerfile }
+          - { name: realtime, file: apps/realtime/Dockerfile }
+          - { name: backup, file: deploy/backup.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Nome do registro em minúsculas
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          tags: ghcr.io/${{ env.OWNER_LC }}/duckchat-${{ matrix.name }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          # valores públicos de build do web (ver apps/web/Dockerfile); segredo NUNCA entra aqui
+          build-args: |
+            ${{ matrix.name == 'web' && format('NEXT_PUBLIC_REALTIME_URL={0}', vars.NEXT_PUBLIC_REALTIME_URL) || '' }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    # só roda no disparo manual com "deploy" marcado ou em tag v*
+    if: ${{ github.event_name == 'push' || inputs.deploy }}
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # APROVAÇÃO MANUAL: configure este environment com "Required reviewers" (Settings > Environments > production).
+    # O job fica parado até um revisor aprovar.
+    environment:
+      name: production
+      url: https://${{ vars.APP_DOMAIN }}
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar SSH (chave do servidor FIXADA, sem ssh-keyscan)
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            Port ${SSH_PORT}
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ServerAliveInterval 30
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Enviar os arquivos de deploy (compose, Caddyfile, scripts)
+        run: |
+          tar czf - deploy docker/postgres/init | ssh vps 'mkdir -p /opt/duckchat && tar xzf - -C /opt/duckchat'
+
+      - name: Login no GHCR na VPS (token temporário do job)
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | ssh vps "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+
+      - name: Deploy (pull, migrations, up, espera ficar saudável)
+        run: |
+          ssh vps "cd /opt/duckchat/deploy && ./deploy.sh up ${{ github.sha }}"
+
+      - name: Verificação pública (passando pela Cloudflare)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS -m 20 -o /dev/null "https://${{ vars.APP_DOMAIN }}/entrar"; then echo "app respondeu"; exit 0; fi
+            echo "tentativa $i falhou; aguardando"; sleep 10
+          done
+          echo "::error::O app não respondeu em https://${{ vars.APP_DOMAIN }}/entrar. Veja docs/runbooks/deploy.md (rollback)."
+          exit 1
+
+      - name: Logout do GHCR na VPS
+        if: always()
+        run: ssh vps "docker logout ghcr.io" || true

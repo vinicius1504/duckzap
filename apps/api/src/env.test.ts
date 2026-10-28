@@ -80,3 +80,42 @@ describe("parseEnv — variáveis vazias do .env.example", () => {
     if (result.ok) expect(result.env.PORT).toBe(4000);
   });
 });
+
+describe("parseEnv — armazenamento de mídia (MEDIA_STORAGE_*)", () => {
+  const media = {
+    MEDIA_STORAGE_ENDPOINT: "http://localhost:9002",
+    MEDIA_STORAGE_BUCKET: "duckzap-media",
+    MEDIA_STORAGE_ACCESS_KEY_ID: "chave",
+    MEDIA_STORAGE_SECRET_ACCESS_KEY: "segredo",
+  };
+
+  it("sem nenhuma variável o recurso fica desligado, sem erro (aviso só em produção)", () => {
+    const dev = parseEnv(base());
+    expect(dev.ok && dev.warnings.some((w) => w.includes("MEDIA_STORAGE"))).toBe(false);
+    const prod = parseEnv({ ...base(), NODE_ENV: "production", WEB_URL: "https://app.example.com", SUPPORT_EMAIL: "a@b.com" });
+    expect(prod.ok && prod.warnings.some((w) => w.includes("MEDIA_STORAGE_* não definido"))).toBe(true);
+  });
+
+  it("completa, com padrões (região auto, modo auto)", () => {
+    const result = parseEnv({ ...base(), ...media });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.env.MEDIA_STORAGE_REGION).toBe("auto");
+      expect(result.env.MEDIA_SEND_MODE).toBe("auto");
+    }
+  });
+
+  it("incompleta: aviso em dev, erro em produção (nomeia o que falta, sem imprimir valores)", () => {
+    const { MEDIA_STORAGE_SECRET_ACCESS_KEY: _s, ...partial } = media;
+    const dev = parseEnv({ ...base(), ...partial });
+    expect(dev.ok && dev.warnings.join(" ")).toMatch(/faltam MEDIA_STORAGE_SECRET_ACCESS_KEY/);
+    const prod = parseEnv({ ...base(), ...partial, NODE_ENV: "production" });
+    expect(prod.ok).toBe(false);
+    if (!prod.ok) expect(prod.errors.join(" ")).not.toContain("chave");
+  });
+
+  it("valores inválidos derrubam o boot com mensagem clara", () => {
+    expect(parseEnv({ ...base(), ...media, MEDIA_SEND_MODE: "nuvem" }).ok).toBe(false);
+    expect(parseEnv({ ...base(), ...media, MEDIA_STORAGE_ENDPOINT: "ftp://x" }).ok).toBe(false);
+  });
+});

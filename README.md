@@ -42,7 +42,7 @@ docker compose -f docker-compose.local.yml up -d
 cp apps/api/.env.example apps/api/.env     # preencha BETTER_AUTH_SECRET, ENCRYPTION_KEY, senhas do banco
 cp packages/db/.env.example packages/db/.env   # DATABASE_ADMIN_URL, APP_DB_PASSWORD, ADMIN_DB_PASSWORD, ADMIN_SEED_PASSWORD
 cp apps/web/.env.example apps/web/.env.local
-pnpm --filter @duckzap/db db:setup         # migrations + papéis do banco + seed (contas de teste)
+pnpm --filter @duckzap/db db:setup         # papéis do banco, migrations, papéis de novo (tabelas novas) + seed (contas de teste)
 pnpm --filter @duckzap/db db:seed-admin    # (opcional) admins do painel; ver docs/runbooks/primeiro-admin.md
 pnpm dev                                   # web :3000, admin :3002, API :4000
 ```

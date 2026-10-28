@@ -19,7 +19,10 @@ import { createAppointment } from "../appointments/service";
 import { zonedDay, zonedTime } from "../appointments/time";
 import { checkCopilotAllowed } from "../agents/plan";
 import { addEvent, addNote, auditState, deliverOutbound, type Media } from "./outbound";
-import { findVisibleConversation, loadTags, mediaSchema, toMessage, canAccessContact, type ConvCtx } from "./queries";
+import { MEDIA_UNAVAILABLE } from "../media/logic";
+import { getMediaRuntime } from "../media/runtime";
+import { claimForSend, linkToMessage } from "../media/service";
+import { findVisibleConversation, loadTags, mediaSchema, toMessage, toMessages, canAccessContact, type ConvCtx } from "./queries";
 
 const { conversations, messages, contacts, contactTags, tags, member, memberProfiles, teams, teamMembers, user } = schema;
 
@@ -286,7 +289,7 @@ export async function sendMessage(
   ctx: ConvCtx,
   input: SendMessageInput,
   now = new Date(),
-): Promise<Result<SendOutcome, NotFound | "resolved" | "sending_paused">> {
+): Promise<Result<SendOutcome, NotFound | "resolved" | "sending_paused" | "media_unavailable" | "invalid_media">> {
   const conv = await findVisibleConversation(tx, ctx, input.conversationId, { lock: true });
   if (!conv) return NOT_FOUND();
   const [contact] = await tx.select({ name: contacts.name, phone: contacts.phone, instagram: contacts.instagram }).from(contacts).where(eq(contacts.id, conv.contactId)).limit(1);
@@ -305,6 +308,24 @@ export async function sendMessage(
   // plano expirado: leitura liberada, envio barrado AQUI (a tela só reflete)
   if (ctx.sendingPaused) return fail("sending_paused", "Seu plano expirou. Você ainda vê as conversas, mas o envio fica pausado até renovar.");
   if (conv.status === "resolved") return fail("resolved", "Reabra a conversa para responder.");
+
+  // mídia: o arquivo vem SÓ do `mediaId` (upload conferido da MESMA empresa, do mesmo tipo e ainda não usado); qualquer URL ou
+  // metadado vindo do cliente é ignorado. Validado ANTES de assumir a conversa, para recusa não deixar efeito colateral.
+  let attachment: Media | null = null;
+  let claimedMediaId: string | null = null;
+  if (input.kind !== "text") {
+    if (!getMediaRuntime().storage) return fail("media_unavailable", MEDIA_UNAVAILABLE);
+    if (input.clientId) {
+      // o navegador repetiu o pedido (rede instável): devolve a mensagem que já foi criada, sem exigir o arquivo de novo
+      const [dup] = await tx.select().from(messages).where(and(eq(messages.conversationId, conv.id), eq(messages.clientId, input.clientId))).limit(1);
+      if (dup) return ok({ message: (await toMessages(tx, ctx.organizationId, [dup], contact.name))[0] as Message, reconnect: false });
+    }
+    const claimed = await claimForSend(tx, ctx.organizationId, ctx.userId, input.attachment?.mediaId, input.kind);
+    if (!claimed.ok) return claimed;
+    const file = claimed.data;
+    claimedMediaId = file.id;
+    attachment = { fileName: file.fileName, mimeType: file.mimeType, sizeBytes: file.sizeBytes, durationSeconds: file.durationSeconds, url: null, mediaId: file.id };
+  }
 
   // responder assume o atendimento: sem responsável a pessoa vira o responsável e, se a IA ainda estava no comando (modo IA,
   // IA ativa ou transferência pendente), o modo passa a "Só humano" para a tela e a IA refletirem quem atende de verdade
@@ -330,9 +351,6 @@ export async function sendMessage(
   }
 
   const channel = await findSendChannel(tx, ctx.organizationId, conv.channelId);
-  const attachment: Media | null = input.attachment
-    ? { fileName: input.attachment.fileName, mimeType: input.attachment.mimeType, sizeBytes: input.attachment.sizeBytes, durationSeconds: input.attachment.durationSeconds, url: input.attachment.url }
-    : null;
   const delivered = await deliverOutbound(tx, {
     conv,
     channelName: channel?.name ?? "do cliente",
@@ -346,7 +364,8 @@ export async function sendMessage(
     countsAsReply: true,
     now,
   });
-  return ok({ message: toMessage(delivered.message, contact.name), reconnect: delivered.reconnect });
+  if (claimedMediaId) await linkToMessage(tx, claimedMediaId, delivered.message.id);
+  return ok({ message: (await toMessages(tx, ctx.organizationId, [delivered.message], contact.name))[0] as Message, reconnect: delivered.reconnect });
 }
 
 export async function resendMessage(
@@ -385,7 +404,7 @@ export async function resendMessage(
     existing: row,
     now,
   });
-  if (result.ok) return ok(toMessage(result.message, contact.name));
+  if (result.ok) return ok((await toMessages(tx, ctx.organizationId, [result.message], contact.name))[0] as Message);
   return fail(result.reconnect ? "channel_down" : "send_failed", result.reason ?? "Não foi possível reenviar.");
 }
 

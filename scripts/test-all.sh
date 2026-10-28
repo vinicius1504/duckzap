@@ -12,6 +12,8 @@
 #   ONLY_PACKAGE   roda só um pacote (db, api ou ai)
 #   UNIT_ONLY=1    só os testes sem banco (é o que a CI faz sem serviço Postgres)
 #   PREPARE=1      prepara o banco antes (equivale a `pnpm test:db:prepare`)
+#   MEDIA_MINIO_INTEGRATION=1   liga também os testes de mídia contra um MinIO REAL (docker compose -f docker-compose.local.yml up -d minio);
+#                  lê MEDIA_STORAGE_* de apps/api/.env se não vierem do ambiente e RECUSA endpoint que não seja localhost/minio
 #
 # Argumentos extras vão ao vitest de cada pacote (ex.: `pnpm test contacts` filtra por nome de arquivo;
 # pacote sem arquivo que case encerra com erro "No test files found", o que é esperado ao filtrar).
@@ -75,7 +77,13 @@ if [[ "${UNIT_ONLY:-0}" != "1" ]]; then
 
   export CLIENTES_INTEGRATION=1 AGENDA_INTEGRATION=1 AGENDA_EXCLUSION_CONSTRAINT=1 ADMIN_INTEGRATION=1 \
          CONVERSATIONS_INTEGRATION=1 NOTIFICATIONS_INTEGRATION=1 CAMPAIGNS_ALLOW_DEV_DB=1 CAMPAIGNS_INTEGRATION=1 CHANNELS_INTEGRATION=1 \
-         AGENTS_INTEGRATION=1 SETTINGS_INTEGRATION=1 TEAM_INTEGRATION=1
+         AGENTS_INTEGRATION=1 SETTINGS_INTEGRATION=1 TEAM_INTEGRATION=1 MEDIA_INTEGRATION=1
+  if [[ "${MEDIA_MINIO_INTEGRATION:-0}" == "1" ]]; then
+    export MEDIA_MINIO_INTEGRATION=1
+    for key in MEDIA_STORAGE_ENDPOINT MEDIA_STORAGE_BUCKET MEDIA_STORAGE_ACCESS_KEY_ID MEDIA_STORAGE_SECRET_ACCESS_KEY MEDIA_STORAGE_FORCE_PATH_STYLE MEDIA_STORAGE_REGION; do
+      [[ -n "${!key:-}" ]] || { value="$(env_value apps/api/.env "$key")"; [[ -z "$value" ]] || export "$key=$value"; }
+    done
+  fi
   echo "Banco de teste (descartável): ${test_db}"
 else
   echo "UNIT_ONLY=1: sem banco."

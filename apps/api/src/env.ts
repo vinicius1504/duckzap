@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { loadMasterKeys } from "./lib/crypto";
+import { missingStorageVars, storageEnvSchema } from "./lib/storage";
 
 const LLM_PROVIDERS = ["anthropic", "openai", "gemini", "groq", "fake"] as const;
 const llmProvider = (name: string) =>
@@ -53,14 +54,18 @@ const envSchema = z.object({
   EVOLUTION_API_KEY: z.string().optional(),
   /** /openapi.json: padrão só com sessão; "true" libera para todos (só dev/documentação). */
   OPENAPI_PUBLIC: flag(),
+  /** Armazenamento de mídia (R2/MinIO): `MEDIA_STORAGE_*` e `MEDIA_SEND_MODE`. Tudo vazio = envio/recebimento de arquivos desligado. */
+  ...storageEnvSchema.shape,
 });
 
 type Parsed = z.infer<typeof envSchema>;
 /** Campos acrescentados depois (IA, 2FA, openapi) são opcionais no tipo: testes montam `Env` à mão sem eles. */
-export type Env = Omit<Parsed, "LLM_PROVIDER" | "OPENAPI_PUBLIC"> & {
-  LLM_PROVIDER?: Parsed["LLM_PROVIDER"];
-  OPENAPI_PUBLIC?: boolean;
-};
+type StorageKey = keyof typeof storageEnvSchema.shape;
+export type Env = Omit<Parsed, "LLM_PROVIDER" | "OPENAPI_PUBLIC" | StorageKey> &
+  Partial<Pick<Parsed, StorageKey>> & {
+    LLM_PROVIDER?: Parsed["LLM_PROVIDER"];
+    OPENAPI_PUBLIC?: boolean;
+  };
 
 export type EnvResult = { ok: true; env: Env; warnings: string[] } | { ok: false; errors: string[] };
 
@@ -91,6 +96,15 @@ export function parseEnv(source: NodeJS.ProcessEnv = process.env): EnvResult {
     const message = "EVOLUTION_URL está definida mas EVOLUTION_API_KEY não: canais por QR code não vão conectar.";
     if (production) errors.push(message);
     else warnings.push(message);
+  }
+  // armazenamento de mídia: tudo ausente = recurso desligado (ok); parte das variáveis = configuração incompleta
+  const missingMedia = missingStorageVars(source);
+  if (missingMedia.length > 0) {
+    const message = `Armazenamento de mídia incompleto (faltam ${missingMedia.join(", ")}): o envio e o recebimento de arquivos ficam desligados.`;
+    if (production) errors.push(message);
+    else warnings.push(message);
+  } else if (production && !source.MEDIA_STORAGE_ENDPOINT?.trim()) {
+    warnings.push("MEDIA_STORAGE_* não definido: o envio e o recebimento de imagens, documentos e áudios ficam desligados.");
   }
   if (production) {
     if (data.WEB_ORIGINS.some((origin) => origin.startsWith("http://") && !origin.includes("localhost"))) {

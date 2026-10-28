@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, generateNonce, realtimeOrigin } from "./csp";
+import { buildCsp, generateNonce, mediaStorageOrigins, realtimeOrigin } from "./csp";
 
 describe("buildCsp", () => {
   it("em produção usa nonce + strict-dynamic e fecha o resto", () => {
@@ -50,12 +50,53 @@ describe("buildCsp: tempo real", () => {
   });
 
   it("em desenvolvimento continua liberando ws:/wss:", () => {
-    expect(connectSrc(buildCsp({ nonce: "n", isDev: true, realtimeUrl: "ws://localhost:4001/ws" }))).toBe("connect-src 'self' ws: wss:");
+    expect(connectSrc(buildCsp({ nonce: "n", isDev: true, realtimeUrl: "ws://localhost:4001/ws" }))).toBe(
+      "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*",
+    );
   });
 
   it("realtimeOrigin normaliza", () => {
     expect(realtimeOrigin("wss://RT.example.com:8443/ws")).toBe("wss://rt.example.com:8443");
     expect(realtimeOrigin(undefined)).toBeNull();
+  });
+});
+
+describe("buildCsp: mídia da conversa", () => {
+  const directive = (csp: string, name: string) => csp.split("; ").find((d) => d.startsWith(name)) ?? "";
+
+  it("sem armazenamento configurado nada muda", () => {
+    const csp = buildCsp({ nonce: "n", mediaOrigins: undefined });
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self'");
+    expect(directive(csp, "media-src")).toBe("media-src 'self' blob:");
+  });
+
+  it("libera a origem do armazenamento para o PUT, as imagens e os áudios", () => {
+    const csp = buildCsp({ nonce: "n", mediaOrigins: "https://acc.r2.cloudflarestorage.com/bucket?x=1" });
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self' https://acc.r2.cloudflarestorage.com");
+    expect(directive(csp, "img-src")).toContain("https://acc.r2.cloudflarestorage.com");
+    expect(directive(csp, "media-src")).toBe("media-src 'self' blob: https://acc.r2.cloudflarestorage.com");
+  });
+
+  it("mantém o tempo real junto com o armazenamento", () => {
+    const csp = buildCsp({ nonce: "n", realtimeUrl: "wss://rt.duckchat.com.br/ws", mediaOrigins: "http://localhost:9000" });
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self' wss://rt.duckchat.com.br http://localhost:9000");
+  });
+
+  it("em desenvolvimento o MinIO local (localhost) já funciona", () => {
+    const csp = buildCsp({ nonce: "n", isDev: true });
+    expect(directive(csp, "connect-src")).toContain("http://localhost:*");
+    expect(directive(csp, "media-src")).toContain("http://localhost:*");
+  });
+
+  it("mediaStorageOrigins aceita lista, normaliza e ignora lixo", () => {
+    expect(mediaStorageOrigins("https://A.example.com/x, http://localhost:9000 ,https://a.example.com")).toEqual([
+      "https://a.example.com",
+      "http://localhost:9000",
+    ]);
+    for (const bad of ["", "lixo", "javascript:alert(1)", "ftp://x.test", "https://a.test; script-src *"]) {
+      expect(mediaStorageOrigins(bad).join(" "), bad).not.toMatch(/[;*]|script-src|ftp/);
+    }
+    expect(mediaStorageOrigins(undefined)).toEqual([]);
   });
 });
 

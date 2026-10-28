@@ -10,6 +10,7 @@ import { conversationsRoutes } from "./conversations/routes";
 import { conversationTypingRoutes } from "./conversations/typing";
 import { helpRoutes } from "./help/routes";
 import { homeRoutes } from "./home/routes";
+import { mediaRoutes } from "./media/routes";
 import { notificationsRoutes } from "./notifications/routes";
 import { onboardingRoutes } from "./onboarding/routes";
 import { sessionRoutes } from "./session/routes";
@@ -34,6 +35,7 @@ export function mountModules(app: OpenAPIHono<AppBindings>, deps: Deps) {
   app.route("/v1", settingsRoutes(deps));
   app.route("/v1", homeRoutes(deps));
   app.route("/v1", helpRoutes(deps));
+  app.route("/v1", mediaRoutes(deps));
   app.route("/v1", notificationsRoutes(deps));
   app.route("/v1", adminRoutes(deps));
 }

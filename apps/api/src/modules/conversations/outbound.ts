@@ -1,13 +1,14 @@
 import type { Transaction } from "@duckzap/db";
 import { schema } from "@duckzap/db";
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { OutboundMessage, SendResult } from "../../lib/messaging";
 import { sendViaChannel, type SendDeps } from "../channels/sending";
 import { getChannelsRuntime } from "../channels/runtime";
 import { findSendChannel } from "../channels/repo";
 import { queueRealtime } from "../../lib/realtime";
 import { newId } from "../contacts/result";
+import { MEDIA_UNAVAILABLE } from "../media/logic";
+import { buildMediaMessage } from "../media/outbound";
 import { lastMessageKindOf, previewOf } from "./logic";
 import type { ConversationRow, MessageRow } from "./queries";
 import { signMessage } from "./signature";
@@ -15,11 +16,10 @@ import { signMessage } from "./signature";
 const { conversations, messages, conversationAiEvents } = schema;
 
 export type Sender = { kind: "member" | "agent" | "system"; id: string | null; name: string };
-export type Media = { fileName: string | null; mimeType: string; sizeBytes: number | null; durationSeconds: number | null; url: string | null };
+/** `url` fica sempre null aqui: a URL de leitura é assinada na hora da leitura. O arquivo é achado por `mediaId` (tabela `media_files`). */
+export type Media = { fileName: string | null; mimeType: string; sizeBytes: number | null; durationSeconds: number | null; url: string | null; mediaId?: string | null };
 
-export const MEDIA_UNAVAILABLE = "O envio de arquivos ainda não está disponível: o armazenamento de mídia não foi configurado.";
-
-const httpsUrl = z.url().refine((u) => u.startsWith("https://"));
+export { MEDIA_UNAVAILABLE };
 
 export const NO_CHANNEL = "Sem canal conectado. Conecte um canal em Canais e reenvie a mensagem.";
 
@@ -120,19 +120,8 @@ export type DeliverInput = {
 
 export type DeliverResult = { message: MessageRow; ok: boolean; reconnect: boolean; reason: string | null };
 
-function toOutbound(input: DeliverInput, to: string): OutboundMessage | null {
-  if (input.kind === "text") {
-    return { externalId: input.externalId, to, kind: "text", text: input.body, ...(input.typingMs ? { typingMs: input.typingMs } : {}) };
-  }
-  if (!input.media?.url || !httpsUrl.safeParse(input.media.url).success) return null;
-  return {
-    externalId: input.externalId,
-    to,
-    kind: input.kind,
-    mediaUrl: input.media.url,
-    ...(input.body ? { text: input.body } : {}),
-    ...(input.media.fileName ? { filename: input.media.fileName } : {}),
-  };
+function textOutbound(input: DeliverInput, to: string): OutboundMessage {
+  return { externalId: input.externalId, to, kind: "text", text: input.body, ...(input.typingMs ? { typingMs: input.typingMs } : {}) };
 }
 
 /**
@@ -195,12 +184,22 @@ export async function deliverOutbound(tx: Transaction, input: DeliverInput): Pro
       : null;
     outboundInput = { ...input, body: signMessage(input.body, input.sender.name, teamName) };
   }
-  const outbound = input.to ? toOutbound(outboundInput, input.to) : null;
   let result: SendResult;
   if (!sendChannel) result = { ok: false, code: "disconnected", message: NO_CHANNEL };
   else if (!input.to) result = { ok: false, code: "rejected", message: "Este contato não tem número para receber a mensagem." };
-  else if (!outbound) result = { ok: false, code: "rejected", message: MEDIA_UNAVAILABLE };
-  else result = await sendViaChannel(tx, sendChannel.id, outbound, input.sendDeps ?? getChannelsRuntime());
+  else {
+    const deps = input.sendDeps ?? getChannelsRuntime();
+    // texto direto; mídia: o arquivo vem do armazenamento pelo `mediaId` (URL assinada ou base64), nunca de uma URL do cliente
+    const outbound =
+      outboundInput.kind === "text"
+        ? ({ ok: true, message: textOutbound(outboundInput, input.to) } as const)
+        : await buildMediaMessage(
+            tx,
+            { organizationId: conv.organizationId, kind: outboundInput.kind, mediaId: outboundInput.media?.mediaId, to: input.to, externalId: outboundInput.externalId, caption: outboundInput.body },
+            deps.providers.get(sendChannel.provider),
+          );
+    result = outbound.ok ? await sendViaChannel(tx, sendChannel.id, outbound.message, deps) : { ok: false, code: "rejected", message: outbound.message };
+  }
 
   let updated: MessageRow;
   let reconnect = false;

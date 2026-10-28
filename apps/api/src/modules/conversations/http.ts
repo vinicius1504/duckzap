@@ -17,7 +17,7 @@ export {
   type ModuleContext,
 } from "../contacts/http";
 
-const STATUS: Record<string, 400 | 403 | 404 | 409 | 422 | 429 | 502> = {
+const STATUS: Record<string, 400 | 403 | 404 | 409 | 422 | 429 | 502 | 503> = {
   not_found: 404,
   resolved: 409,
   conflict: 409,
@@ -31,6 +31,8 @@ const STATUS: Record<string, 400 | 403 | 404 | 409 | 422 | 429 | 502> = {
   plan_feature: 403,
   rate_limited: 429,
   send_failed: 502,
+  media_unavailable: 503,
+  invalid_media: 422,
 };
 
 export function toApiError(result: Fail, extra: Record<string, unknown> = {}) {

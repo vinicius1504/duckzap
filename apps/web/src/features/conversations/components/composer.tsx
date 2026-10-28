@@ -14,7 +14,7 @@ import { Icon } from "@duckzap/ui/components/icon";
 import { Segmented } from "@duckzap/ui/components/segmented";
 import { cn } from "@duckzap/ui/cn";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { acceptAttribute, mediaRulesHint, recordedFileName, uploadStatusText, validateMediaFile } from "@/lib/media";
+import { acceptAttribute, mediaRulesHint, recordedFileName, validateMediaFile } from "@/lib/media";
 import { rateSuggestionAction, sendTypingAction, suggestReplyAction } from "../actions";
 import { createTypingPinger } from "../typing-pinger";
 import { useMediaUpload, type MessageDraft as Draft, type SendOptions } from "../use-media-upload";
@@ -30,7 +30,7 @@ type Props = {
   /** motivo para bloquear respostas ao cliente (plano expirado); notas internas continuam liberadas */
   sendingPausedReason: string | null;
   /** envia e devolve o erro, se houver (a mensagem já aparece como "enviando") */
-  onSend: (draft: Draft) => Promise<string | null>;
+  onSend: (draft: Draft, options?: SendOptions) => Promise<string | null>;
 };
 
 const EMOJIS = ["😊", "🙏", "👍", "😁", "🦷", "📅", "✅", "❤️"];
@@ -42,7 +42,9 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
   const [suggestion, setSuggestion] = useState<ReplySuggestion | null>(null);
   const [rating, setRating] = useState<"useful" | "bad" | null>(null);
   const [suggesting, startSuggest] = useTransition();
-  const [recording, setRecording] = useState<number | null>(null);
+  const recorder = useVoiceRecorder();
+  const recording = recorder.seconds;
+  const upload = useMediaUpload(onSend);
   const [activeIndex, setActiveIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -62,6 +64,8 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
     return () => pinger?.stop();
   }, [conversationId]);
 
+  // um arquivo por vez: com um escolhido ou enviando, o anexo e o microfone esperam
+  const attachBusy = upload.item !== null;
   const isNote = target === "note";
   const replyBlocked = !isNote && sendingPausedReason !== null;
 
@@ -72,13 +76,6 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
   const active = matches[Math.min(activeIndex, matches.length - 1)];
 
   useEffect(() => setActiveIndex(0), [text]);
-
-  // gravação de exemplo: só conta o tempo
-  useEffect(() => {
-    if (recording === null) return;
-    const timer = setInterval(() => setRecording((s) => (s === null ? s : s + 1)), 1000);
-    return () => clearInterval(timer);
-  }, [recording]);
 
   function pickQuickReply(reply: QuickReply) {
     setText(reply.body);
@@ -108,27 +105,46 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
     void submit({ kind: isNote ? "note" : "text", body, attachment: null });
   }
 
-  function sendFile(file: File, kind: "image" | "document") {
-    const attachment: MessageAttachment = {
-      fileName: file.name,
-      mimeType: file.type || "application/octet-stream",
-      sizeBytes: file.size,
-      durationSeconds: null,
-      url: null,
-    };
-    void submit({ kind, body: "", attachment });
+  /** Valida (tipo e tamanho, antes de subir qualquer byte) e mostra a pré-visualização com a legenda. */
+  function pickFile(file: File, kind: Exclude<MediaKind, "audio">) {
+    setError(null);
+    const check = validateMediaFile(kind, file);
+    if (!check.ok) {
+      setError(check.message);
+      return;
+    }
+    upload.pick({ kind, file, fileName: file.name, mimeType: check.mimeType, sizeBytes: file.size, durationSeconds: null });
   }
 
-  function stopRecording(send: boolean) {
-    const seconds = recording ?? 0;
-    setRecording(null);
-    if (send && seconds > 0) {
-      void submit({
-        kind: "audio",
-        body: "",
-        attachment: { fileName: null, mimeType: "audio/ogg", sizeBytes: null, durationSeconds: seconds, url: null },
-      });
+  async function startRecording() {
+    setError(null);
+    const problem = await recorder.start();
+    if (problem) setError(problem);
+  }
+
+  async function stopRecording(send: boolean) {
+    if (!send) {
+      recorder.discard();
+      return;
     }
+    const recorded = await recorder.stop();
+    if (!recorded) return;
+    const seconds = Math.max(1, recorded.seconds);
+    const fileName = recordedFileName(recorded.mimeType, new Date());
+    const check = validateMediaFile("audio", { name: fileName, type: recorded.mimeType, size: recorded.blob.size });
+    if (!check.ok) {
+      setError(check.message);
+      return;
+    }
+    // o áudio vai direto pelo mesmo fluxo (progresso, erro e "tentar de novo" aparecem no cartão)
+    upload.submit("", {
+      kind: "audio",
+      file: recorded.blob,
+      fileName,
+      mimeType: check.mimeType,
+      sizeBytes: recorded.blob.size,
+      durationSeconds: seconds,
+    });
   }
 
   function suggest() {
@@ -248,6 +264,24 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
         ) : null}
       </div>
 
+      {upload.item ? (
+        <AttachmentPreview
+          key={`${upload.item.fileName}:${upload.item.sizeBytes}`}
+          item={upload.item}
+          state={upload.state}
+          onSubmit={(caption) => upload.submit(caption)}
+          onRetry={(caption) => upload.retry(caption)}
+          onCancel={() => {
+            upload.cancel();
+            requestAnimationFrame(() => textareaRef.current?.focus());
+          }}
+        />
+      ) : null}
+      {/* `relative` no contêiner acima: o texto sr-only fica preso aqui */}
+      <p role="status" className="sr-only">
+        {upload.justSent ? "Arquivo enviado." : ""}
+      </p>
+
       {recording !== null ? (
         <div className="flex items-center gap-2" role="status">
           <span className="size-2.5 animate-pulse rounded-full bg-err" aria-hidden="true" />
@@ -265,18 +299,30 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" className="max-md:size-11" aria-label="Anexar arquivo" disabled={replyBlocked}>
+                  <Button
+                    size="icon"
+                    className="max-md:size-11"
+                    aria-label="Anexar arquivo"
+                    disabled={replyBlocked || attachBusy}
+                    title={attachBusy ? "Termine ou cancele o envio do arquivo atual" : undefined}
+                  >
                     <Icon name="paperclip" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top">
-                  <DropdownMenuItem onSelect={() => imageInput.current?.click()}>
-                    <Icon name="image" size={18} />
-                    Foto
+                <DropdownMenuContent align="start" side="top" className="max-w-[min(320px,calc(100vw-24px))]">
+                  <DropdownMenuItem className="min-h-14 py-2" onSelect={() => imageInput.current?.click()}>
+                    <Icon name="image" size={18} className="shrink-0" />
+                    <span className="flex flex-col">
+                      <span>Foto</span>
+                      <span className="text-xs font-normal text-ink-2">{mediaRulesHint("image")}</span>
+                    </span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => docInput.current?.click()}>
-                    <Icon name="file" size={18} />
-                    Documento
+                  <DropdownMenuItem className="min-h-14 py-2" onSelect={() => docInput.current?.click()}>
+                    <Icon name="file" size={18} className="shrink-0" />
+                    <span className="flex flex-col">
+                      <span>Documento</span>
+                      <span className="text-xs font-normal text-ink-2">{mediaRulesHint("document")}</span>
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -304,26 +350,26 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
               <input
                 ref={imageInput}
                 type="file"
-                accept="image/*"
+                accept={acceptAttribute("image")}
                 className="hidden"
                 tabIndex={-1}
                 aria-hidden="true"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) sendFile(file, "image");
+                  if (file) pickFile(file, "image");
                   e.target.value = "";
                 }}
               />
               <input
                 ref={docInput}
                 type="file"
-                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                accept={acceptAttribute("document")}
                 className="hidden"
                 tabIndex={-1}
                 aria-hidden="true"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) sendFile(file, "document");
+                  if (file) pickFile(file, "document");
                   e.target.value = "";
                 }}
               />
@@ -395,8 +441,8 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
               size="icon"
               className="max-md:size-11"
               aria-label="Gravar áudio"
-              disabled={replyBlocked}
-              onClick={() => setRecording(0)}
+              disabled={replyBlocked || upload.item !== null}
+              onClick={() => void startRecording()}
             >
               <Icon name="mic" />
             </Button>
@@ -408,4 +454,16 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
             onClick={sendText}
             disabled={replyBlocked}
           >
-            <Icon name={is
+            <Icon name={isNote ? "note" : "send"} strokeWidth={2} />
+          </Button>
+        </div>
+      )}
+
+      {error ? (
+        <p id={errorId} role="alert" className="mt-2 text-[13px] font-semibold text-err">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}

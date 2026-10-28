@@ -31,8 +31,10 @@ async function validateMessage(message: OutboundMessage): Promise<string | null>
     case "template":
       return message.template ? null : "Modelo de mensagem ausente.";
     default:
-      if (!message.mediaUrl) return "Mídia sem arquivo.";
-      return (await isSafeMediaUrlResolved(message.mediaUrl)) ? null : "O endereço do arquivo precisa ser https e público.";
+      // por base64 não há endereço a conferir; por URL, ela precisa ser https e pública (anti-SSRF)
+      if (!message.mediaUrl && !message.mediaBase64) return "Mídia sem arquivo.";
+      if (message.mediaUrl && !(await isSafeMediaUrlResolved(message.mediaUrl))) return "O endereço do arquivo precisa ser https e público.";
+      return null;
   }
 }
 

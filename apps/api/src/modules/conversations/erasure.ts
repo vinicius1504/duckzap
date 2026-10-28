@@ -2,6 +2,7 @@ import { schema, type Transaction } from "@duckzap/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { registerContactErasureHook } from "../contacts/service";
 import { eraseInboundEventsForPhones } from "../channels/inbound-store";
+import { eraseMediaForContacts } from "../media/service";
 
 const { conversations, conversationAiEvents, copilotFeedback, aiUsageLog } = schema;
 
@@ -10,10 +11,13 @@ let registered = false;
 /**
  * LGPD (§5.5): apagar o contato apaga em cascata conversas, mensagens e sugestões (FK ON DELETE CASCADE). As tabelas de
  * Agentes que guardam o id da conversa como TEXTO (auditoria da IA, feedback do Copiloto — que contém o texto sugerido —
- * e uso de tokens) não têm FK, então este hook as limpa na mesma transação, ANTES de o contato sumir.
+ * e uso de tokens) não têm FK, então este hook as limpa na mesma transação, ANTES de o contato sumir. Os ARQUIVOS das
+ * mensagens (imagens, documentos, áudios) vivem no armazenamento de objetos, fora do banco: também são apagados aqui (objeto e
+ * registro); se o armazenamento recusar, a exclusão inteira falha em vez de deixar o arquivo do titular para trás.
  */
 export async function eraseConversationData(tx: Transaction, organizationId: string, contactIds: string[]) {
   if (contactIds.length === 0) return;
+  await eraseMediaForContacts(tx, organizationId, contactIds);
   // eventos brutos de entrada (webhook) com o telefone do titular: minimiza antes de o contato sumir (precisa do telefone)
   const phones = await tx
     .select({ phone: schema.contacts.phone })

@@ -1,0 +1,4 @@
+# TLS_MODE=origin (recomendado com a Cloudflare em "Full (strict)"): certificado de origem da Cloudflare,
+# colocado em deploy/certs/origin.pem e deploy/certs/origin.key na VPS (a pasta não vai para o Git). Vale 15 anos,
+# não depende de a porta 80 estar aberta ao mundo e não renova sozinho. Precisa cobrir APP_DOMAIN e ADMIN_DOMAIN.
+tls /certs/origin.pem /certs/origin.key

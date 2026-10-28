@@ -5,6 +5,7 @@ import {
   type ChannelRef,
   type ConnectResult,
   type ConnectionStatus,
+  type DownloadedMedia,
   type InboundEvent,
   type InboundPresence,
   type MessagingProvider,
@@ -74,12 +75,12 @@ export class EvolutionProvider implements MessagingProvider {
 
   capabilities(): ProviderCapabilities {
     // botões/listas são instáveis no Baileys (§3.6): degradar para texto numerado
-    return { buttons: false, lists: false, templates: false, media: true, reactions: true, window24h: false, presence: this.presenceEnabled };
+    return { buttons: false, lists: false, templates: false, media: true, reactions: true, window24h: false, presence: this.presenceEnabled, mediaBase64: true, downloadMedia: true };
   }
 
   // --- HTTP ---------------------------------------------------------------------------------------------
 
-  private async call(path: string, init: { method?: string; body?: unknown; key: string; timeoutMs?: number }): Promise<Reply> {
+  private async call(path: string, init: { method?: string; body?: unknown; key: string; timeoutMs?: number; maxResponseBytes?: number }): Promise<Reply> {
     let response: Response;
     try {
       response = await this.http(`${this.options.baseUrl}${path}`, {
@@ -90,6 +91,12 @@ export class EvolutionProvider implements MessagingProvider {
       });
     } catch {
       throw new ProviderError("unavailable", "Não conseguimos falar com o serviço de QR Code. Tente de novo em instantes.");
+    }
+    // resposta enorme (mídia): recusa pelo cabeçalho ANTES de ler tudo para a memória
+    const declared = Number(response.headers.get("content-length"));
+    if (init.maxResponseBytes !== undefined && Number.isFinite(declared) && declared > init.maxResponseBytes) {
+      await response.body?.cancel().catch(() => {});
+      throw new ProviderError("rejected", "O arquivo recebido é grande demais.");
     }
     const raw = await readBody(response);
     return { response, body: asRecord(raw), raw };
@@ -287,24 +294,33 @@ export class EvolutionProvider implements MessagingProvider {
         path = `/message/sendText/${name}`;
         body = { number, text: message.text, ...delay };
         break;
-      case "audio":
-        if (!message.mediaUrl) return { ok: false, code: "rejected", message: "Áudio sem arquivo." };
+      case "audio": {
+        // URL ou base64 puro: a Evolution converte QUALQUER formato (webm/opus do navegador, mp3, m4a) para ogg/opus com o
+        // ffmpeg dela (`encoding`) e envia como mensagem de voz tocável (ptt)
+        const audio = message.mediaUrl ?? message.mediaBase64;
+        if (!audio) return { ok: false, code: "rejected", message: "Áudio sem arquivo." };
         path = `/message/sendWhatsAppAudio/${name}`;
-        body = { number, audio: message.mediaUrl };
+        body = { number, audio, encoding: true };
         break;
+      }
       case "image":
-      case "document":
-        if (!message.mediaUrl) return { ok: false, code: "rejected", message: "Mídia sem arquivo." };
+      case "document": {
+        const media = message.mediaUrl ?? message.mediaBase64;
+        if (!media) return { ok: false, code: "rejected", message: "Mídia sem arquivo." };
+        // por base64 a Evolution exige `fileName` (documento) e deduz o tipo pela extensão dele
+        if (!message.mediaUrl && !message.filename) return { ok: false, code: "rejected", message: "Mídia sem nome de arquivo." };
         path = `/message/sendMedia/${name}`;
         body = {
           number,
           mediatype: message.kind,
-          media: message.mediaUrl,
+          media,
+          ...(!message.mediaUrl && message.mimeType ? { mimetype: message.mimeType } : {}),
           ...(message.text ? { caption: message.text } : {}),
           ...(message.filename ? { fileName: message.filename } : {}),
           ...delay,
         };
         break;
+      }
       case "template":
         return { ok: false, code: "rejected", message: "Modelos de mensagem só existem na API oficial." };
     }
@@ -326,6 +342,36 @@ export class EvolutionProvider implements MessagingProvider {
     if (response.status === 401 || response.status === 403) return { ok: false, code: "disconnected", message: "O número está desconectado." };
     if (response.status >= 500) return { ok: false, code: "unknown", message: "O provedor falhou ao enviar." };
     return { ok: false, code: "rejected", message: "O provedor recusou a mensagem." };
+  }
+
+  // --- mídia recebida -----------------------------------------------------------------------------------
+
+  /**
+   * `POST /chat/getBase64FromMediaMessage/{instância}` com `{ message: { key: { id } } }` (Evolution 2.3.x; responde 201 com
+   * `{ mediaType, fileName, mimetype, size, base64 }`). ATENÇÃO: a Evolution procura a mensagem no banco dela, então o container
+   * precisa de `DATABASE_SAVE_DATA_NEW_MESSAGE=true`; sem isso responde 400 "Message not found" e a mídia fica indisponível.
+   * O corpo é limitado ANTES de decodificar (`maxBytes`); conteúdo do cliente nunca vai para log.
+   */
+  async downloadMedia(channel: ChannelRef, input: { externalId: string; maxBytes: number; timeoutMs?: number }): Promise<DownloadedMedia> {
+    const { response, body } = await this.call(`/chat/getBase64FromMediaMessage/${encodeURIComponent(this.name(channel))}`, {
+      method: "POST",
+      key: this.instanceKey(channel),
+      body: { message: { key: { id: input.externalId } }, convertToMp4: false },
+      timeoutMs: input.timeoutMs ?? 20_000,
+      // base64 + JSON: ~4/3 do arquivo
+      maxResponseBytes: Math.ceil((input.maxBytes * 4) / 3) + 4096,
+    });
+    if (response.status === 401 || response.status === 403) throw new ProviderError("invalid_credentials", "O número está desconectado.");
+    if (!response.ok) {
+      throw new ProviderError(response.status === 429 || response.status >= 500 ? "unavailable" : "rejected", "O provedor não devolveu o arquivo.");
+    }
+    const base64 = asString(body.base64);
+    if (!base64) throw new ProviderError("rejected", "O provedor não devolveu o arquivo.");
+    // 4 caracteres de base64 = 3 bytes
+    if ((base64.length * 3) / 4 > input.maxBytes + 4) throw new ProviderError("rejected", "O arquivo recebido é grande demais.");
+    const bytes = Buffer.from(base64, "base64");
+    if (bytes.length > input.maxBytes) throw new ProviderError("rejected", "O arquivo recebido é grande demais.");
+    return { bytes, mimeType: asString(body.mimetype), fileName: asString(body.fileName) };
   }
 
   // --- webhook ------------------------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import { onError } from "../../middleware/error-handler";
 import { loadChannelsConfig } from "../channels/config";
 import { InMemoryTokenBucket } from "../channels/rate-limit";
 import { createChannelsRuntime, setChannelsRuntime } from "../channels/runtime";
+import { createMediaRuntime, setMediaRuntime } from "../media/runtime";
 import { deleteContacts } from "../contacts/service";
 import { closeInactiveAiConversations, runDueAiTurn, sweepDueAiTurns } from "./ai-turn";
 import { loadConversationsConfig } from "./config";
@@ -867,15 +868,20 @@ describe.skipIf(!enabled)("Conversas e Início — integração (precisa da migr
       await withOrg(db, A, (tx) => tx.update(schema.channels).set({ status: "disconnected" }).where(eq(schema.channels.id, ids.chanDown)));
     });
 
-    it("anexo sem armazenamento de mídia falha com motivo claro (placeholder)", async () => {
+    it("anexo sem armazenamento de mídia configurado é recusado com motivo claro (503), sem criar mensagem", async () => {
+      setMediaRuntime(createMediaRuntime({ storage: null })); // hermético: ignora MEDIA_STORAGE_* do .env de quem roda
       const { conv } = await newConversation("oi");
       const res = await call("owner", "POST", `/conversations/${conv.id}/messages`, {
         kind: "image",
         body: "",
-        attachment: { fileName: "foto.png", mimeType: "image/png", sizeBytes: 100, durationSeconds: null, url: null },
+        attachment: { fileName: "foto.png", mimeType: "image/png", sizeBytes: 100, durationSeconds: null, url: null, mediaId: uuidv7() },
         clientId: `c-${run}-img`,
       });
-      expect((await json<{ status: string; failureReason: string }>(res)).status).toBe("failed");
+      expect(res.status).toBe(503);
+      const err = await json<{ error: { code: string; message: string } }>(res);
+      expect(err.error.code).toBe("media_unavailable");
+      expect(err.error.message).toMatch(/armazenamento de mídia não foi configurado/);
+      expect((await messagesOf(A, conv.id)).filter((m) => m.direction === "out")).toHaveLength(0);
     });
 
     it("conta suspensa (plano expirado): bloqueio TOTAL no servidor (403 account_suspended), inclusive leitura e nota interna", async () => {

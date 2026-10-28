@@ -25,6 +25,7 @@ import {
   sendMessageAction,
 } from "../actions";
 import { inboxHref } from "../search-params";
+import type { MessageDraft, SendOptions } from "../use-media-upload";
 import { AppointmentDialog } from "./appointment-dialog";
 import { Composer } from "./composer";
 import { CustomerPanel } from "./customer-panel";
@@ -86,7 +87,7 @@ export function ConversationView({ detail, lookups, permissions, viewer, sending
     });
   }
 
-  async function send(draft: Parameters<Parameters<typeof Composer>[0]["onSend"]>[0]): Promise<string | null> {
+  async function send(draft: MessageDraft, options?: SendOptions): Promise<string | null> {
     const clientId = `tmp_${Date.now().toString(36)}`;
     const optimistic: Message = {
       id: clientId,
@@ -95,7 +96,8 @@ export function ConversationView({ detail, lookups, permissions, viewer, sending
       direction: draft.kind === "note" ? "internal" : "out",
       author: { kind: "member", id: viewer.id, name: viewer.name },
       body: draft.body,
-      attachment: draft.attachment,
+      // na bolha otimista a mídia aparece pela cópia local; ao servidor vai `url: null` (a API usa o mediaId)
+      attachment: draft.attachment && options?.previewUrl ? { ...draft.attachment, url: options.previewUrl } : draft.attachment,
       status: draft.kind === "note" ? null : "sending",
       failureReason: null,
       createdAt: new Date().toISOString(),

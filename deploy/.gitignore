@@ -1,0 +1,6 @@
+# Segredos e estado da VPS: nunca no Git.
+.env
+.env.*
+!.env.production.example
+certs/
+.deploy/

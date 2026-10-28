@@ -17,7 +17,7 @@ const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   transpilePackages: ["@duckzap/ui", "@duckzap/brand", "@duckzap/contracts", "@duckzap/api-client"],
-  experimental: { serverActions: { bodySizeLimit: "2mb" } },
+  experimental: { serverActions: { bodySizeLimit: "16mb" } },
   // O navegador só precisa de login/sessão pelo mesmo domínio (cookie). Todo o resto (módulos de negócio, /v1/admin/*)
   // é chamado pelo servidor do Next (apiFetch), então NÃO é exposto aqui: lista de permitidos, não "/api/*".
   async rewrites() {

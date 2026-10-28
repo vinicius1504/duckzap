@@ -1,6 +1,7 @@
 import type { Deps } from "../../lib/context";
 import { registerInboundHandler } from "../../lib/inbound";
 import { registerPresenceHandler } from "../../lib/presence";
+import { createInboundMediaPort, type InboundMediaPort } from "../media/inbound";
 import { loadAgentsConfig } from "../agents/config";
 import { createAiRateLimiters, runDueAiTurn, type AiDeps, type AiLimiters } from "./ai-turn";
 import { loadConversationsConfig, type ConversationsConfig } from "./config";
@@ -20,6 +21,8 @@ export type RuntimeOverrides = {
   now?: () => Date;
   /** Substitui o temporizador do processo (testes chamam `runDueAiTurn` à mão; um worker usaria uma fila). */
   scheduleAiTurn?: InboundDeps["scheduleAiTurn"];
+  /** Substitui o download da mídia recebida (testes). Padrão: provedor do canal + armazenamento configurado. */
+  media?: InboundMediaPort;
   /** `false` nos testes: não registra o handler global nem a varredura. */
   register?: boolean;
 };
@@ -47,7 +50,7 @@ export function createConversationsRuntime(deps: Pick<Deps, "db" | "llm">, overr
     });
   // turno adiado por falha passageira do provedor de IA: mesmo temporizador (o prazo gravado em ai_due_at é a fonte da verdade)
   ai.scheduleRetry = scheduleAiTurn;
-  return { config, limiters, ai, inbound: { db: deps.db, config, scheduleAiTurn, now, log } };
+  return { config, limiters, ai, inbound: { db: deps.db, config, scheduleAiTurn, media: overrides.media ?? createInboundMediaPort(), now, log } };
 }
 
 // Um único handler no processo, sempre apontando para o runtime mais recente (várias instâncias do app em teste

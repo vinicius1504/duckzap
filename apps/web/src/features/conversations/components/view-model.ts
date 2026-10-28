@@ -92,9 +92,9 @@ export function previewText(last: ConversationSummary["lastMessage"]) {
   switch (last.kind) {
     case "audio":
     case "document":
-      return `${prefix}${mediaPreviewLabel(last)}`;
+      return `${prefix}${mediaPreviewLabel({ kind: last.kind, fileName: last.fileName, durationSeconds: last.durationSeconds })}`;
     case "image":
-      return `${prefix}${mediaPreviewLabel({ ...last, caption: last.preview })}`;
+      return `${prefix}${mediaPreviewLabel({ kind: "image", fileName: last.fileName, durationSeconds: null, caption: last.preview })}`;
     case "text":
       return last.preview;
   }

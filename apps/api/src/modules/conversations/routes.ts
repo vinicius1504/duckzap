@@ -62,11 +62,13 @@ const listQuerySchema = z.object({
 });
 
 const transferBodySchema = z.object({ target: transferTargetSchema, note: z.string().trim().max(1000).nullable().default(null) });
-// o contrato não limita os campos do anexo; o servidor limita (a URL final ainda passa pela checagem anti-SSRF do envio)
+// o contrato não limita os campos do anexo; o servidor limita. No envio só `mediaId` vale: nome, tipo, tamanho e `url` vindos
+// do cliente são ignorados (o arquivo é o upload conferido, ver modules/media)
 const attachmentSchema = messageAttachmentSchema.extend({
   fileName: z.string().max(255).nullable(),
   mimeType: z.string().max(100),
   url: z.string().max(2048).nullable(),
+  mediaId: z.string().max(64).nullable().optional(),
 });
 const sendBodySchema = sendMessageInputSchema.omit({ conversationId: true }).extend({ body: z.string().max(4096), attachment: attachmentSchema.nullable() });
 const appointmentBodySchema = scheduleAppointmentInputSchema.omit({ conversationId: true });

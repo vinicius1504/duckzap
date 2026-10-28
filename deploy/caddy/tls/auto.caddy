@@ -1,0 +1,3 @@
+# TLS_MODE=auto: o Caddy emite e renova o certificado (Let's Encrypt/ZeroSSL) sozinho. Nenhuma diretiva extra.
+# Com a Cloudflare na frente (nuvem laranja) o desafio HTTP-01 passa pelo proxy; se falhar na primeira emissão, deixe o
+# registro em "só DNS" (nuvem cinza) por alguns minutos e depois volte para o proxy. Sem a porta 80 alcançável não emite.
