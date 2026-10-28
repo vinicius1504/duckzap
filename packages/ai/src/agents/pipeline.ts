@@ -7,7 +7,7 @@ import { DEFAULT_TIME_ZONE, formatNow } from "./local-time";
 import { buildDataBlock, buildRulesBlock, buildSystemPrompt, TURN_INSTRUCTION, wrapToolResult } from "./prompt";
 import { applyRules, classifyIntent, intentFromVerdict, MIN_ROUTER_CONFIDENCE } from "./router";
 import { aiMayRespond, canTransition, transition, type ConversationEvent } from "./state-machine";
-import { isWithinBusinessHours, looksLikeInjection } from "./text";
+import { isWithinBusinessHours, looksLikeInjection, toWhatsappFormat } from "./text";
 import { buildToolDefs, executeTool, toLlmTools, type ToolContext } from "./tools";
 import {
   SKIP_LLM_UNAVAILABLE,
@@ -372,9 +372,10 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
   const linkCorpus = [staticKnowledge, config.advanced.prompt, config.profile.companySummary, ...previousAgent].join("\n");
   if (knowledgeTexts.slice(1).some(looksLikeInjection)) result.flags.push("knowledge_injection_suspected");
   const own = [...(input.ownContactValues ?? []), contact?.phone ?? "", contact?.email ?? ""].filter(Boolean);
-  const checked = finalText.trim()
+  const formattedText = toWhatsappFormat(finalText); // sem símbolos de Markdown no WhatsApp
+  const checked = formattedText.trim()
     ? checkOutput({
-        text: finalText,
+        text: formattedText,
         knowledgeCorpus: corpus,
         linkCorpus,
         urlAllowlist: input.urlAllowlist ?? [],

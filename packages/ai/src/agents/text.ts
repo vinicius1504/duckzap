@@ -154,3 +154,17 @@ export function extractMonetaryClaims(text: string): MoneyClaim[] {
   for (const m of text.matchAll(re(String.raw`${NUM}\s+(?:de\s+)?(?:desconto|off\b|de entrada|por m[eê]s|mensais|ao m[eê]s|[aà] vista|de taxa)`))) add("money", claimFrom(m[1], m[2]));
   return out;
 }
+
+/**
+ * O modelo escreve em Markdown ("**negrito**", "# título", "[texto](url)"); no WhatsApp o negrito é UM asterisco, título não existe
+ * e "* item" vira asterisco solto. Converte o que dá e remove o resto, para o cliente nunca ver símbolos de Markdown.
+ */
+export function toWhatsappFormat(text: string): string {
+  return text
+    .replace(/\*\*\s*([^*\n]+?)\s*\*\*/g, "*$1*") // **negrito** → *negrito*
+    .replace(/__\s*([^_\n]+?)\s*__/g, "*$1*") // __negrito__ → *negrito*
+    .replace(/^#{1,6}\s+(.+)$/gm, "*$1*") // # Título → *Título*
+    .replace(/^\s*\*\s+(?=\S)/gm, "- ") // "* item" → "- item" (asterisco no começo da linha abriria negrito)
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1: $2") // [texto](url) → texto: url
+    .replace(/`([^`\n]+)`/g, "$1"); // `código` → código
+}

@@ -167,7 +167,9 @@ describe("tools escopadas pelo servidor", () => {
 
   it("dry-run: leitura roda, escrita não", async () => {
     const { c, defs, state } = ctx({ dryRun: true });
-    const read = await executeTool(defs, c, "list_available_slots", { type_id: "apt_limpeza", from_date: "2026-10-27", to_date: "2026-10-28" });
+    // datas relativas a hoje (a agenda de teste só oferece horário futuro, e domingo não tem)
+    const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    const read = await executeTool(defs, c, "list_available_slots", { type_id: "apt_limpeza", from_date: day(1), to_date: day(4) });
     expect(read.output).toContain("slot_id=");
     const write = await executeTool(defs, c, "add_tag", { tag: "lead" });
     expect(write.output).toContain("(teste)");
