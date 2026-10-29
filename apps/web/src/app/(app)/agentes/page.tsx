@@ -30,12 +30,13 @@ export default async function AgentsPage() {
       <div className="mb-6">
         <FollowUpPreviewCard />
       </div>
+      {/* fora das colunas: com o chip só na coluna da esquerda, o Copiloto ficava mais alto que a lista */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Chip tone={limitReached ? "warn" : "neutral"}>{usage}</Chip>
+        {limitReached ? <span className="text-[13px] text-ink-2">Mude para o Pro para criar mais agentes.</span> : null}
+      </div>
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex min-w-0 flex-[3_1_560px] flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Chip tone={limitReached ? "warn" : "neutral"}>{usage}</Chip>
-            {limitReached ? <span className="text-[13px] text-ink-2">Mude para o Pro para criar mais agentes.</span> : null}
-          </div>
           {agents.length ? (
             <AgentCards agents={agents} />
           ) : (

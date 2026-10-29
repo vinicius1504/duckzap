@@ -62,6 +62,7 @@ export function ShellFrame({
       currentPath={pathname}
       Link={Link}
       topBarActions={actions}
+      title={session.organization.name}
       banner={
         <>
           {suspended ? (

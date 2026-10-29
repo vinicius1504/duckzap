@@ -3,11 +3,13 @@
 import type { ConversationPriority, InboxLookups } from "@duckzap/contracts/conversations";
 import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogContent, DialogFooter, DialogTrigger, DialogClose } from "@duckzap/ui/components/dialog";
+import { FilterSelect } from "@duckzap/ui/components/filter-select";
 import { Select } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Segmented } from "@duckzap/ui/components/segmented";
 import { cn } from "@duckzap/ui/cn";
 import { useQueryStates } from "nuqs";
+import type { ReactNode } from "react";
 import { inboxParsers, inboxUrlKeys, type ViewSlug } from "../search-params";
 import { PRIORITY_LABEL } from "./view-model";
 
@@ -78,108 +80,102 @@ export function InboxToolbar({ lookups, className }: { lookups: InboxLookups; cl
   );
 }
 
+/** Barra: filtro padrão (nome dentro do campo). Gaveta: nome acima do campo, como nos formulários. */
+function Field({
+  name,
+  id,
+  value,
+  onChange,
+  stacked,
+  suffix,
+  children,
+}: {
+  name: string;
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  stacked: boolean;
+  suffix: string;
+  children: ReactNode;
+}) {
+  const fieldId = `f-${id}${suffix}`;
+  if (!stacked) {
+    return (
+      <FilterSelect id={fieldId} label={name} value={value} onChange={(e) => onChange(e.target.value)} className="h-9 max-w-52">
+        {children}
+      </FilterSelect>
+    );
+  }
+  return (
+    <div>
+      <label htmlFor={fieldId} className="mb-1.5 block text-[13px] font-semibold">
+        {name}
+      </label>
+      <Select id={fieldId} className="h-11" value={value} onChange={(e) => onChange(e.target.value)}>
+        {children}
+      </Select>
+    </div>
+  );
+}
+
 function Filters({ lookups, stacked = false }: { lookups: InboxLookups; stacked?: boolean }) {
   const [state, setState] = useInboxState();
-  const size = stacked ? "h-11" : "h-8 w-auto rounded-lg text-[13px] font-semibold";
-  const labelClass = stacked ? "mb-1.5 block text-[13px] font-semibold" : "sr-only";
-  const prefix = (text: string) => (stacked ? "" : `${text}: `);
+  const field = { stacked, suffix: stacked ? "-m" : "" };
 
   return (
     <>
-      <div>
-        <label htmlFor={`f-canal${stacked ? "-m" : ""}`} className={labelClass}>
-          Canal
-        </label>
-        <Select
-          id={`f-canal${stacked ? "-m" : ""}`}
-          className={size}
-          value={state.channel ?? ""}
-          onChange={(e) => setState({ channel: e.target.value || null })}
-        >
-          <option value="">{prefix("Canal")}Todos</option>
-          {lookups.channels.map((ch) => (
-            <option key={ch.id} value={ch.id}>
-              {prefix("Canal")}
-              {ch.name}
-              {ch.status === "disconnected" ? " (desconectado)" : ""}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <label htmlFor={`f-equipe${stacked ? "-m" : ""}`} className={labelClass}>
-          Equipe
-        </label>
-        <Select
-          id={`f-equipe${stacked ? "-m" : ""}`}
-          className={size}
-          value={state.team ?? ""}
-          onChange={(e) => setState({ team: e.target.value || null })}
-        >
-          <option value="">{prefix("Equipe")}Todas</option>
-          {lookups.teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {prefix("Equipe")}
-              {t.name}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <label htmlFor={`f-etiqueta${stacked ? "-m" : ""}`} className={labelClass}>
-          Etiqueta
-        </label>
-        <Select
-          id={`f-etiqueta${stacked ? "-m" : ""}`}
-          className={size}
-          value={state.tag ?? ""}
-          onChange={(e) => setState({ tag: e.target.value || null })}
-        >
-          <option value="">{stacked ? "Todas" : "Etiqueta"}</option>
-          <optgroup label="Etapas do funil">
-            {lookups.tags
-              .filter((t) => t.funnelStage !== null)
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {prefix("Etiqueta")}
-                  {t.name}
-                </option>
-              ))}
-          </optgroup>
-          <optgroup label="Outras etiquetas">
-            {lookups.tags
-              .filter((t) => t.funnelStage === null)
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {prefix("Etiqueta")}
-                  {t.name}
-                </option>
-              ))}
-          </optgroup>
-        </Select>
-      </div>
-      <div>
-        <label htmlFor={`f-prioridade${stacked ? "-m" : ""}`} className={labelClass}>
-          Prioridade
-        </label>
-        <Select
-          id={`f-prioridade${stacked ? "-m" : ""}`}
-          className={size}
-          value={state.priority ?? ""}
-          onChange={(e) => {
-            const value = priorities.find((p) => p === e.target.value) ?? null;
-            setState({ priority: value });
-          }}
-        >
-          <option value="">{stacked ? "Todas" : "Prioridade"}</option>
-          {priorities.map((p) => (
-            <option key={p} value={p}>
-              {prefix("Prioridade")}
-              {PRIORITY_LABEL[p].label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <Field {...field} name="Canal" id="canal" value={state.channel ?? ""} onChange={(value) => setState({ channel: value || null })}>
+        <option value="">Todos</option>
+        {lookups.channels.map((ch) => (
+          <option key={ch.id} value={ch.id}>
+            {ch.name}
+            {ch.status === "disconnected" ? " (desconectado)" : ""}
+          </option>
+        ))}
+      </Field>
+      <Field {...field} name="Equipe" id="equipe" value={state.team ?? ""} onChange={(value) => setState({ team: value || null })}>
+        <option value="">Todas</option>
+        {lookups.teams.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </Field>
+      <Field {...field} name="Etiqueta" id="etiqueta" value={state.tag ?? ""} onChange={(value) => setState({ tag: value || null })}>
+        <option value="">Todas</option>
+        <optgroup label="Etapas do funil">
+          {lookups.tags
+            .filter((t) => t.funnelStage !== null)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+        </optgroup>
+        <optgroup label="Outras etiquetas">
+          {lookups.tags
+            .filter((t) => t.funnelStage === null)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+        </optgroup>
+      </Field>
+      <Field
+        {...field}
+        name="Prioridade"
+        id="prioridade"
+        value={state.priority ?? ""}
+        onChange={(value) => setState({ priority: priorities.find((p) => p === value) ?? null })}
+      >
+        <option value="">Todas</option>
+        {priorities.map((p) => (
+          <option key={p} value={p}>
+            {PRIORITY_LABEL[p].label}
+          </option>
+        ))}
+      </Field>
     </>
   );
 }

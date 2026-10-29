@@ -25,7 +25,13 @@ export type ViewProps = {
 
 const HOUR_START = 7;
 const HOUR_END = 20;
-const HOUR_PX = 56;
+/**
+ * A grade da semana ocupa a altura que sobra na tela (sem rolagem da página): 13 horas, de 28 px (mínimo) a 56 px por hora.
+ * O 266 é o que há em volta dela (barra do topo, margens, barra da agenda e cabeçalho dos dias). As posições dos
+ * agendamentos são em percentual da grade, então acompanham qualquer altura.
+ */
+const WEEK_GRID_MIN_HEIGHT = `clamp(${(HOUR_END - HOUR_START) * 28}px, calc(100dvh - 266px), ${(HOUR_END - HOUR_START) * 56}px)`;
+const DAY_MINUTES = (HOUR_END - HOUR_START) * 60;
 
 function firstName(name: string) {
   const parts = name.split(" ");
@@ -81,12 +87,11 @@ export function WeekView(props: ViewProps) {
   const days = daysBetween(props.from, props.to);
   const byDay = groupByDay(props.appointments, props.timeZone);
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-  const height = hours.length * HOUR_PX;
-  const nowTop = ((zonedMinutes(props.nowIso, props.timeZone) - HOUR_START * 60) / 60) * HOUR_PX;
+  const nowPercent = ((zonedMinutes(props.nowIso, props.timeZone) - HOUR_START * 60) / DAY_MINUTES) * 100;
 
   return (
-    <Card className="overflow-x-auto">
-      <div className="min-w-[760px]">
+    <Card className="flex flex-1 flex-col overflow-x-auto overflow-y-hidden">
+      <div className="flex min-w-[760px] flex-1 flex-col">
         <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line bg-bg">
           <span />
           {days.map((day) => {
@@ -105,10 +110,10 @@ export function WeekView(props: ViewProps) {
             );
           })}
         </div>
-        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+        <div className="grid flex-1 grid-cols-[56px_repeat(7,minmax(0,1fr))]" style={{ minHeight: WEEK_GRID_MIN_HEIGHT }}>
           <div className="flex flex-col pr-2 text-right text-[11px] text-ink-2" aria-hidden="true">
             {hours.map((h) => (
-              <span key={h} style={{ height: HOUR_PX }}>
+              <span key={h} className="flex-1">
                 {String(h).padStart(2, "0")}h
               </span>
             ))}
@@ -124,15 +129,15 @@ export function WeekView(props: ViewProps) {
                 aria-label={formatDay(day, { weekday: "long", day: "numeric", month: "long" })}
                 className={cn("relative border-l border-line", weekend && "bg-bg")}
                 style={{
-                  height,
-                  backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_PX - 1}px, var(--line) ${HOUR_PX - 1}px, var(--line) ${HOUR_PX}px)`,
+                  backgroundImage: "linear-gradient(to bottom, transparent calc(100% - 1px), var(--line) calc(100% - 1px))",
+                  backgroundSize: `100% calc(100% / ${hours.length})`,
                 }}
               >
                 {items.map((a) => {
                   const start = Math.max(zonedMinutes(a.startsAt, props.timeZone), HOUR_START * 60);
                   const minutes = (Date.parse(a.endsAt) - Date.parse(a.startsAt)) / 60000;
-                  const top = ((start - HOUR_START * 60) / 60) * HOUR_PX;
-                  const h = Math.max(26, Math.min((minutes / 60) * HOUR_PX, height - top) - 2);
+                  const topPercent = ((start - HOUR_START * 60) / DAY_MINUTES) * 100;
+                  const heightPercent = Math.min((minutes / DAY_MINUTES) * 100, 100 - topPercent);
                   const pos = layout.get(a.id) ?? { lane: 0, lanes: 1 };
                   const conflict = props.conflictIds.has(a.id);
                   return (
@@ -147,8 +152,9 @@ export function WeekView(props: ViewProps) {
                           conflict && "ring-2 ring-err",
                         )}
                         style={{
-                          top,
-                          height: h,
+                          top: `${topPercent}%`,
+                          height: `calc(${heightPercent}% - 2px)`,
+                          minHeight: 26,
                           left: `calc(${(pos.lane / pos.lanes) * 100}% + 3px)`,
                           width: `calc(${100 / pos.lanes}% - 6px)`,
                         }}
@@ -163,8 +169,8 @@ export function WeekView(props: ViewProps) {
                     </div>
                   );
                 })}
-                {day === props.today && nowTop >= 0 && nowTop <= height ? (
-                  <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-0.5 bg-err" style={{ top: nowTop }} />
+                {day === props.today && nowPercent >= 0 && nowPercent <= 100 ? (
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-0.5 bg-err" style={{ top: `${nowPercent}%` }} />
                 ) : null}
               </div>
             );

@@ -14,7 +14,7 @@ export function AppShell({
   Link,
   userMenu,
   topBarActions,
-  searchPlaceholder,
+  title,
   banner,
   children,
 }: {
@@ -23,7 +23,8 @@ export function AppShell({
   Link: LinkComponent;
   userMenu: ReactNode;
   topBarActions?: ReactNode;
-  searchPlaceholder?: string;
+  /** Nome mostrado no topo: a empresa (app) ou o painel (admin). */
+  title?: string;
   /** Faixa fixa abaixo do topo (ex.: plano expirado). */
   banner?: ReactNode;
   children: ReactNode;
@@ -32,7 +33,7 @@ export function AppShell({
     <div className="flex min-h-dvh">
       <Rail nav={nav} currentPath={currentPath} Link={Link} label="Menu principal" />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar userMenu={userMenu} actions={topBarActions} searchPlaceholder={searchPlaceholder} />
+        <TopBar userMenu={userMenu} actions={topBarActions} title={title} />
         {banner}
         <div className="flex-1 max-md:pb-20">{children}</div>
       </div>

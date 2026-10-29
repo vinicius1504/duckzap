@@ -11,7 +11,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { signUpAction } from "../actions";
+
+/** A confirmação só existe na tela: o servidor recebe o mesmo `SignUpInput` de sempre. */
+const signUpFormSchema = signUpSchema
+  .extend({ confirmPassword: z.string() })
+  .refine((values) => values.password === values.confirmPassword, { error: "As senhas não conferem.", path: ["confirmPassword"] });
+type SignUpFormValues = z.infer<typeof signUpFormSchema>;
 
 export function SignUpForm() {
   const router = useRouter();
@@ -21,14 +28,15 @@ export function SignUpForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SignUpInput>({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", password: "", acceptTerms: false },
+  } = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpFormSchema),
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "", acceptTerms: false },
   });
 
-  async function onSubmit(values: SignUpInput) {
+  async function onSubmit({ confirmPassword: _confirm, ...values }: SignUpFormValues) {
     setServerError(null);
-    const result = await signUpAction(values);
+    const input: SignUpInput = values;
+    const result = await signUpAction(input);
     if (result) {
       setServerError(result.error);
       return;
@@ -98,6 +106,19 @@ export function SignUpForm() {
           Pelo menos 8 caracteres, com letras e números.
         </p>
         <FieldError id="senha-erro" message={errors.password?.message} />
+      </div>
+
+      <div>
+        <Label htmlFor="senha-confirma">Repita a senha</Label>
+        <Input
+          id="senha-confirma"
+          type={showPassword ? "text" : "password"}
+          autoComplete="new-password"
+          invalid={Boolean(errors.confirmPassword)}
+          aria-describedby={errors.confirmPassword ? "senha-confirma-erro" : undefined}
+          {...register("confirmPassword")}
+        />
+        <FieldError id="senha-confirma-erro" message={errors.confirmPassword?.message} />
       </div>
 
       <div>

@@ -45,8 +45,8 @@ export function UserMenu({
         <span className="font-semibold max-md:hidden">{user.name}</span>
         <Icon name="chevronDown" size={16} className="text-ink-2 max-md:hidden" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-60">
-        <DropdownMenuLabel className="text-sm text-ink">
+      <DropdownMenuContent className="w-auto min-w-60 max-w-[min(22rem,calc(100vw-1rem))]">
+        <DropdownMenuLabel className="text-sm text-ink [overflow-wrap:anywhere]">
           {user.name}
           {user.email ? <span className="block font-medium text-ink-2">{user.email}</span> : null}
         </DropdownMenuLabel>

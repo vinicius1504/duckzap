@@ -142,7 +142,7 @@ export function AgendaBoard({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="mr-1 text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">Agenda</h1>
@@ -235,16 +235,19 @@ export function AgendaBoard({
         </Alert>
       ) : null}
 
-      <div className={cn(navPending && "opacity-70 transition-opacity")}>
+      <div className={cn("relative flex min-h-0 flex-1 flex-col", navPending && "opacity-70 transition-opacity")}>
         {view === "semana" ? <WeekView {...viewProps} /> : null}
         {view === "mes" ? (
           <MonthView {...viewProps} month={anchor.slice(0, 7)} onPickDay={(day) => void setParams({ visao: null, data: day })} />
         ) : null}
         {view === "lista" ? <ListView {...viewProps} canManage={perms.manage} onConfirm={(id) => changeStatus(id, "confirmed")} /> : null}
+        {/* sobre a grade (não abaixo dela): uma linha a mais empurrava a página e criava rolagem */}
+        {optimistic.length === 0 && view !== "lista" ? (
+          <p className="pointer-events-none absolute inset-x-0 top-24 text-center text-ink-2">
+            Nenhum agendamento neste período{ownerFilter || typeFilter ? " com esses filtros" : ""}.
+          </p>
+        ) : null}
       </div>
-      {optimistic.length === 0 && view !== "lista" ? (
-        <p className="text-center text-ink-2">Nenhum agendamento neste período{ownerFilter || typeFilter ? " com esses filtros" : ""}.</p>
-      ) : null}
 
       <AppointmentDetailsDialog
         appointment={opened}

@@ -3,7 +3,7 @@
 import type { ContactFilter, ContactList, Tag } from "@duckzap/contracts/contacts";
 import { Button } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
-import { Select } from "@duckzap/ui/components/form-controls";
+import { FilterSelect } from "@duckzap/ui/components/filter-select";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Spinner } from "@duckzap/ui/components/feedback";
 import { useQueryStates } from "nuqs";
@@ -61,7 +61,7 @@ export function ContactsToolbar({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-0 flex-[1_1_260px]">
           <label htmlFor="busca-cliente" className="sr-only">
             Buscar cliente
@@ -82,14 +82,14 @@ export function ContactsToolbar({
           ) : null}
         </div>
 
-        <FilterSelect
+        <ToolbarFilter
           id="f-etiqueta"
           label="Etiqueta"
           value={params.etiqueta ?? ""}
           onChange={(v) => void setParams({ etiqueta: v || null, pagina: null })}
           options={tags.map((t) => ({ value: t.id, label: t.name }))}
         />
-        <FilterSelect
+        <ToolbarFilter
           id="f-cliente"
           label="É cliente"
           value={params.cliente ?? ""}
@@ -99,21 +99,21 @@ export function ContactsToolbar({
             { value: "nao", label: "Não" },
           ]}
         />
-        <FilterSelect
+        <ToolbarFilter
           id="f-disparos"
           label="Disparos"
           value={params.disparos ?? ""}
           onChange={(v) => void setParams({ disparos: isConsent(v) ? v : null, pagina: null })}
           options={consentOptions}
         />
-        <FilterSelect
+        <ToolbarFilter
           id="f-criado"
           label="Criado em"
           value={params.criado ?? ""}
           onChange={(v) => void setParams({ criado: isCreated(v) ? v : null, pagina: null })}
           options={createdParams.map((v) => ({ value: v, label: createdLabel[v] }))}
         />
-        <FilterSelect
+        <ToolbarFilter
           id="f-inativo"
           label="Sem conversa"
           value={params.inativo ?? ""}
@@ -162,7 +162,8 @@ export function ContactsToolbar({
   );
 }
 
-function FilterSelect({
+/** Filtro da barra no padrão do sistema (`FilterSelect` do ui); aqui só junta as opções "Todos" + as da tela. */
+function ToolbarFilter({
   id,
   label,
   value,
@@ -176,18 +177,13 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="flex-[0_1_160px] max-sm:flex-[1_1_140px]">
-      <label htmlFor={id} className="mb-1 block text-xs font-semibold text-ink-2">
-        {label}
-      </label>
-      <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="max-md:h-11">
-        <option value="">Todos</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </Select>
-    </div>
+    <FilterSelect id={id} label={label} value={value} onChange={(e) => onChange(e.target.value)} className="flex-[0_1_220px] max-sm:flex-[1_1_100%]">
+      <option value="">Todos</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </FilterSelect>
   );
 }

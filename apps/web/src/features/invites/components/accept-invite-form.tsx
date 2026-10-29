@@ -10,6 +10,8 @@ import { acceptInviteAction } from "../actions";
 /** `needsPassword`: conta nova (cria a senha). Senão a pessoa já está logada com o e-mail do convite. */
 export function AcceptInviteForm({ token, needsPassword }: { token: string; needsPassword: boolean }) {
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -22,8 +24,14 @@ export function AcceptInviteForm({ token, needsPassword }: { token: string; need
         setFieldError(parsed.error.issues[0]?.message ?? "Confira a senha.");
         return;
       }
+      if (confirm !== password) {
+        setFieldError(null);
+        setConfirmError("As senhas não conferem.");
+        return;
+      }
     }
     setFieldError(null);
+    setConfirmError(null);
     startTransition(async () => {
       const result = await acceptInviteAction(token, needsPassword ? password : null);
       if (result) setServerError(result.error);
@@ -58,6 +66,21 @@ export function AcceptInviteForm({ token, needsPassword }: { token: string; need
           />
           <FieldError id="senha-erro" message={fieldError ?? undefined} />
           <p className="mt-1 text-[13px] text-ink-2">Pelo menos 8 caracteres, com letra e número.</p>
+        </div>
+      ) : null}
+      {needsPassword ? (
+        <div>
+          <Label htmlFor="senha-confirma">Repita a senha</Label>
+          <Input
+            id="senha-confirma"
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            invalid={Boolean(confirmError)}
+            aria-describedby={confirmError ? "senha-confirma-erro" : undefined}
+          />
+          <FieldError id="senha-confirma-erro" message={confirmError ?? undefined} />
         </div>
       ) : null}
       <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">

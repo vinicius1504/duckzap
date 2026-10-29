@@ -33,7 +33,7 @@ export function AdminShellFrame({
         nav={adminNav}
         currentPath={pathname}
         Link={Link}
-        searchPlaceholder="Buscar empresas, planos, ações…"
+        title="Painel da plataforma"
         topBarActions={
           <Chip tone="info" className="gap-1.5">
             <Icon name="shield" size={14} strokeWidth={2} />

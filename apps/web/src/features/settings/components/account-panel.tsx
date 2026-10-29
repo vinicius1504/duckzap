@@ -292,8 +292,19 @@ const themeOptions = [
   { value: "system", label: "Automático" },
 ] as const satisfies readonly { value: ThemePreference; label: string }[];
 
-function PreferencesForm({ notifications }: { notifications: NotificationPrefs }) {
+/** Tema: muda na hora e fica salvo no navegador, então não tem botão de salvar. */
+function ThemeSection() {
   const { theme, setTheme } = useTheme();
+  return (
+    <section aria-labelledby="tema-titulo" className="flex flex-col gap-3">
+      <CardTitle id="tema-titulo">Tema</CardTitle>
+      <Segmented label="Tema" options={themeOptions} value={theme} onChange={setTheme} />
+      <p className="text-xs text-ink-2">Muda na hora e fica salvo neste navegador. Automático segue o sistema.</p>
+    </section>
+  );
+}
+
+function PreferencesForm({ notifications }: { notifications: NotificationPrefs }) {
   const [prefs, setPrefs] = useState(notifications);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [pending, startTransition] = useTransition();
@@ -322,11 +333,6 @@ function PreferencesForm({ notifications }: { notifications: NotificationPrefs }
         });
       }}
     >
-      <div>
-        <CardTitle className="mb-1.5">Tema</CardTitle>
-        <Segmented label="Tema" options={themeOptions} value={theme} onChange={setTheme} />
-        <p className="mt-1.5 text-xs text-ink-2">Muda na hora e fica salvo neste navegador. Automático segue o sistema.</p>
-      </div>
       <fieldset>
         <legend className="mb-1.5 text-base font-bold">Notificações</legend>
         <label className="flex min-h-11 items-center gap-2.5">
@@ -361,9 +367,14 @@ export function AccountPanel({ account, timeZone }: { account: Account; timeZone
       <Card className="p-6 max-sm:p-4">
         <PasswordForm />
       </Card>
-      <Card className="p-6 max-sm:p-4">
-        <TwoFactorSection account={account} timeZone={timeZone} />
-      </Card>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Card className="p-6 max-sm:p-4">
+          <TwoFactorSection account={account} timeZone={timeZone} />
+        </Card>
+        <Card className="p-6 max-sm:p-4">
+          <ThemeSection />
+        </Card>
+      </div>
       <Card className="p-6 max-sm:p-4">
         <PreferencesForm notifications={account.notifications} />
       </Card>

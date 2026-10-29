@@ -8,7 +8,8 @@ export const Tabs = TabsPrimitive.Root;
 export const TabsContent = TabsPrimitive.Content;
 
 export function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
-  return <TabsPrimitive.List className={cn("flex gap-1 overflow-x-auto border-b border-line", className)} {...props} />;
+  // overflow-y-hidden + pb-px: o -mb-px das abas passava 1px do fundo e fazia o navegador mostrar uma rolagem vertical
+  return <TabsPrimitive.List className={cn("flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line pb-px", className)} {...props} />;
 }
 
 export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitive.Trigger>) {

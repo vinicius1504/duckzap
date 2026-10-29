@@ -36,7 +36,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
   return (
     <Page className="gap-[18px]">
-      <div className="flex flex-wrap items-start gap-5">
+      <div className="flex flex-wrap items-start gap-5 lg:items-stretch">
         <section aria-label="Calendário" className="flex min-w-0 flex-[1_1_680px] flex-col">
           <AgendaBoard
             appointments={appointments}
@@ -57,7 +57,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             newFor={newFor}
           />
         </section>
-        <aside aria-label="Ajustes da agenda" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 lg:max-w-[340px]">
+        <aside aria-label="Ajustes da agenda" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 lg:max-w-[340px] [&>:last-child]:flex-1">
           <GoogleSyncCard sync={sync} nowIso={nowIso} perms={perms} />
           <TypesCard types={types} perms={perms} />
           <RemindersCard settings={reminders} perms={perms} />
