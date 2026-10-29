@@ -57,12 +57,12 @@ export function ConversationList({ list, lookups, tab, selectedId, query, nowIso
             const active = slug === tab;
             const count = list.counts[tabFromSlug[slug]];
             return (
-              <li key={slug} className="flex-1 max-md:flex-none">
+              <li key={slug} className="min-w-0 flex-auto max-md:flex-none">
                 <Link
                   href={inboxHref(query, { tab: slug, conversation: null })}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-[34px] items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1.5 text-[13px] font-semibold text-ink-2",
+                    "flex h-[34px] items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1 text-[13px] font-semibold text-ink-2",
                     active && "bg-surface text-ink shadow-[0_1px_2px_rgba(15,31,43,.15)]",
                     "max-md:h-11 max-md:rounded-full max-md:border max-md:border-line max-md:bg-surface max-md:px-4 max-md:text-sm max-md:text-ink",
                     active && "max-md:border-ink max-md:bg-ink max-md:text-bg",
@@ -70,7 +70,7 @@ export function ConversationList({ list, lookups, tab, selectedId, query, nowIso
                 >
                   {TAB_LABEL[slug]}
                   {COUNTER[slug] && count > 0 ? (
-                    <Chip tone={COUNTER[slug].tone} className="h-5 px-1.5">
+                    <Chip tone={COUNTER[slug].tone} className="h-4 min-w-4 justify-center px-1 text-[11px] leading-none">
                       {count}
                       <span className="sr-only"> {COUNTER[slug].hint}</span>
                     </Chip>

@@ -9,7 +9,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSession } from "@/features/auth/session";
 import { getHomeOverview } from "@/features/home/api";
-import { ConversationsLine, FunnelDonut, funnelColors } from "@/features/home/components/charts";
+import { FunnelDonut, funnelColors } from "@/features/home/components/charts";
+import { ConversationsLine } from "@/features/home/components/conversations-line";
 import { PeriodFilter } from "@/features/home/components/period-filter";
 import { TasksCard } from "@/features/home/components/tasks-card";
 import { formatDate, formatDuration, greeting } from "@/lib/format";
@@ -73,7 +74,9 @@ export default async function HomePage({
             <div className="mb-1.5 flex items-center justify-between">
               <CardTitle>Precisa de você</CardTitle>
               <Chip tone={data.attention.length ? "warn" : "ok"}>
-                {data.attention.length ? `${data.attention.length} itens` : "Tudo em dia"}
+                {data.attention.length
+                  ? `${data.attention.length} ${data.attention.length === 1 ? "item" : "itens"}`
+                  : "Tudo em dia"}
               </Chip>
             </div>
             <ul>
@@ -130,7 +133,7 @@ export default async function HomePage({
               <CardTitle>Conversas por dia</CardTitle>
               <span className="text-[13px] text-ink-2">Últimos 7 dias</span>
             </div>
-            <ConversationsLine data={data.conversationsPerDay} />
+            <ConversationsLine data={data.conversationsPerDay} timeZone={tz} />
           </Card>
 
           <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))]">
@@ -182,6 +185,9 @@ export default async function HomePage({
           {can(session.user.role, "home.view_team_metrics") ? (
             <Card className="p-5">
               <CardTitle>Conversas por atendente</CardTitle>
+              {data.conversationsByAgent.length === 0 ? (
+                <p className="mt-2 text-[13px] text-ink-2">Ainda não há conversas atendidas neste período.</p>
+              ) : null}
               <ul className="mt-3.5 flex flex-col gap-3.5 text-[13px]">
                 {data.conversationsByAgent.map((agent) => (
                   <li key={agent.name}>
