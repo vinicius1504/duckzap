@@ -7,8 +7,6 @@ import { Chip } from "@duckzap/ui/components/chip";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
-import { Segmented } from "@duckzap/ui/components/segmented";
-import { useTheme, type ThemePreference } from "@duckzap/ui/theme";
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/format";
 import {
@@ -286,24 +284,6 @@ function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: s
   );
 }
 
-const themeOptions = [
-  { value: "light", label: "Claro" },
-  { value: "dark", label: "Escuro" },
-  { value: "system", label: "Automático" },
-] as const satisfies readonly { value: ThemePreference; label: string }[];
-
-/** Tema: muda na hora e fica salvo no navegador, então não tem botão de salvar. */
-function ThemeSection() {
-  const { theme, setTheme } = useTheme();
-  return (
-    <section aria-labelledby="tema-titulo" className="flex flex-col gap-3">
-      <CardTitle id="tema-titulo">Tema</CardTitle>
-      <Segmented label="Tema" options={themeOptions} value={theme} onChange={setTheme} />
-      <p className="text-xs text-ink-2">Muda na hora e fica salvo neste navegador. Automático segue o sistema.</p>
-    </section>
-  );
-}
-
 function PreferencesForm({ notifications }: { notifications: NotificationPrefs }) {
   const [prefs, setPrefs] = useState(notifications);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -375,13 +355,10 @@ export function AccountPanel({ account, timeZone }: { account: Account; timeZone
             <TwoFactorSection account={account} timeZone={timeZone} />
           </Card>
           <Card className="p-6 max-sm:p-4">
-            <ThemeSection />
+            <PreferencesForm notifications={account.notifications} />
           </Card>
         </div>
       </div>
-      <Card className="p-6 max-sm:p-4">
-        <PreferencesForm notifications={account.notifications} />
-      </Card>
     </div>
   );
 }
