@@ -8,6 +8,7 @@ import {
   listAppointments,
 } from "@/features/appointments/api";
 import { AgendaBoard } from "@/features/appointments/components/agenda-board";
+import { GOOGLE_CALENDAR_ENABLED } from "@/lib/features";
 import { GoogleSyncCard, RemindersCard, TypesCard } from "@/features/appointments/components/agenda-sidebar";
 import { agendaPerms, parseAgendaSearch } from "@/features/appointments/search-params";
 import { rangeFor, todayIn } from "@/features/appointments/time";
@@ -57,8 +58,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             newFor={newFor}
           />
         </section>
-        <aside aria-label="Ajustes da agenda" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 lg:max-w-[340px] [&>:last-child]:flex-1">
-          <GoogleSyncCard sync={sync} nowIso={nowIso} perms={perms} />
+        <aside aria-label="Ajustes da agenda" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 lg:max-w-[340px]">
+          {GOOGLE_CALENDAR_ENABLED ? <GoogleSyncCard sync={sync} nowIso={nowIso} perms={perms} /> : null}
           <TypesCard types={types} perms={perms} />
           <RemindersCard settings={reminders} perms={perms} />
         </aside>

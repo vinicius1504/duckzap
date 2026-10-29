@@ -20,6 +20,13 @@ const TAB_LABEL: Record<TabSlug, string> = {
   resolvidas: "Resolvidas",
 };
 
+// Resolvidas fica sem número: é histórico e só cresce.
+const COUNTER: Partial<Record<TabSlug, { tone: "warn" | "info"; hint: string }>> = {
+  minhas: { tone: "info", hint: "com você" },
+  aguardando: { tone: "warn", hint: "na fila" },
+  ia: { tone: "info", hint: "com a IA" },
+};
+
 const EMPTY: Record<TabSlug, { title: string; description: string }> = {
   minhas: { title: "Nada com você agora", description: "As conversas que você assumiu ou que foram transferidas para você aparecem aqui." },
   aguardando: { title: "Ninguém na fila", description: "Quando a IA ou alguém da equipe chamar uma pessoa, a conversa aparece aqui." },
@@ -62,10 +69,10 @@ export function ConversationList({ list, lookups, tab, selectedId, query, nowIso
                   )}
                 >
                   {TAB_LABEL[slug]}
-                  {slug === "aguardando" && count > 0 ? (
-                    <Chip tone="warn" className="h-5 px-1.5">
+                  {COUNTER[slug] && count > 0 ? (
+                    <Chip tone={COUNTER[slug].tone} className="h-5 px-1.5">
                       {count}
-                      <span className="sr-only"> na fila</span>
+                      <span className="sr-only"> {COUNTER[slug].hint}</span>
                     </Chip>
                   ) : null}
                 </Link>

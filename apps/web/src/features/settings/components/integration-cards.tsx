@@ -15,6 +15,7 @@ import {
   disconnectGoogleCalendarAction,
   updateWhatsappTokenAction,
 } from "../actions";
+import { GOOGLE_CALENDAR_ENABLED } from "@/lib/features";
 import { ConfirmDialog } from "./confirm-dialog";
 import { CopyField } from "./copy-field";
 
@@ -46,52 +47,74 @@ function useAction() {
   return { error, pending, run };
 }
 
-export function IntegrationCards({ integrations, timeZone }: { integrations: Integrations; timeZone: string }) {
+export function IntegrationCards({
+  integrations,
+  timeZone,
+}: {
+  integrations: Integrations;
+  timeZone: string;
+}) {
   const { googleCalendar, instagram, whatsappOfficial } = integrations;
   const google = useAction();
   const insta = useAction();
   const [token, setToken] = useState("");
-  const [tokenFeedback, setTokenFeedback] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+  const [tokenFeedback, setTokenFeedback] = useState<{ tone: "ok" | "err"; text: string } | null>(
+    null,
+  );
   const [savingToken, startSavingToken] = useTransition();
 
   return (
     <>
-      <Card className="flex flex-col gap-2.5 p-5 max-sm:p-4">
-        <Header title="Google Calendar" status={googleCalendar.status} />
-        <p className="text-[13px] text-ink-2">
-          {googleCalendar.status === "connected" && googleCalendar.lastSyncAt
-            ? `Calendário “${googleCalendar.calendarName}” sincronizado em ${formatDate(
-                googleCalendar.lastSyncAt,
-                { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" },
-                timeZone,
-              )}.`
-            : "Sincronize a Agenda com o Google Calendar nos dois sentidos."}
-        </p>
-        {google.error ? (
-          <Alert tone="err" live>
-            {google.error}
-          </Alert>
-        ) : null}
-        {googleCalendar.status === "connected" ? (
-          <ConfirmDialog
-            trigger={<Button size="sm" className="self-start">Desconectar</Button>}
-            title="Desconectar o Google Calendar?"
-            description="Os agendamentos param de sincronizar. Os que já estão no Google continuam lá."
-            confirmLabel="Desconectar"
-            danger
-            onConfirm={disconnectGoogleCalendarAction}
-          />
-        ) : (
-          <Button size="sm" variant="primary" className="self-start" disabled={google.pending} onClick={() => google.run(connectGoogleCalendarAction)}>
-            {google.pending ? "Conectando…" : "Conectar com o Google"}
-          </Button>
-        )}
-      </Card>
+      {GOOGLE_CALENDAR_ENABLED ? (
+        <Card className="flex flex-col gap-2.5 p-5 max-sm:p-4">
+          <Header title="Google Calendar" status={googleCalendar.status} />
+          <p className="text-[13px] text-ink-2">
+            {googleCalendar.status === "connected" && googleCalendar.lastSyncAt
+              ? `Calendário “${googleCalendar.calendarName}” sincronizado em ${formatDate(
+                  googleCalendar.lastSyncAt,
+                  { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" },
+                  timeZone,
+                )}.`
+              : "Sincronize a Agenda com o Google Calendar nos dois sentidos."}
+          </p>
+          {google.error ? (
+            <Alert tone="err" live>
+              {google.error}
+            </Alert>
+          ) : null}
+          {googleCalendar.status === "connected" ? (
+            <ConfirmDialog
+              trigger={
+                <Button size="sm" className="self-start">
+                  Desconectar
+                </Button>
+              }
+              title="Desconectar o Google Calendar?"
+              description="Os agendamentos param de sincronizar. Os que já estão no Google continuam lá."
+              confirmLabel="Desconectar"
+              danger
+              onConfirm={disconnectGoogleCalendarAction}
+            />
+          ) : (
+            <Button
+              size="sm"
+              variant="primary"
+              className="self-start"
+              disabled={google.pending}
+              onClick={() => google.run(connectGoogleCalendarAction)}
+            >
+              {google.pending ? "Conectando…" : "Conectar com o Google"}
+            </Button>
+          )}
+        </Card>
+      ) : null}
 
       <Card className="flex flex-col gap-2.5 p-5 max-sm:p-4">
         <Header title="Instagram" status={instagram.status} />
         <p className="text-[13px] text-ink-2">
-          {instagram.status === "connected" ? `Conta ${instagram.account} recebendo DMs e comentários.` : "Receba DMs e comentários na tela de Conversas."}
+          {instagram.status === "connected"
+            ? `Conta ${instagram.account} recebendo DMs e comentários.`
+            : "Receba DMs e comentários na tela de Conversas."}
         </p>
         {insta.error ? (
           <Alert tone="err" live>
@@ -103,7 +126,13 @@ export function IntegrationCards({ integrations, timeZone }: { integrations: Int
             Gerenciar em Canais
           </Link>
         ) : (
-          <Button size="sm" variant="primary" className="self-start" disabled={insta.pending} onClick={() => insta.run(authorizeInstagramAction)}>
+          <Button
+            size="sm"
+            variant="primary"
+            className="self-start"
+            disabled={insta.pending}
+            onClick={() => insta.run(authorizeInstagramAction)}
+          >
             {insta.pending ? "Aguardando o Facebook…" : "Autorizar"}
           </Button>
         )}
@@ -117,7 +146,11 @@ export function IntegrationCards({ integrations, timeZone }: { integrations: Int
             e.preventDefault();
             startSavingToken(async () => {
               const result = await updateWhatsappTokenAction(token);
-              setTokenFeedback(result.ok ? { tone: "ok", text: "Token atualizado." } : { tone: "err", text: result.error });
+              setTokenFeedback(
+                result.ok
+                  ? { tone: "ok", text: "Token atualizado." }
+                  : { tone: "err", text: result.error },
+              );
               if (result.ok) setToken("");
             });
           }}
@@ -128,7 +161,11 @@ export function IntegrationCards({ integrations, timeZone }: { integrations: Int
               id="wa-numero"
               readOnly
               className="h-10"
-              value={whatsappOfficial.phoneNumberIdLast4 ? `•••••••••••${whatsappOfficial.phoneNumberIdLast4}` : "Não configurado"}
+              value={
+                whatsappOfficial.phoneNumberIdLast4
+                  ? `•••••••••••${whatsappOfficial.phoneNumberIdLast4}`
+                  : "Não configurado"
+              }
             />
           </div>
           <div>
@@ -141,15 +178,29 @@ export function IntegrationCards({ integrations, timeZone }: { integrations: Int
                 className="h-10 min-w-0"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder={whatsappOfficial.accessTokenLast4 ? `Termina em ${whatsappOfficial.accessTokenLast4} · cole um novo para trocar` : "Cole o token"}
+                placeholder={
+                  whatsappOfficial.accessTokenLast4
+                    ? `Termina em ${whatsappOfficial.accessTokenLast4} · cole um novo para trocar`
+                    : "Cole o token"
+                }
               />
               <Button type="submit" disabled={!token || savingToken} className="shrink-0">
                 {savingToken ? "Salvando…" : "Trocar"}
               </Button>
             </div>
           </div>
-          <CopyField id="wa-webhook" label="URL do webhook" value={whatsappOfficial.webhookUrl} mono />
-          <CopyField id="wa-verify" label="Token de verificação" value={whatsappOfficial.verifyToken} mono />
+          <CopyField
+            id="wa-webhook"
+            label="URL do webhook"
+            value={whatsappOfficial.webhookUrl}
+            mono
+          />
+          <CopyField
+            id="wa-verify"
+            label="Token de verificação"
+            value={whatsappOfficial.verifyToken}
+            mono
+          />
         </form>
         {tokenFeedback ? (
           <Alert tone={tokenFeedback.tone} live>

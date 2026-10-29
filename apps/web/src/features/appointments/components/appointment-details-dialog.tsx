@@ -8,6 +8,7 @@ import { Alert } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import Link from "next/link";
 import { OpenConversationButton } from "@/features/conversations/components/open-conversation-button";
+import { GOOGLE_CALENDAR_ENABLED } from "@/lib/features";
 import { formatDate, formatPhone } from "@/lib/format";
 import { sourceLabel, statusActions, statusView } from "../labels";
 import { zonedTime } from "../time";
@@ -45,7 +46,9 @@ export function AppointmentDetailsDialog({
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone={statusView[a.status].tone}>{statusView[a.status].label}</Chip>
             {conflict ? <Chip tone="err">Conflito de horário</Chip> : null}
-            <Chip tone={a.syncedToGoogle ? "ok" : "neutral"}>{a.syncedToGoogle ? "No Google Calendar" : "Ainda não sincronizado"}</Chip>
+            {GOOGLE_CALENDAR_ENABLED ? (
+              <Chip tone={a.syncedToGoogle ? "ok" : "neutral"}>{a.syncedToGoogle ? "No Google Calendar" : "Ainda não sincronizado"}</Chip>
+            ) : null}
           </div>
 
           <dl className="grid grid-cols-[minmax(96px,auto)_1fr] gap-x-3 gap-y-2 text-[13px]">

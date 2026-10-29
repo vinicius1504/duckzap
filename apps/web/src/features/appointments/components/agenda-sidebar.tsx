@@ -4,9 +4,11 @@ import type { AppointmentType, CalendarSync, ReminderSettings } from "@duckzap/c
 import { Button } from "@duckzap/ui/components/button";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
+import { CollapsibleCard } from "@duckzap/ui/components/collapsible-card";
 import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox, Textarea } from "@duckzap/ui/components/form-controls";
+import { Icon } from "@duckzap/ui/components/icon";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { Switch } from "@duckzap/ui/components/switch";
 import { useRouter } from "next/navigation";
@@ -113,16 +115,16 @@ export function TypesCard({ types, perms }: { types: AppointmentType[]; perms: A
     });
   }
 
+  const activeCount = optimistic.filter((t) => t.active).length;
+  const summary = optimistic.length === 0 ? "Nenhum tipo ainda" : `${optimistic.length} ${optimistic.length === 1 ? "tipo" : "tipos"} · ${activeCount} ${activeCount === 1 ? "ativo" : "ativos"}`;
+
   return (
-    <Card className="p-[18px]">
-      <div className="flex items-center justify-between gap-2">
-        <CardTitle className="text-[15px]">Tipos de atendimento</CardTitle>
-        {perms.settings ? (
-          <Button size="sm" onClick={() => setOpen(true)} className="max-md:h-11">
-            Novo
-          </Button>
-        ) : null}
-      </div>
+    <CollapsibleCard icon="list" title="Tipos de atendimento" summary={summary}>
+      {perms.settings ? (
+        <Button size="sm" onClick={() => setOpen(true)} className="max-md:h-11">
+          <Icon name="plus" size={16} /> Novo tipo
+        </Button>
+      ) : null}
       {error ? <Alert tone="err" live className="mt-2">{error}</Alert> : null}
       <ul className="mt-2.5 text-[13px]">
         {optimistic.map((type) => (
@@ -160,7 +162,7 @@ export function TypesCard({ types, perms }: { types: AppointmentType[]; perms: A
       </ul>
       {!perms.settings ? <p className="mt-2 text-xs text-ink-2">Só administradores mudam os tipos.</p> : null}
       <NewTypeDialog open={open} onOpenChange={setOpen} />
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -234,10 +236,12 @@ export function RemindersCard({ settings, perms }: { settings: ReminderSettings;
     });
   }
 
+  const on = draft.reminders.filter((r) => r.enabled).length;
+  const summary = on === 0 ? "Desligados" : `${on} ${on === 1 ? "lembrete ligado" : "lembretes ligados"}${draft.confirmByReply ? " · confirma pela resposta" : ""}`;
+
   return (
-    <Card className="p-[18px]">
-      <CardTitle className="text-[15px]">Lembretes automáticos</CardTitle>
-      <p className="mt-1 text-[13px] text-ink-2">Enviados pelo WhatsApp do canal da conversa. Variáveis: {"{nome}"}, {"{hora}"}, {"{data}"}, {"{tipo}"}.</p>
+    <CollapsibleCard icon="bell" title="Lembretes automáticos" summary={summary}>
+      <p className="text-[13px] text-ink-2">Enviados pelo WhatsApp do canal da conversa. Variáveis: {"{nome}"}, {"{hora}"}, {"{data}"}, {"{tipo}"}.</p>
       <div className="mt-3 flex flex-col gap-4">
         {draft.reminders.map((r) => (
           <div key={r.kind} className="flex flex-col gap-2">
@@ -289,6 +293,6 @@ export function RemindersCard({ settings, perms }: { settings: ReminderSettings;
           </Button>
         )}
       </div>
-    </Card>
+    </CollapsibleCard>
   );
 }
