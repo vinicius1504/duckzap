@@ -46,7 +46,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <Page className="max-w-275 gap-[18px]">
       <PageHeader title="Configurações" description="Ajustes da empresa, do atendimento, das integrações e da sua conta." />
 
-      <nav aria-label="Seções das configurações" className="flex gap-1 overflow-x-auto border-b border-line">
+      {/* overflow-y-hidden + pb-px: o -mb-px das abas passava 1px do fundo e o navegador mostrava uma rolagem vertical */}
+      <nav aria-label="Seções das configurações" className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line pb-px">
         {allowed.map((t) => (
           <Link
             key={t.value}

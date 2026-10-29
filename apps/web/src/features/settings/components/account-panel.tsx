@@ -361,19 +361,23 @@ function PreferencesForm({ notifications }: { notifications: NotificationPrefs }
 export function AccountPanel({ account, timeZone }: { account: Account; timeZone: string }) {
   return (
     <div className="flex flex-col gap-4">
-      <Card className="p-6 max-sm:p-4">
-        <ProfileForm account={account} />
-      </Card>
-      <Card className="p-6 max-sm:p-4">
-        <PasswordForm />
-      </Card>
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        <Card className="p-6 max-sm:p-4">
-          <TwoFactorSection account={account} timeZone={timeZone} />
-        </Card>
-        <Card className="p-6 max-sm:p-4">
-          <ThemeSection />
-        </Card>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card className="p-6 max-sm:p-4">
+            <ProfileForm account={account} />
+          </Card>
+          <Card className="p-6 max-sm:p-4">
+            <PasswordForm />
+          </Card>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card className="p-6 max-sm:p-4">
+            <TwoFactorSection account={account} timeZone={timeZone} />
+          </Card>
+          <Card className="p-6 max-sm:p-4">
+            <ThemeSection />
+          </Card>
+        </div>
       </div>
       <Card className="p-6 max-sm:p-4">
         <PreferencesForm notifications={account.notifications} />

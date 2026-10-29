@@ -45,7 +45,7 @@ export function ConversationList({ list, lookups, tab, selectedId, query, nowIso
   return (
     <>
       <nav aria-label="Abas de conversas" className="px-4 pt-3.5 max-md:pt-2.5">
-        <ul className="flex gap-0.5 rounded-control bg-surface-2 p-[3px] max-md:gap-2 max-md:overflow-x-auto max-md:bg-transparent max-md:p-0">
+        <ul className="flex gap-0.5 rounded-control bg-surface-2 p-[3px] max-md:gap-2 max-md:overflow-x-auto max-md:overflow-y-hidden max-md:bg-transparent max-md:p-0">
           {tabs.map((slug) => {
             const active = slug === tab;
             const count = list.counts[tabFromSlug[slug]];
