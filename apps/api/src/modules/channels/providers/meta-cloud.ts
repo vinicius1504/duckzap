@@ -260,6 +260,8 @@ function parseMessage(message: Record<string, unknown>, names: Map<string, strin
       const media = asRecord(message.image);
       return { ...base, kind: "image", text: asString(media.caption), mediaRef: asString(media.id) };
     }
+    case "sticker":
+      return { ...base, kind: "image", sticker: true, mediaRef: asString(asRecord(message.sticker).id) };
     case "audio":
       return { ...base, kind: "audio", mediaRef: asString(asRecord(message.audio).id) };
     case "document": {

@@ -300,7 +300,7 @@ export function SimpleConfigTab({
           variant="primary"
           size="lg"
           className="h-12 w-full aria-disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:hover:border-duck aria-disabled:hover:bg-duck"
-          disabled={generating || cooldownLeft > 0 || generation.decision !== null}
+          disabled={generating || cooldownLeft > 0}
           aria-disabled={blocked || undefined}
           aria-describedby="gen-submit-help"
           onClick={generation.generate}

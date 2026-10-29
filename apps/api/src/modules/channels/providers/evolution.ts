@@ -504,6 +504,7 @@ function parseUpsert(data: Record<string, unknown>, fallbackAt: Date): InboundEv
   if (text) return { ...base, kind: "text", text };
   const image = asRecord(message.imageMessage);
   if (Object.keys(image).length) return { ...base, kind: "image", text: asString(image.caption), mediaRef: id };
+  if (Object.keys(asRecord(message.stickerMessage)).length) return { ...base, kind: "image", sticker: true, mediaRef: id };
   if (Object.keys(asRecord(message.audioMessage)).length) return { ...base, kind: "audio", mediaRef: id };
   const document = asRecord(message.documentMessage);
   if (Object.keys(document).length) return { ...base, kind: "document", text: asString(document.caption), mediaRef: id };

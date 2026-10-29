@@ -20,14 +20,13 @@ import {
   purposeForJob,
   type GeneratorTextField,
 } from "@/lib/agent-generator";
-import { sectionsWithContent } from "@/lib/agent-generator-apply";
 import { AFTER_GENERATION_SECTION, EDITOR_SECTIONS, EXAMPLES_SECTION, legacyResource, parseEditorSection, type EditorSection } from "@/lib/agent-tabs";
 import { saveAgentConfigAction, setAgentStatusAction } from "../actions";
 import { GEN_IDS, useGeneration } from "../use-generation";
 import { AdvancedConfigTab } from "./advanced-config-tab";
 import { AgentHeader } from "./agent-header";
-import { ApplyConfirmPanel } from "./apply-confirm-panel";
 import { GenerationStatus } from "./generation-status";
+import { ImproveHints } from "./improve-hints";
 import { ResourcesTab } from "./resources-tab";
 import { SegmentedTabsList, SegmentedTabsTrigger } from "./segmented-tabs";
 import { SimpleConfigTab } from "./simple-config-tab";
@@ -228,16 +227,6 @@ export function AgentEditor({
           </p>
           <div className="flex flex-col gap-3 empty:hidden [&:not(:empty)]:mb-4">
             <GenerationStatus generation={generation} />
-            {generation.decision ? (
-              <ApplyConfirmPanel
-                config={config}
-                sections={sectionsWithContent(config)}
-                choices={generation.decision.choices}
-                onChoice={generation.setChoice}
-                onConfirm={generation.confirmDecision}
-                onDiscard={generation.discardDecision}
-              />
-            ) : null}
           </div>
           <Tabs value={section} onValueChange={(value) => setSection(parseEditorSection(value))}>
             <SegmentedTabsList aria-label="Seções da configuração do agente">
@@ -278,8 +267,9 @@ export function AgentEditor({
         </Card>
       </div>
 
-      <aside className="sticky top-4 min-w-0 flex-[1_1_320px] max-xl:hidden" aria-label="Simulador">
-        <Simulator {...simulatorProps} />
+      <aside className="sticky top-4 flex min-w-0 flex-[1_1_320px] flex-col gap-3 max-xl:hidden" aria-label="Simulador">
+        <Simulator {...simulatorProps} className={generation.outcome ? "max-h-[calc(100dvh-340px)] min-h-[320px]" : undefined} />
+        <ImproveHints generation={generation} className="max-h-48 shrink-0" />
       </aside>
       <div className="fixed bottom-24 right-4 z-30 xl:hidden">
         <Button variant="primary" size="lg" className="shadow-lg" onClick={openSimulator}>
@@ -288,7 +278,10 @@ export function AgentEditor({
       </div>
       <Dialog open={simulatorOpen} onOpenChange={setSimulatorOpen}>
         <DialogContent side="right" title="Simulador" description="Teste aqui. Nada é enviado a clientes.">
-          <Simulator {...simulatorProps} />
+          <div className="flex flex-col gap-3">
+            <Simulator {...simulatorProps} />
+            <ImproveHints generation={generation} />
+          </div>
         </DialogContent>
       </Dialog>
       <VersionsDrawer open={historyOpen} onOpenChange={setHistoryOpen} agent={agent} versions={versions} timeZone={timeZone} dirty={dirty} />

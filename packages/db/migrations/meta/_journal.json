@@ -85,6 +85,13 @@
       "when": 1793225946191,
       "tag": "0011_plan_pro",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793229546191,
+      "tag": "0012_media_thumbnail",
+      "breakpoints": true
     }
   ]
 }

@@ -246,7 +246,7 @@ describe.skipIf(!enabled)("Mídia de conversa — integração (precisa da migra
     clientId: `c-${run}-${++seq}`,
   });
 
-  type MessageBody = { id: string; kind: string; status: string; attachment: { fileName: string | null; mimeType: string; sizeBytes: number | null; durationSeconds: number | null; url: string | null; mediaId: string | null } | null };
+  type MessageBody = { id: string; kind: string; status: string; attachment: { fileName: string | null; mimeType: string; sizeBytes: number | null; durationSeconds: number | null; url: string | null; thumbnailUrl?: string | null; sticker?: boolean; mediaId: string | null } | null };
   const send = (conversationId: string, payload: unknown, as = "owner") => call(as, "POST", `/conversations/${conversationId}/messages`, payload);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -375,6 +375,38 @@ describe.skipIf(!enabled)("Mídia de conversa — integração (precisa da migra
       const [row] = (await mediaRows()).filter((r) => r.id === init.mediaId);
       expect(row).toMatchObject({ status: "ready" });
       expect(row!.readyAt).not.toBeNull();
+    });
+
+    it("imagem de verdade ganha miniatura WebP leve; o balão recebe a URL dela e a original continua intacta", async () => {
+      const { default: sharp } = await import("sharp");
+      const photo = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: { r: 200, g: 80, b: 40 } } }).png().toBuffer();
+      const { conv } = await newConversation();
+      const { ready, init } = await upload("owner", "image", "foto.png", "image/png", photo);
+      const [row] = (await mediaRows()).filter((r) => r.id === init.mediaId);
+      expect(row!.thumbKey).toBe(`${row!.storageKey}-t`);
+      const thumb = mem.objects.get(row!.thumbKey!)!;
+      expect(thumb.contentType).toBe("image/webp");
+      expect(thumb.bytes.length).toBeLessThan(photo.length);
+      const meta = await sharp(thumb.bytes).metadata();
+      expect(meta).toMatchObject({ format: "webp", width: 480, height: 360 });
+      expect(mem.objects.get(row!.storageKey)!.bytes.equals(photo)).toBe(true);
+
+      await send(conv.id, sendBody("image", ready!.mediaId));
+      const body = await json<{ messages: MessageBody[] }>(await call("owner", "GET", `/conversations/${conv.id}`));
+      const att = body.messages.find((m) => m.attachment)!.attachment as { url: string; thumbnailUrl: string };
+      expect(att.thumbnailUrl).toContain(row!.thumbKey!);
+      expect(att.url).not.toContain(row!.thumbKey!);
+    });
+
+    it("imagem que não dá para reduzir fica sem miniatura (sem erro): o balão usa a original", async () => {
+      const { conv } = await newConversation();
+      const { ready, init } = await upload("owner", "image", "a.png", "image/png", PNG);
+      expect(ready).not.toBeNull();
+      const [row] = (await mediaRows()).filter((r) => r.id === init.mediaId);
+      expect(row!.thumbKey).toBeNull();
+      await send(conv.id, sendBody("image", ready!.mediaId));
+      const body = await json<{ messages: MessageBody[] }>(await call("owner", "GET", `/conversations/${conv.id}`));
+      expect(body.messages.find((m) => m.attachment)!.attachment!.thumbnailUrl ?? null).toBeNull();
     });
 
     it("é idempotente (repetir devolve o mesmo) e só quem pediu o envio confere", async () => {
@@ -752,6 +784,23 @@ describe.skipIf(!enabled)("Mídia de conversa — integração (precisa da migra
       const urls = detail.messages.flatMap((m) => (m.attachment ? [m.attachment] : []));
       expect(urls).toHaveLength(3);
       expect(urls.every((a) => a.url?.startsWith(`${HOST}/get/org/${A}/`) && a.mediaId)).toBe(true);
+    });
+
+    it("figurinha vira imagem marcada como figurinha, guardada sem miniatura, e a leitura devolve a marca", async () => {
+      const { default: sharp } = await import("sharp");
+      const webp = await sharp({ create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).webp().toBuffer();
+      const from = phone();
+      const ref = extId("stk");
+      fake.downloads.set(ref, { bytes: webp, mimeType: "image/webp", fileName: undefined });
+      await inbound({ from, kind: "image", sticker: true, mediaRef: ref, externalId: ref, text: undefined });
+      const found = await conversationOf(from);
+      const [msg] = (await messagesOf(found!.conv.id)).filter((m) => m.direction === "in");
+      expect(msg).toMatchObject({ kind: "image", body: "" });
+      expect(msg!.media).toMatchObject({ sticker: true, mimeType: "image/webp" });
+      const [row] = (await mediaRows()).filter((r) => r.messageId === msg!.id);
+      expect(row).toMatchObject({ kind: "image", status: "ready", thumbKey: null });
+      const detail = await json<{ messages: MessageBody[] }>(await call("owner", "GET", `/conversations/${found!.conv.id}`));
+      expect(detail.messages.find((m) => m.attachment)!.attachment).toMatchObject({ sticker: true, thumbnailUrl: null });
     });
 
     it("falha ao baixar NUNCA perde a mensagem: entra com a legenda e o anexo indisponível", async () => {

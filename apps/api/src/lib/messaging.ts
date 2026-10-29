@@ -79,6 +79,8 @@ export type InboundEvent =
       mediaUrl?: string;
       /** Referência para baixar a mídia no provedor (Meta: media id; Evolution: id da mensagem). */
       mediaRef?: string;
+      /** Figurinha: chega como `image` (WebP), mas a tela a mostra pequena e sem miniatura. */
+      sticker?: boolean;
       at: string;
       /** API oficial: até quando vale a janela de 24 h para resposta em texto livre. */
       windowExpiresAt?: string;
@@ -105,6 +107,7 @@ export const inboundEventSchema: z.ZodType<InboundEvent> = z.discriminatedUnion(
     text: z.string().optional(),
     mediaUrl: z.string().optional(),
     mediaRef: z.string().optional(),
+    sticker: z.boolean().optional(),
     at: z.iso.datetime(),
     windowExpiresAt: z.iso.datetime().optional(),
   }),

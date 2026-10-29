@@ -148,6 +148,10 @@ export const messageAttachmentSchema = z.object({
    * Envio: ignorada pela API; o que vale é `mediaId`.
    */
   url: z.string().nullable(),
+  /** Leitura, só imagem: URL assinada da miniatura leve (null/ausente = usar `url`). */
+  thumbnailUrl: z.string().nullable().optional(),
+  /** Figurinha recebida: a tela a mostra pequena, sem balão de imagem. */
+  sticker: z.boolean().optional(),
   /** Envio: id devolvido por `POST /v1/media/uploads/{id}/complete` (ver contracts/media.ts). */
   mediaId: z.string().nullable().optional(),
 });

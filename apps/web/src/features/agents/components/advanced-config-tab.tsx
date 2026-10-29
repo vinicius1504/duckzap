@@ -9,7 +9,6 @@ import type { AgentConfig } from "@duckzap/contracts/agents";
 import { examplesCountLabel, incompleteExamples } from "@/lib/agent-examples";
 import { GENERATED_NOTICE, PROFILE_LIMITS } from "@/lib/agent-generator-apply";
 import { GEN_IDS, type GenerationApi } from "../use-generation";
-import { CompleteImprove } from "./complete-improve";
 import { ExamplesEditor } from "./examples-editor";
 import { CountedField } from "./field";
 
@@ -72,7 +71,6 @@ export function AdvancedConfigTab({
   return (
     <div className="flex flex-col gap-6">
       {noticeVisible ? <GeneratedNotice onOpenSimulator={onOpenSimulator} /> : null}
-      <CompleteImprove generation={generation} />
 
       <div className="flex flex-col gap-3">
         {legacy ? (

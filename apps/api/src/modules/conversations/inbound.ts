@@ -316,6 +316,7 @@ async function storeMessage(deps: InboundDeps, context: InboundContext, event: E
                 url: null,
                 mediaId: file?.id ?? null,
                 mediaRef: event.mediaRef ?? null,
+                ...(event.sticker ? { sticker: true } : {}),
               },
         senderKind: "contact",
         senderName: contact.name,
@@ -329,7 +330,9 @@ async function storeMessage(deps: InboundDeps, context: InboundContext, event: E
     if (file) await linkToMessage(tx, file.id, messageId);
 
     // 7. contabilidade da conversa
-    const activeAgent = await loadActiveAgent(tx, organizationId, conv.agentId);
+    // o agente é o da conversa; conversa criada antes de o canal ter agente ativo herda o do canal (fonte de verdade) agora
+    const activeAgent = await loadActiveAgent(tx, organizationId, conv.agentId ?? channel.agentId);
+    const inheritedAgentId = conv.agentId === null && activeAgent ? activeAgent.id : null;
     const convMode = modeOf(conv);
     const next = statusAfterInbound({ status: statusOf(conv), mode: convMode, assigneeId: conv.assigneeId }, activeAgent !== null);
     const queuedNow = next.queued && conv.waitingSince === null;
@@ -346,6 +349,7 @@ async function storeMessage(deps: InboundDeps, context: InboundContext, event: E
       lastMessageDirection: "in",
       lastInboundAt: createdAt,
       updatedAt: now,
+      ...(inheritedAgentId ? { agentId: inheritedAgentId } : {}),
       ...(event.windowExpiresAt ? { windowExpiresAt: new Date(event.windowExpiresAt) } : {}),
     };
     await tx.update(conversations).set(patch).where(eq(conversations.id, conv.id));
@@ -369,7 +373,7 @@ async function storeMessage(deps: InboundDeps, context: InboundContext, event: E
     if (reopened || created || queuedNow) queueRealtime(tx, organizationId, { type: "home.invalidate" });
 
     const sendingPaused = await isSendingPausedForOrg(tx, now);
-    const freshConv: ConversationRow = { ...conv, status: next.status, waitingSince };
+    const freshConv: ConversationRow = { ...conv, status: next.status, waitingSince, agentId: inheritedAgentId ?? conv.agentId };
 
     // 8. pedido de saída / resposta de consentimento: confirma uma vez e PARA (sem boas-vindas, sem IA)
     if (classification.optOut || consent) {

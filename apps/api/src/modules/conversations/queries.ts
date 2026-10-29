@@ -161,6 +161,7 @@ export const mediaSchema = z.object({
   durationSeconds: z.number().int().nullable().catch(null),
   url: z.string().nullable().catch(null),
   mediaId: z.string().nullable().catch(null),
+  sticker: z.boolean().optional().catch(undefined),
 });
 
 /**
@@ -186,7 +187,7 @@ export function toMessage(row: MessageRow, contactName: string, signed?: SignedM
     direction,
     author,
     body: row.body,
-    attachment: media?.success ? { ...media.data, url: signed?.url ?? null, mediaId: signed?.mediaId ?? media.data.mediaId } : null,
+    attachment: media?.success ? { ...media.data, url: signed?.url ?? null, thumbnailUrl: signed?.thumbnailUrl ?? null, mediaId: signed?.mediaId ?? media.data.mediaId } : null,
     status: direction === "out" ? messageStatusSchema.catch("sent").parse(row.status) : null,
     failureReason: row.error,
     createdAt: iso(row.createdAt),

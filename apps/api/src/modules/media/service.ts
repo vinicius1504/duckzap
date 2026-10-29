@@ -16,6 +16,7 @@ import {
   FILE_TYPES,
   extensionOf,
 } from "./logic";
+import { makeThumbnail, thumbnailKeyFor } from "../../lib/thumbnail";
 import { getMediaRuntime, type MediaRuntime } from "./runtime";
 
 const { mediaFiles, messages, conversations } = schema;
@@ -105,9 +106,10 @@ export async function completeUpload(
   if (!type || type.kind !== row.kind || !hasSignature(type.signature, bytes)) {
     return reject(tx, rt, row, `O conteúdo de "${row.fileName}" não é ${article(type?.label ?? "do tipo informado")}. Por segurança o arquivo foi descartado: envie o arquivo original.`);
   }
+  const thumbKey = row.kind === "image" ? await storeThumbnail(rt, row.storageKey, await rt.storage.getObject(row.storageKey, { maxBytes: row.sizeBytes }).catch(() => null)) : null;
   const [ready] = await tx
     .update(mediaFiles)
-    .set({ status: "ready", readyAt: rt.now() })
+    .set({ status: "ready", readyAt: rt.now(), thumbKey })
     .where(and(eq(mediaFiles.id, row.id), eq(mediaFiles.status, "uploading")))
     .returning();
   return ok(toReady(ready ?? row));
@@ -120,10 +122,31 @@ async function reject(tx: Transaction, rt: MediaRuntime, row: MediaFileRow, mess
   return fail("invalid_media" as const, message);
 }
 
-/** Apaga o objeto (melhor esforço) e marca o registro como `deleted`. */
-export async function discard(tx: Transaction, rt: MediaRuntime, row: Pick<MediaFileRow, "id" | "storageKey">) {
+/**
+ * Reduz a imagem e guarda a miniatura ao lado da original. Melhor esforço: sem bytes, sem armazenamento ou imagem ilegível
+ * devolve null (o registro fica sem `thumb_key` e o balão usa a original). Nunca lança.
+ */
+export async function storeThumbnail(rt: MediaRuntime, storageKey: string, bytes: Buffer | null): Promise<string | null> {
+  if (!rt.storage || !bytes) return null;
   try {
-    await rt.storage?.delete(row.storageKey);
+    const thumb = await makeThumbnail(bytes);
+    if (!thumb) return null;
+    const key = thumbnailKeyFor(storageKey);
+    await rt.storage.put(key, thumb, { contentType: "image/webp" });
+    return key;
+  } catch {
+    rt.log.warn("media.thumbnail_failed", { storageKey });
+    return null;
+  }
+}
+
+/** Chaves dos objetos de um arquivo (a original e, se houver, a miniatura). */
+const objectKeys = (row: { storageKey: string; thumbKey?: string | null }) => (row.thumbKey ? [row.storageKey, row.thumbKey] : [row.storageKey]);
+
+/** Apaga o objeto (melhor esforço) e marca o registro como `deleted`. */
+export async function discard(tx: Transaction, rt: MediaRuntime, row: Pick<MediaFileRow, "id" | "storageKey"> & { thumbKey?: string | null }) {
+  try {
+    await rt.storage?.deleteMany(objectKeys(row));
   } catch {
     rt.log.error("media.discard_failed", { mediaId: row.id });
   }
@@ -151,7 +174,7 @@ export async function cleanupOrphans(tx: Transaction, organizationId: string, rt
     const day = new Date(now.getTime() - 24 * 3_600_000);
     const old = new Date(now.getTime() - DELETED_RECORD_DAYS * 86_400_000);
     const rows = await tx
-      .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, status: mediaFiles.status })
+      .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey, status: mediaFiles.status })
       .from(mediaFiles)
       .where(
         and(
@@ -165,7 +188,7 @@ export async function cleanupOrphans(tx: Transaction, organizationId: string, rt
       )
       .limit(ORPHAN_BATCH);
     if (rows.length === 0) return 0;
-    const keys = rows.filter((r) => r.status !== "deleted").map((r) => r.storageKey);
+    const keys = rows.filter((r) => r.status !== "deleted").flatMap(objectKeys);
     if (keys.length) await rt.storage.deleteMany(keys);
     await tx.delete(mediaFiles).where(inArray(mediaFiles.id, rows.map((r) => r.id)));
     return rows.length;
@@ -215,7 +238,7 @@ export async function findReadyMedia(tx: Transaction, organizationId: string, me
 
 // ── leitura (URL assinada curta) ────────────────────────────────────────────
 
-export type SignedMedia = { mediaId: string; url: string | null };
+export type SignedMedia = { mediaId: string; url: string | null; thumbnailUrl?: string | null };
 
 /**
  * `messageId → { mediaId, url }` dos arquivos das mensagens. A URL é assinada, vale ~10 min e SÓ sai para quem já passou
@@ -243,7 +266,11 @@ export async function signMessageMedia(tx: Transaction, organizationId: string, 
         // documentos baixam; imagem e áudio abrem na própria tela
         attachment: row.kind === "document",
       });
-      out.set(row.messageId, { mediaId: row.id, url });
+      // miniatura (só imagem que a tem): é o que o balão carrega; a original só abre no clique
+      const thumbnailUrl = row.thumbKey
+        ? await rt.storage.presignGet(row.thumbKey, { expiresInSeconds: READ_URL_SECONDS, contentType: "image/webp" }).catch(() => null)
+        : null;
+      out.set(row.messageId, { mediaId: row.id, url, thumbnailUrl });
     } catch {
       rt.log.warn("media.sign_failed", { mediaId: row.id });
       out.set(row.messageId, { mediaId: row.id, url: null });
@@ -264,11 +291,11 @@ export async function eraseMediaForContacts(tx: Transaction, organizationId: str
   const convIds = tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.organizationId, organizationId), inArray(conversations.contactId, contactIds)));
   const msgIds = tx.select({ id: messages.id }).from(messages).where(and(eq(messages.organizationId, organizationId), inArray(messages.conversationId, convIds)));
   const rows = await tx
-    .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, status: mediaFiles.status })
+    .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey, status: mediaFiles.status })
     .from(mediaFiles)
     .where(and(eq(mediaFiles.organizationId, organizationId), inArray(mediaFiles.messageId, msgIds)));
   if (rows.length === 0) return 0;
-  const keys = rows.filter((r) => r.status !== "deleted").map((r) => r.storageKey);
+  const keys = rows.filter((r) => r.status !== "deleted").flatMap(objectKeys);
   if (keys.length > 0) {
     if (!rt.storage) throw new Error("Não foi possível apagar os arquivos das conversas: o armazenamento de mídia não está configurado.");
     await rt.storage.deleteMany(keys);

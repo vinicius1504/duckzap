@@ -425,6 +425,26 @@ describe.skipIf(!enabled)("Conversas e Início — integração (precisa da migr
       expect(aiQueue.some((q) => q.conversationId === found!.conv.id)).toBe(true);
     });
 
+    it("conversa criada antes de o canal ter agente ativo herda o agente do canal na mensagem seguinte (não cai na fila)", async () => {
+      const chan = uuidv7();
+      await insertChannel(A, chan, `Agente depois ${run}`, { teamId: ids.teamA });
+      const from = phone();
+      await inbound(A, chan, from, "Oi");
+      const created = (await conversationOf(A, from, chan))!.conv;
+      expect(created.agentId).toBeNull();
+      // depois a empresa ativa o agente, vincula ao canal e a equipe devolve a conversa para a IA
+      await withOrg(db, A, async (tx) => {
+        await tx.update(schema.channels).set({ agentId: ids.agent }).where(eq(schema.channels.id, chan));
+        await tx.update(schema.conversations).set({ mode: "ai", status: "ai_active", waitingSince: null }).where(eq(schema.conversations.id, created.id));
+      });
+      aiQueue.length = 0;
+      await inbound(A, chan, from, "Ainda aí?");
+      const found = await conversationOf(A, from, chan);
+      expect(found!.conv).toMatchObject({ mode: "ai", status: "ai_active", agentId: ids.agent });
+      expect(found!.conv.waitingSince).toBeNull();
+      expect(aiQueue.some((q) => q.conversationId === created.id)).toBe(true);
+    });
+
     it("respostas obrigatórias do sistema (opt-out) saem em todos os modos", async () => {
       for (const replyMode of ["ai", "auto"] as const) {
         const chan = uuidv7();

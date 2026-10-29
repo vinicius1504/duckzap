@@ -7,7 +7,7 @@ import { getChannelsRuntime, type ChannelsRuntime } from "../channels/runtime";
 import { newId } from "../contacts/result";
 import { MAX_INBOUND_BYTES, SIGNATURE_BYTES, hasSignature, resolveInboundType, storageKeyFor } from "./logic";
 import { getMediaRuntime, type MediaRuntime } from "./runtime";
-import { cleanupOrphans } from "./service";
+import { cleanupOrphans, storeThumbnail } from "./service";
 
 const { mediaFiles, messages } = schema;
 
@@ -100,6 +100,8 @@ export function createInboundMediaPort(options: Options = {}): InboundMediaPort 
           rt.log.warn("media.inbound.store_failed", { channelId: context.channelId, kind });
           return { state: "unavailable" };
         }
+        // miniatura da imagem (melhor esforço; sem ela o balão usa a original)
+        const thumbKey = kind === "image" && !event.sticker ? await storeThumbnail(rt, storageKey, bytes) : null;
         try {
           await withOrg(db, organizationId, async (tx) => {
             await tx.insert(mediaFiles).values({
@@ -110,6 +112,7 @@ export function createInboundMediaPort(options: Options = {}): InboundMediaPort 
               mimeType: file.mimeType,
               sizeBytes: file.sizeBytes,
               storageKey,
+              thumbKey,
               status: "ready",
               direction: "in",
               createdBy: null,
@@ -121,7 +124,7 @@ export function createInboundMediaPort(options: Options = {}): InboundMediaPort 
           });
         } catch {
           rt.log.warn("media.inbound.record_failed", { channelId: context.channelId, kind });
-          await rt.storage.delete(storageKey).catch(() => {});
+          await rt.storage.deleteMany(thumbKey ? [storageKey, thumbKey] : [storageKey]).catch(() => {});
           return { state: "unavailable" };
         }
         return { state: "stored", file };
@@ -134,8 +137,8 @@ export function createInboundMediaPort(options: Options = {}): InboundMediaPort 
     async discard(db, organizationId, file) {
       const rt = mediaRt();
       try {
-        const [row] = await withOrg(db, organizationId, (tx) => tx.delete(mediaFiles).where(and(eq(mediaFiles.id, file.id), eq(mediaFiles.organizationId, organizationId))).returning({ key: mediaFiles.storageKey }));
-        if (row) await rt.storage?.delete(row.key);
+        const [row] = await withOrg(db, organizationId, (tx) => tx.delete(mediaFiles).where(and(eq(mediaFiles.id, file.id), eq(mediaFiles.organizationId, organizationId))).returning({ key: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey }));
+        if (row) await rt.storage?.deleteMany(row.thumbKey ? [row.key, row.thumbKey] : [row.key]);
       } catch {
         rt.log.warn("media.inbound.discard_failed", { mediaId: file.id });
       }

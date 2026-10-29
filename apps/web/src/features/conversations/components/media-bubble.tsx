@@ -18,7 +18,7 @@ type Props = {
 };
 
 /**
- * Mídia dentro do balão. A `url` do contrato é assinada e expira em minutos; se o arquivo não carregar mostramos
+ * Mídia dentro do balão. Imagem mostra a miniatura (`thumbnailUrl`) e abre a original no clique. A `url` do contrato é assinada e expira em minutos; se o arquivo não carregar mostramos
  * "Arquivo expirou" com um botão que recarrega a conversa (o servidor devolve URLs novas). Sem cache de URL aqui.
  */
 export function MediaBubble({ message, inverted }: Props) {
@@ -70,8 +70,16 @@ export function MediaBubble({ message, inverted }: Props) {
         </button>
       </div>
     );
+  } else if (message.kind === "image" && att.sticker) {
+    // figurinha (WebP, às vezes animada): pequena, sem ampliar e sem miniatura; o fundo transparente aparece como é
+    media = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="Figurinha" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} className="block size-32 object-contain" />
+    );
   } else if (message.kind === "image") {
     const alt = caption || "Imagem";
+    // o balão carrega a miniatura leve; a original só baixa quando a pessoa abre (imagens antigas não têm miniatura)
+    const preview = att.thumbnailUrl ?? url;
     media = (
       <Dialog>
         <DialogTrigger asChild>
@@ -83,7 +91,7 @@ export function MediaBubble({ message, inverted }: Props) {
             {/* URL assinada de outro domínio: <img> simples (next/image não serve) */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={url}
+              src={preview}
               alt={alt}
               loading="lazy"
               decoding="async"

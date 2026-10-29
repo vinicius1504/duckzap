@@ -27,6 +27,8 @@ export const mediaFiles = pgTable(
     durationSeconds: integer(),
     /** `org/<orgId>/<ano-mes>/<uuid>`: único no bucket inteiro. */
     storageKey: text().notNull(),
+    /** Miniatura WebP da imagem (`<storage_key>-t`); null = sem miniatura, o balão usa a original. */
+    thumbKey: text(),
     /** uploading | ready | deleted */
     status: text().notNull().default("uploading"),
     /** out = enviado pela equipe; in = recebido do cliente */

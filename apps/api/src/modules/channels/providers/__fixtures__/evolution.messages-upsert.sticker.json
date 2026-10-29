@@ -1,0 +1,29 @@
+{
+  "event": "messages.upsert",
+  "instance": "dz-test-instance",
+  "destination": "http://host.docker.internal:4000/v1/webhooks/wa/evolution/REDACTED",
+  "date_time": "2026-10-26T22:10:00.000Z",
+  "sender": "556733331020@s.whatsapp.net",
+  "server_url": "http://localhost:8081",
+  "apikey": "REDACTED",
+  "data": {
+    "key": {
+      "remoteJid": "5567999990000@s.whatsapp.net",
+      "fromMe": false,
+      "id": "3EB0STICKER0000000001"
+    },
+    "pushName": "Maria Souza",
+    "status": "DELIVERY_ACK",
+    "message": {
+      "stickerMessage": {
+        "mimetype": "image/webp",
+        "isAnimated": false,
+        "fileLength": "21034"
+      }
+    },
+    "messageType": "stickerMessage",
+    "messageTimestamp": 1793052660,
+    "instanceId": "00000000-0000-0000-0000-000000000000",
+    "source": "ios"
+  }
+}

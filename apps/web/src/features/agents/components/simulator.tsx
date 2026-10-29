@@ -28,11 +28,14 @@ export function Simulator({
   dirty,
   entries,
   setEntries,
+  className,
 }: {
   agentId: string;
   agentName: string;
   config: AgentConfig;
   dirty: boolean;
+  /** Ajuste de altura: na coluna fixa, o aviso "O que pode melhorar" divide a altura da tela com o simulador. */
+  className?: string;
   /** A conversa de teste mora no editor: a gaveta (abaixo de `xl`) e a coluna fixa mostram a mesma, e ela sobrevive a fechar a gaveta. */
   entries: SimulatorEntry[];
   setEntries: Dispatch<SetStateAction<SimulatorEntry[]>>;
@@ -74,7 +77,7 @@ export function Simulator({
   }
 
   return (
-    <Card className="flex max-h-[calc(100dvh-140px)] min-h-[420px] flex-col gap-0 overflow-hidden p-0 max-xl:max-h-none">
+    <Card className={cn("flex max-h-[calc(100dvh-140px)] min-h-[420px] flex-col gap-0 overflow-hidden p-0 max-xl:max-h-none", className)}>
       <div className="flex items-center justify-between gap-3 bg-duck px-4 py-3 text-on-duck">
         <div className="flex min-w-0 items-center gap-3">
           <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full border border-current">
