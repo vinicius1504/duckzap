@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { isAway, showMessageNotification } from "./browser-notify";
 import { createCoalescer, type Coalescer } from "./coalesce";
 import { useRealtimeEvent, useRealtimeResync, useRealtimeStatus } from "./hooks";
 import { openConversationId, refreshRuleFor, shouldPoll } from "./routes";
@@ -80,6 +81,7 @@ function useSoundEnabled(): boolean {
 
 /** Mensagem recebida: contador no título (aba escondida), som opcional e anúncio educado para leitor de tela. */
 function MessageNotifier() {
+  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const openId = openConversationId(pathname, params);
@@ -122,6 +124,8 @@ function MessageNotifier() {
       unread.current += 1;
       document.title = withUnreadPrefix(document.title, unread.current);
     }
+    // em outra aba/janela: janelinha do sistema (se a pessoa ligou); clicar abre a conversa
+    if (isAway()) showMessageNotification(() => router.push(`/conversas?conversa=${encodeURIComponent(event.conversationId)}`));
     // a conversa aberta já lê a mensagem nova (role="log"); evita falar duas vezes
     if (!isOpenAndVisible) {
       const now = Date.now();

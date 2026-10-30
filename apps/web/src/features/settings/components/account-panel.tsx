@@ -7,7 +7,9 @@ import { Chip } from "@duckzap/ui/components/chip";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
+import { emailError, phoneError } from "@duckzap/contracts/validation";
 import { useState, useTransition } from "react";
+import { EmailField, PhoneField } from "@/components/form-fields";
 import { formatDate } from "@/lib/format";
 import {
   changePasswordAction,
@@ -35,6 +37,7 @@ function FeedbackAlert({ feedback }: { feedback: Feedback }) {
 function ProfileForm({ account }: { account: Account }) {
   const [form, setForm] = useState({ name: account.name, email: account.email, phone: account.phone });
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -43,6 +46,11 @@ function ProfileForm({ account }: { account: Account }) {
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
+        setSubmitted(true);
+        if (emailError(form.email, { required: true }) || phoneError(form.phone)) {
+          setFeedback({ tone: "err", text: "Corrija os campos destacados." });
+          return;
+        }
         startTransition(async () => {
           const result = await updateProfileAction(form);
           setFeedback(result.ok ? { tone: "ok", text: "Dados salvos." } : { tone: "err", text: result.error });
@@ -55,14 +63,8 @@ function ProfileForm({ account }: { account: Account }) {
           <Label htmlFor="conta-nome">Nome</Label>
           <Input id="conta-nome" className="h-10" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
         </div>
-        <div>
-          <Label htmlFor="conta-email">E-mail</Label>
-          <Input id="conta-email" type="email" className="h-10" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" />
-        </div>
-        <div>
-          <Label htmlFor="conta-telefone">Telefone</Label>
-          <Input id="conta-telefone" type="tel" className="h-10" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
-        </div>
+        <EmailField id="conta-email" label="E-mail" className="h-10" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required showErrors={submitted} />
+        <PhoneField id="conta-telefone" label="Telefone" className="h-10" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} showErrors={submitted} />
       </div>
       <FeedbackAlert feedback={feedback} />
       <div className="flex justify-end">

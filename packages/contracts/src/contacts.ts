@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhone, normalizePhone, PHONE_ERROR } from "./validation";
 
 // Clientes (CRM): contatos, etiquetas (as 4 primeiras são as etapas do funil), listas estáticas,
 // segmentos dinâmicos (filtro salvo) e consentimento de disparo (opt-in, INSTRUCTIONS §5.7 item 7).
@@ -169,8 +170,8 @@ export type ContactDetail = z.infer<typeof contactDetailSchema>;
 const phoneSchema = z
   .string()
   .trim()
-  .transform((v) => v.replace(/[^\d+]/g, ""))
-  .refine((v) => v === "" || /^\+?\d{10,13}$/.test(v), "Telefone inválido. Use DDD + número, ex.: 67 99812-3456.");
+  .transform(normalizePhone)
+  .refine(isValidPhone, PHONE_ERROR);
 
 export const contactInputSchema = z
   .object({

@@ -8,6 +8,8 @@ import { Alert } from "@duckzap/ui/components/feedback";
 import { Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { useState, useTransition } from "react";
+import { emailError, phoneError } from "@duckzap/contracts/validation";
+import { EmailField, PhoneField } from "@/components/form-fields";
 import { updateCompanyAction } from "../actions";
 import { summarizeBusinessHours } from "./business-hours";
 import { BusinessHoursEditor } from "./business-hours-editor";
@@ -30,11 +32,17 @@ const timeZones = [
 export function CompanyForm({ company }: { company: Company }) {
   const [form, setForm] = useState(company);
   const [editingHours, setEditingHours] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const set = <K extends keyof Company>(key: K, value: Company[K]) => setForm((f) => ({ ...f, [key]: value }));
 
   function save() {
+    setSubmitted(true);
+    if (phoneError(form.phone) || emailError(form.email)) {
+      setFeedback({ tone: "err", text: "Corrija os campos destacados." });
+      return;
+    }
     const { logoUrl: _logo, ...input } = form;
     startTransition(async () => {
       const result = await updateCompanyAction(input);
@@ -75,14 +83,8 @@ export function CompanyForm({ company }: { company: Company }) {
             <Label htmlFor="empresa-segmento">Segmento</Label>
             <Input id="empresa-segmento" value={form.segment} onChange={(e) => set("segment", e.target.value)} maxLength={60} className="h-10" />
           </div>
-          <div>
-            <Label htmlFor="empresa-telefone">Telefone de contato</Label>
-            <Input id="empresa-telefone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} maxLength={20} className="h-10" />
-          </div>
-          <div>
-            <Label htmlFor="empresa-email">E-mail</Label>
-            <Input id="empresa-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="h-10" />
-          </div>
+          <PhoneField id="empresa-telefone" label="Telefone de contato" value={form.phone} onChange={(v) => set("phone", v)} showErrors={submitted} className="h-10" />
+          <EmailField id="empresa-email" label="E-mail" value={form.email} onChange={(v) => set("email", v)} showErrors={submitted} className="h-10" />
           <div>
             <Label htmlFor="empresa-fuso">Fuso horário</Label>
             <Select id="empresa-fuso" value={form.timeZone} onChange={(e) => set("timeZone", e.target.value)} aria-describedby="empresa-fuso-dica">

@@ -14,7 +14,7 @@ import { navFor } from "@/config/nav";
 import { signOutAction } from "@/features/auth/actions";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import type { ShellStatus } from "@/features/shell/api";
-import { RealtimeStatusChip, SoundToggle } from "@/lib/realtime/controls";
+import { BrowserNotifyToggle, RealtimeStatusChip, SoundToggle } from "@/lib/realtime/controls";
 
 export function ShellFrame({
   session,
@@ -51,6 +51,7 @@ export function ShellFrame({
           </Chip>
         </Link>
       )}
+      <BrowserNotifyToggle className="max-sm:hidden" />
       <SoundToggle className="max-sm:hidden" />
       <NotificationBell initialUnread={status.unreadNotifications} timeZone={session.organization.timeZone} />
     </>

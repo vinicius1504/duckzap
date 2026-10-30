@@ -6,9 +6,11 @@ import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dial
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox, Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
+import { emailError, phoneError } from "@duckzap/contracts/validation";
 import { useQueryStates } from "nuqs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { EmailField, PhoneField } from "@/components/form-fields";
 import { saveContactAction } from "../actions";
 import { originLabel } from "../labels";
 import { contactsParsers } from "../search-params";
@@ -49,12 +51,14 @@ export function ContactFormDialog({
   const [, setParams] = useQueryStates(contactsParsers, { shallow: false });
   const [form, setForm] = useState<ContactInput>(() => fromContact(contact));
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     if (open) {
       setForm(fromContact(contact));
       setError(null);
+      setSubmitted(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -65,6 +69,9 @@ export function ContactFormDialog({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
+    if (phoneError(form.phone) || emailError(form.email)) return setError("Corrija os campos destacados.");
+    setError(null);
     startTransition(async () => {
       const result = await saveContactAction(contact?.id ?? null, form);
       if ("error" in result) return setError(result.error);
@@ -83,14 +90,8 @@ export function ContactFormDialog({
             <Input id="ct-nome" value={form.name} onChange={(e) => set("name", e.target.value)} required autoComplete="off" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="ct-tel">Telefone (WhatsApp)</Label>
-              <Input id="ct-tel" type="tel" inputMode="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="67 99812-3456" />
-            </div>
-            <div>
-              <Label htmlFor="ct-email">E-mail</Label>
-              <Input id="ct-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-            </div>
+            <PhoneField id="ct-tel" label="Telefone (WhatsApp)" value={form.phone} onChange={(v) => set("phone", v)} showErrors={submitted} autoComplete="off" />
+            <EmailField id="ct-email" label="E-mail" value={form.email} onChange={(v) => set("email", v)} showErrors={submitted} autoComplete="off" />
             <div>
               <Label htmlFor="ct-ig">Instagram</Label>
               <Input id="ct-ig" value={form.instagram} onChange={(e) => set("instagram", e.target.value)} placeholder="@usuario" />

@@ -3,12 +3,14 @@
 import { roleLabels } from "@duckzap/contracts/permissions";
 import { memberRoleSchema, type MemberRole } from "@duckzap/contracts/session";
 import type { Member } from "@duckzap/contracts/team";
+import { emailError } from "@duckzap/contracts/validation";
 import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox, Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { useState, useTransition, type ReactElement } from "react";
+import { EmailField } from "@/components/form-fields";
 import { inviteMemberAction, updateMemberAction } from "../actions";
 import { canAssignRole, canManageMember, requiresTwoFactor } from "../rules";
 
@@ -39,6 +41,7 @@ export function MemberDialog({
   const [role, setRole] = useState<MemberRole>(member?.role ?? "agent");
   const [teamIds, setTeamIds] = useState<string[]>(member?.teamIds ?? []);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
   const prefix = member ? `pessoa-${member.id}` : "convite";
   const roleLocked = Boolean(member && (lastOwner || !canManageMember(actorRole, member)));
@@ -50,9 +53,16 @@ export function MemberDialog({
     setRole(member?.role ?? "agent");
     setTeamIds(member?.teamIds ?? []);
     setError(null);
+    setSubmitted(false);
   }
 
   function submit() {
+    setSubmitted(true);
+    if (!member && emailError(email, { required: true })) {
+      setError("Corrija o e-mail destacado.");
+      return;
+    }
+    setError(null);
     startTransition(async () => {
       const result = member
         ? await updateMemberAction(member.id, { name, role, teamIds })
@@ -88,23 +98,17 @@ export function MemberDialog({
               <Label htmlFor={`${prefix}-nome`}>Nome</Label>
               <Input id={`${prefix}-nome`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
             </div>
-            <div>
-              <Label htmlFor={`${prefix}-email`}>E-mail</Label>
-              <Input
-                id={`${prefix}-email`}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                readOnly={Boolean(member)}
-                aria-describedby={member ? `${prefix}-email-dica` : undefined}
-                required
-              />
-              {member ? (
+            {member ? (
+              <div>
+                <Label htmlFor={`${prefix}-email`}>E-mail</Label>
+                <Input id={`${prefix}-email`} type="email" value={email} readOnly aria-describedby={`${prefix}-email-dica`} required />
                 <p id={`${prefix}-email-dica`} className="mt-1 text-xs text-ink-2">
                   Só a própria pessoa troca o e-mail, em Minha conta.
                 </p>
-              ) : null}
-            </div>
+              </div>
+            ) : (
+              <EmailField id={`${prefix}-email`} label="E-mail" value={email} onChange={setEmail} required showErrors={submitted} autoComplete="off" />
+            )}
           </div>
 
           <div>

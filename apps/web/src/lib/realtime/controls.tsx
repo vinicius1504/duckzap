@@ -4,6 +4,12 @@ import { Chip } from "@duckzap/ui/components/chip";
 import { cn } from "@duckzap/ui/cn";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRealtimeAvailable, useRealtimeStatus } from "./hooks";
+import {
+  getBrowserNotifyEnabledSnapshot,
+  notifyPermission,
+  setBrowserNotifyEnabled,
+  subscribeBrowserNotify,
+} from "./browser-notify";
 import { getSoundEnabledSnapshot, primeSound, subscribeSoundEnabled, writeSoundEnabled } from "./sound";
 
 /** Só mostra depois de tanto tempo fora do ar (quedas curtas e a primeira conexão passam em silêncio). */
@@ -32,6 +38,42 @@ export function RealtimeStatusChip() {
       <span className="size-2 rounded-full bg-current motion-safe:animate-pulse" aria-hidden="true" />
       Reconectando…
     </Chip>
+  );
+}
+
+/** Liga/desliga a janelinha do navegador para mensagem nova (pede a permissão ao ligar). Some se o navegador não suporta. */
+export function BrowserNotifyToggle({ className }: { className?: string }) {
+  const available = useRealtimeAvailable();
+  const enabled = useSyncExternalStore(subscribeBrowserNotify, getBrowserNotifyEnabledSnapshot, () => false);
+  const permission = useSyncExternalStore(subscribeBrowserNotify, notifyPermission, () => "unsupported" as const);
+  if (!available || permission === "unsupported") return null;
+
+  const blocked = permission === "denied";
+  const title = blocked
+    ? "Avisos do navegador bloqueados. Libere as notificações deste site nas configurações do navegador."
+    : enabled
+      ? "Avisos do navegador: ligados (aparecem quando você está em outra aba)"
+      : "Avisos do navegador: desligados";
+
+  return (
+    <button
+      type="button"
+      aria-pressed={enabled}
+      aria-label="Avisos do navegador para novas mensagens"
+      title={title}
+      disabled={blocked}
+      onClick={() => void setBrowserNotifyEnabled(!enabled)}
+      className={cn(
+        "flex size-10 items-center justify-center rounded-control border border-line bg-surface hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8M12 16v4" />
+        {enabled ? <path d="m9 10 2 2 4-4" /> : null}
+      </svg>
+    </button>
   );
 }
 

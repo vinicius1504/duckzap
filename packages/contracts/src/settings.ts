@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { planSlugSchema } from "./session";
+import { EMAIL_ERROR, isValidPhone, PHONE_ERROR } from "./validation";
 
 export const settingsTabSchema = z.enum(["empresa", "atendimento", "integracoes", "plano", "conta"]);
 export type SettingsTab = z.infer<typeof settingsTabSchema>;
@@ -33,8 +34,8 @@ export type BusinessHours = z.infer<typeof businessHoursSchema>;
 export const companySchema = z.object({
   name: z.string().trim().min(2, "Informe o nome da empresa.").max(80),
   segment: z.string().trim().max(60),
-  phone: z.string().trim().max(20),
-  email: z.union([z.email("E-mail inválido."), z.literal("")]),
+  phone: z.string().trim().max(20).refine(isValidPhone, PHONE_ERROR),
+  email: z.union([z.email(EMAIL_ERROR), z.literal("")]),
   logoUrl: z.string().nullable(),
   timeZone: z.string(),
   businessHours: businessHoursSchema,
@@ -203,8 +204,8 @@ export type Account = z.infer<typeof accountSchema>;
 
 export const updateProfileInputSchema = z.object({
   name: z.string().trim().min(2, "Informe seu nome.").max(80),
-  email: z.email("E-mail inválido."),
-  phone: z.string().trim().max(20),
+  email: z.email(EMAIL_ERROR),
+  phone: z.string().trim().max(20).refine(isValidPhone, PHONE_ERROR),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;
 
