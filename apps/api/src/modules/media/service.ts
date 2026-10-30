@@ -1,6 +1,6 @@
 import type { MediaKind, MediaReady, MediaUploadInit, MediaUploadInitResult } from "@duckzap/contracts/media";
 import { schema, type Transaction } from "@duckzap/db";
-import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { isGuid } from "../contacts/http";
 import { fail, newId, ok, type Result } from "../contacts/result";
 import {
@@ -19,7 +19,7 @@ import {
 import { makeThumbnail, thumbnailKeyFor } from "../../lib/thumbnail";
 import { getMediaRuntime, type MediaRuntime } from "./runtime";
 
-const { mediaFiles, messages, conversations } = schema;
+const { mediaFiles, messages, conversations, productImages } = schema;
 
 export type MediaFileRow = typeof mediaFiles.$inferSelect;
 export type MediaCtx = { organizationId: string; userId: string; sendingPaused: boolean };
@@ -165,7 +165,7 @@ const DELETED_RECORD_DAYS = 7;
 /**
  * Sem job novo: a cada envio da empresa apaga um lote de sobras. Órfãos: `uploading` há mais de 1 h; `ready` que nunca foi
  * para uma mensagem (recebido há mais de 1 h; enviado há mais de 24 h); e registros `deleted` sem mensagem com mais de 7
- * dias. Nunca falha o pedido que a chamou.
+ * dias. Fotos de produto (`product_images`) ficam de fora. Nunca falha o pedido que a chamou.
  */
 export async function cleanupOrphans(tx: Transaction, organizationId: string, rt: MediaRuntime = getMediaRuntime(), now = rt.now()): Promise<number> {
   if (!rt.storage) return 0;
@@ -179,6 +179,8 @@ export async function cleanupOrphans(tx: Transaction, organizationId: string, rt
       .where(
         and(
           eq(mediaFiles.organizationId, organizationId),
+          // foto de produto do catálogo nunca é órfã: enquanto `product_images` a referencia, ninguém a apaga
+          notExists(tx.select({ one: sql`1` }).from(productImages).where(eq(productImages.mediaId, mediaFiles.id))),
           or(
             and(eq(mediaFiles.status, "uploading"), lt(mediaFiles.createdAt, hour)),
             and(eq(mediaFiles.status, "ready"), isNull(mediaFiles.messageId), or(and(eq(mediaFiles.direction, "in"), lt(mediaFiles.createdAt, hour)), and(eq(mediaFiles.direction, "out"), lt(mediaFiles.createdAt, day)))),

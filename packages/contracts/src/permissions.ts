@@ -16,6 +16,7 @@ export const permissions = [
   "contact.delete",
   "contact.bulk",
   "appointment.manage",
+  "catalog.manage",
   "campaign.manage",
   "campaign.send",
   "agent.manage",

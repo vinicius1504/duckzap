@@ -37,7 +37,8 @@ export async function handleInboundForCampaigns(rt: CampaignsRuntime, context: I
     });
     return;
   }
-  if (event.type !== "message") return;
+  // mensagem que saiu da nossa conta (eco ou digitada no celular) não é resposta do cliente: "SAIR" escrito pela equipe não descadastra ninguém
+  if (event.type !== "message" || event.fromMe) return;
 
   await withOrg(rt.db, organizationId, async (tx) => {
     const contact = await findContactByPhone(tx, organizationId, event.from);

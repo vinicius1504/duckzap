@@ -10,7 +10,7 @@ import {
   type ToolName,
   type UsageEvent,
 } from "@duckzap/ai";
-import type { AgentConfig, SimulatorMessage, SimulatorReply } from "@duckzap/contracts/agents";
+import { agentToolSchema, type AgentConfig, type SimulatorMessage, type SimulatorReply } from "@duckzap/contracts/agents";
 
 /**
  * Simulador (§4.3): MESMO pipeline do agente, em modo `simulator` — tools de escrita em dry-run, agenda/contato
@@ -18,8 +18,16 @@ import type { AgentConfig, SimulatorMessage, SimulatorReply } from "@duckzap/con
  * Sem provedor de IA configurado (LLM_PROVIDER=fake) usa o LLM de demonstração por regras, para a tela funcionar.
  */
 
-/** O contrato de tools do front não tem cancel_appointment: ele é exibido como reschedule_appointment. */
-const toContractTool = (tool: ToolName): SimulatorReply["toolCalls"][number]["tool"] => (tool === "cancel_appointment" ? "reschedule_appointment" : tool);
+/**
+ * O contrato de tools do front não tem cancel_appointment: ele é exibido como reschedule_appointment. As ferramentas do catálogo
+ * (função do sistema, fora da lista que o dono liga) não existem no simulador do V1, que não monta catálogo; se algum dia
+ * aparecerem aqui, são omitidas do passo a passo em vez de quebrar a tela.
+ */
+const toContractTool = (tool: ToolName): SimulatorReply["toolCalls"][number]["tool"] | null => {
+  if (tool === "cancel_appointment") return "reschedule_appointment";
+  const parsed = agentToolSchema.safeParse(tool);
+  return parsed.success ? parsed.data : null;
+};
 
 export function pickSimulatorLlm(llm: LLMProvider): LLMProvider {
   return llm.name === "fake" ? createDemoLlm() : llm;
@@ -56,7 +64,10 @@ export async function simulateReply(input: {
   });
   return {
     messages: result.messages,
-    toolCalls: result.toolCalls.map((t) => ({ tool: toContractTool(t.tool), args: t.args, result: t.result })),
+    toolCalls: result.toolCalls.flatMap((t) => {
+      const tool = toContractTool(t.tool);
+      return tool ? [{ tool, args: t.args, result: t.result }] : [];
+    }),
     handoff: result.handoff ? { reason: result.handoff.reason } : null,
     intent: result.intent ?? "question",
   };

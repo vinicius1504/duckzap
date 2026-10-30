@@ -1,6 +1,7 @@
 import {
   bookableTypeIds,
   createDemoLlm,
+  effectiveCatalogConfig,
   effectiveSchedulingConfig,
   LlmError,
   createConversationRateLimiter,
@@ -23,6 +24,7 @@ import { isSendingPausedForOrg } from "../channels/sending";
 import { findChannel, findSendChannel } from "../channels/repo";
 import { fail, newId, ok, type Result, type ServiceCtx } from "../contacts/result";
 import { createRealPorts } from "./ai-ports";
+import { hasAvailableProducts, sendProductPhotos } from "./catalog-port";
 import type { ConversationsConfig } from "./config";
 import { businessHoursFor } from "./inbound";
 import { aiTextFor, toAiHours, trailingAgentCount } from "./logic";
@@ -151,7 +153,10 @@ async function loadHistory(tx: Transaction, conversationId: string): Promise<His
     if (m.direction === "in") {
       const text = aiTextFor(m.kind, m.body);
       if (text) chat.push({ role: "customer", text });
-    } else if (m.senderKind === "agent") chat.push({ role: "agent", text: m.body });
+    } else if (m.senderKind === "agent") {
+      // foto do catálogo sem legenda não tem texto para a IA ler
+      if (m.body.trim()) chat.push({ role: "agent", text: m.body });
+    }
     else if (m.senderKind === "member" && m.status !== "failed") chat.push({ role: "human", text: m.body });
     // avisos automáticos e mensagens que falharam não entram na conversa que a IA enxerga
   }
@@ -213,7 +218,13 @@ async function runTurn(
   const stages = (await loadTags(tx, ctx)).filter((t) => t.funnelStage !== null).map((t) => t.name);
   // Agendar é função do sistema: com um agente atendendo, a agenda vem dos tipos ativos da empresa (config.scheduling e as
   // ferramentas de agenda em advanced.tools são legado e ignorados). Sem agente (assistente genérico) segue sem ferramentas.
-  const config = agent ? effectiveSchedulingConfig(agent.config, await loadBookableTypeIds(tx, conv.organizationId)) : genericConfig(ctx.orgName);
+  // O catálogo também é função do sistema: com produto disponível na empresa, o agente ganha as ferramentas de catálogo.
+  const config = agent
+    ? effectiveCatalogConfig(
+        effectiveSchedulingConfig(agent.config, await loadBookableTypeIds(tx, conv.organizationId)),
+        await hasAvailableProducts(tx, conv.organizationId),
+      )
+    : genericConfig(ctx.orgName);
   const events: UsageEvent[] = [];
   const minutesWaiting = conv.lastInboundAt ? Math.max(0, Math.floor((now.getTime() - conv.lastInboundAt.getTime()) / 60_000)) : 0;
 
@@ -355,6 +366,19 @@ export async function runDueAiTurn(deps: AiDeps, limiters: AiLimiters, organizat
           typingMs: typingMsForText(text),
         });
         if (delivered.ok) sent++;
+      }
+      // fotos de produto que a IA pediu (send_product_photos): seguem os textos, cada uma como mensagem de imagem do agente
+      if (result.photoRequests.length > 0) {
+        sent += await sendProductPhotos(tx, {
+          conv: claimed,
+          channelName: channel?.name ?? "do cliente",
+          to: contact?.phone ?? contact?.instagram ?? null,
+          agent: { id: agent.id, name: agent.name },
+          productIds: result.photoRequests.map((r) => r.productId),
+          triggerId: history.triggerId,
+          now,
+          log: deps.log,
+        });
       }
 
       for (const t of result.transitions) {

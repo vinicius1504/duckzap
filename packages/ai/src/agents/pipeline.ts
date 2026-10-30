@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { LlmError, type GenerateResult, type LlmMessage } from "../llm";
+import { rankProducts } from "./catalog";
 import { checkOutput } from "./guardrails";
 import { hasKnowledgeOverlap, isSmallTalk } from "./knowledge";
 import { isRetryableLlmError, withLlmRetry } from "./llm-retry";
@@ -10,6 +11,7 @@ import { aiMayRespond, canTransition, transition, type ConversationEvent } from 
 import { isWithinBusinessHours, looksLikeInjection, toWhatsappFormat } from "./text";
 import { buildToolDefs, executeTool, toLlmTools, type ToolContext } from "./tools";
 import {
+  MAX_PHOTO_PRODUCTS_PER_TURN,
   SKIP_LLM_UNAVAILABLE,
   type AppointmentInfo,
   type ContactInfo,
@@ -68,6 +70,7 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
     blocked: [],
     flags: [],
     usage: { inputTokens: 0, outputTokens: 0 },
+    photoRequests: [],
   };
 
   // ---------- utilidades do turno ----------
@@ -106,6 +109,7 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
     result.handoff = null;
     result.transitions = [];
     result.toolCalls = [];
+    result.photoRequests = [];
     result.state = input.state;
     result.flags.push(SKIP_LLM_UNAVAILABLE);
     return skip(SKIP_LLM_UNAVAILABLE);
@@ -113,6 +117,8 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
   const traced = new Set<string>();
   const handoff = async (kind: HandoffKind, reason: string, options: { message?: string; alreadyRequested?: boolean } = {}) => {
     result.handoff = { kind, reason };
+    // foto só acompanha uma resposta aprovada do modelo (ou o pedido de equipe dele); mensagem padrão de cortesia vai sozinha
+    if (kind !== "model_request") result.photoRequests = [];
     const text = options.message ?? COURTESY[kind];
     result.messages = text ? [text] : [];
     if (!options.alreadyRequested) {
@@ -256,7 +262,15 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
       retrieved = [];
     }
     knowledgeTexts.push(...retrieved.map((h) => h.text));
-    const grounded = retrieved.length > 0 || hasKnowledgeOverlap(joined, staticKnowledge);
+    let grounded = retrieved.length > 0 || hasKnowledgeOverlap(joined, staticKnowledge);
+    // o catálogo também é conhecimento: pergunta sobre um produto cadastrado não é "fora do conhecimento"
+    if (!grounded && config.catalog?.enabled) {
+      try {
+        grounded = rankProducts(joined.slice(-300), await input.ports.catalog.listAvailable(scope)).length > 0;
+      } catch {
+        grounded = false;
+      }
+    }
     if (!grounded && config.behavior.handoffOnUnknown) {
       return handoff("unknown_knowledge", "Pergunta fora do conhecimento do agente.");
     }
@@ -285,6 +299,12 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
     businessHours: input.businessHours,
     allowedTags: input.allowedTags ?? [],
     onKnowledge: (hits) => knowledgeTexts.push(...hits.map((h) => h.text)),
+    requestPhotos: (productId) => {
+      if (result.photoRequests.some((r) => r.productId === productId)) return "duplicate";
+      if (result.photoRequests.length >= MAX_PHOTO_PRODUCTS_PER_TURN) return "limit";
+      result.photoRequests.push({ productId });
+      return "added";
+    },
   };
   const defs = buildToolDefs(toolCtx, typeNames);
   const tools = toLlmTools(defs);

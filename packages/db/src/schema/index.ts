@@ -11,3 +11,4 @@ export * from "./campaigns";
 export * from "./settings";
 export * from "./notifications";
 export * from "./media";
+export * from "./catalog";

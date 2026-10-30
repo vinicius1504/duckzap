@@ -6,6 +6,7 @@ import { isWithinBusinessHours } from "@duckzap/ai";
 import type { InboundContext } from "../../lib/inbound";
 import type { InboundEvent } from "../../lib/messaging";
 import { queueRealtime, withOrgRealtime } from "../../lib/realtime";
+import { wasSentByUs } from "../../lib/sent-echo";
 import { applyReminderReply } from "../appointments/service";
 import { interpretReminderReply } from "../appointments/logic";
 import { isSendingPausedForOrg } from "../channels/sending";
@@ -33,7 +34,7 @@ import { addEvent, auditState, deliverOutbound } from "./outbound";
 import { firstStageTag, loadActiveAgent, loadTags, modeOf, statusOf, type ConversationRow } from "./queries";
 import { setFunnelStage } from "./service";
 
-const { conversations, messages, contacts, teams, agents, consents, appointments } = schema;
+const { conversations, messages, contacts, teams, agents, consents, appointments, campaignRecipients } = schema;
 
 export type InboundDeps = {
   db: Database;
@@ -42,6 +43,8 @@ export type InboundDeps = {
   scheduleAiTurn(organizationId: string, conversationId: string, delayMs: number): void;
   /** Baixa e guarda a mídia recebida (imagem/áudio/documento) antes de gravar a mensagem. Sem isto a mídia entra "indisponível". */
   media?: InboundMediaPort;
+  /** Espera antes de tratar uma mensagem enviada pela nossa conta (ver `SELF_ECHO_GRACE_MS`). Testes passam 0. */
+  selfEchoGraceMs?: number;
   now(): Date;
   log: { warn(message: string, meta?: Record<string, unknown>): void };
 };
@@ -484,10 +487,180 @@ async function applyReminderFromReply(tx: Transaction, conv: ConversationRow, co
   return status;
 }
 
+// ── mensagem enviada pela NOSSA conta (digitada no celular) ─────────────────
+
+/** O provedor pode ecoar o envio antes de a resposta do envio chegar até nós: espera um pouco antes de decidir se o eco é nosso. */
+export const SELF_ECHO_GRACE_MS = 2_500;
+/** Quem aparece como autor na conversa: a pessoa que digitou no celular não é um membro identificado do DuckChat. */
+export const PHONE_SENDER_NAME = "Celular";
+
+/**
+ * Mensagem que saiu da conta de WhatsApp do canal. O provedor avisa TODA saída: o eco do que o DuckChat enviou (já gravado, ou
+ * a gravar quando a transação terminar: ignora) e o que a pessoa digitou direto no celular (grava como mensagem de saída de
+ * "Celular"). Responder do celular conta como atender: a IA para (como quando alguém da equipe responde), a fila zera e a
+ * resposta conta no tempo de primeira resposta. Nada de opt-out, consentimento, mensagem automática nem IA: não é o cliente falando.
+ */
+export async function handleSelfMessage(deps: InboundDeps, context: InboundContext, event: Extract<InboundEvent, { type: "message" }>): Promise<MessageOutcome> {
+  const { organizationId } = context;
+  const grace = deps.selfEchoGraceMs ?? SELF_ECHO_GRACE_MS;
+  if (grace > 0) await new Promise((resolve) => setTimeout(resolve, grace));
+  // 1. eco de algo que o DuckChat acabou de enviar (a transação do envio pode não ter terminado: o registro em memória cobre isso)
+  if (wasSentByUs(context.channelId, event.externalId)) return { kind: "ignored", reason: "duplicate" };
+
+  // 2. já gravada (nossa, ou webhook repetido), inclusive disparo de campanha, que não passa por `messages`
+  const known = await withOrgRealtime(deps.db, organizationId, (tx) => isKnownProviderId(tx, organizationId, context.channelId, event.externalId));
+  if (known) return { kind: "ignored", reason: "duplicate" };
+
+  const now = deps.now();
+  const prepared: PreparedInboundMedia = deps.media ? await deps.media.prepare(deps.db, context, event) : { state: "none" };
+  const storedFile = prepared.state === "stored" ? prepared.file : null;
+
+  let outcome: MessageOutcome;
+  try {
+    outcome = await storeSelfMessage(deps, context, event, prepared, now);
+  } catch (error) {
+    if (storedFile) await deps.media?.discard(deps.db, organizationId, storedFile);
+    throw error;
+  }
+  if (storedFile && outcome.kind !== "stored") await deps.media?.discard(deps.db, organizationId, storedFile);
+  return outcome;
+}
+
+async function isKnownProviderId(tx: Transaction, organizationId: string, channelId: string, providerId: string): Promise<boolean> {
+  const [message] = await tx
+    .select({ id: messages.id })
+    .from(messages)
+    .where(and(eq(messages.channelId, channelId), or(eq(messages.externalId, providerId), eq(messages.providerMessageId, providerId))))
+    .limit(1);
+  if (message) return true;
+  const [recipient] = await tx
+    .select({ id: campaignRecipients.id })
+    .from(campaignRecipients)
+    .where(and(eq(campaignRecipients.organizationId, organizationId), eq(campaignRecipients.providerMessageId, providerId)))
+    .limit(1);
+  return Boolean(recipient);
+}
+
+async function storeSelfMessage(deps: InboundDeps, context: InboundContext, event: Extract<InboundEvent, { type: "message" }>, prepared: PreparedInboundMedia, now: Date): Promise<MessageOutcome> {
+  const { organizationId } = context;
+  return withOrgRealtime(deps.db, organizationId, async (tx): Promise<MessageOutcome> => {
+    const channel = await findChannel(tx, organizationId, context.channelId);
+    if (!channel) return { kind: "ignored", reason: "no_channel" };
+    if (channel.type === "instagram") return { kind: "ignored", reason: "unsupported_address" };
+    // de novo dentro da transação: dois avisos iguais ao mesmo tempo não gravam duas vezes
+    if (await isKnownProviderId(tx, organizationId, channel.id, event.externalId)) return { kind: "ignored", reason: "duplicate" };
+
+    // o cliente é o outro lado da conversa (`from`); sem nome: o nome que o provedor manda em mensagem nossa é o do dono da conta
+    const upserted = await upsertContactByPhone(tx, organizationId, { phone: event.from, source: "inbound" });
+    if (!upserted) {
+      deps.log.warn("conversations.inbound.invalid_phone", { channelId: channel.id });
+      return { kind: "ignored", reason: "invalid_phone" };
+    }
+    const contact = upserted.contact;
+    if (upserted.created) {
+      const stage1 = firstStageTag(await loadTags(tx, { organizationId }));
+      if (stage1) await setFunnelStage(tx, organizationId, contact.id, stage1.id, stage1.name);
+    }
+    const { conv, created, reopened } = await findOrCreateConversation(tx, deps, organizationId, channel, contact.id, now);
+
+    const unsupportedFile = prepared.state === "unsupported";
+    const text = event.text?.trim() ? event.text : undefined;
+    const kind = event.kind === "other" || unsupportedFile ? "text" : event.kind;
+    const body = unsupportedFile ? `${text ? `${text}\n` : ""}[arquivo não suportado]` : (text ?? "");
+    const file = prepared.state === "stored" ? prepared.file : null;
+    const createdAt = new Date(Math.min(new Date(event.at).getTime(), now.getTime()));
+    const stored = await tx
+      .insert(messages)
+      .values({
+        id: newId(),
+        organizationId,
+        conversationId: conv.id,
+        channelId: channel.id,
+        direction: "out",
+        kind,
+        status: "sent",
+        // o id do provedor é a chave única da mensagem e também o que os avisos de entregue/lida trazem
+        externalId: event.externalId,
+        providerMessageId: event.externalId,
+        body,
+        media:
+          event.kind === "text" || event.kind === "other" || unsupportedFile
+            ? null
+            : {
+                fileName: file?.fileName ?? null,
+                mimeType: file?.mimeType ?? MEDIA_MIME[event.kind] ?? "application/octet-stream",
+                sizeBytes: file?.sizeBytes ?? null,
+                durationSeconds: null,
+                url: null,
+                mediaId: file?.id ?? null,
+                mediaRef: event.mediaRef ?? null,
+                ...(event.sticker ? { sticker: true } : {}),
+              },
+        senderKind: "member",
+        senderId: null,
+        senderName: PHONE_SENDER_NAME,
+        createdAt,
+        sentAt: createdAt,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
+      .returning({ id: messages.id });
+    const messageId = stored[0]?.id;
+    if (!messageId) return { kind: "ignored", reason: "duplicate" };
+    if (file) await linkToMessage(tx, file.id, messageId);
+
+    // responder do celular é atender: a IA para. Quem digitou no celular não é um membro identificado, então a conversa só tem
+    // "dono" se alguém da equipe já era o responsável; sem responsável ela fica em Aguardando, a fila que a equipe inteira vê
+    // (parada em "Humano" sem responsável ela sumiria da lista dos atendentes).
+    const mode = modeOf(conv);
+    const target = conv.assigneeId !== null ? "human_active" : "handoff_requested";
+    const takeover = mode === "ai" || conv.status !== target;
+    const queuedNow = takeover && target === "handoff_requested" && conv.status !== "handoff_requested";
+    const firstReply = conv.lastReplyAt === null && conv.firstResponseSeconds === null;
+    // a data do aviso tem resolução de segundos e a conversa nova já nasce "agora": só um aviso claramente antigo não vira a última mensagem
+    const isLatest = created || createdAt.getTime() >= conv.lastMessageAt.getTime() - 2_000;
+    await tx
+      .update(conversations)
+      .set({
+        ...(isLatest
+          ? {
+              lastMessageAt: createdAt,
+              lastMessagePreview: previewOf(body),
+              lastMessageKind: lastMessageKindOf(kind),
+              lastMessageFileName: file?.fileName ?? null,
+              lastMessageDurationSeconds: null,
+              lastMessageDirection: "out" as const,
+            }
+          : {}),
+        lastReplyAt: now,
+        unreadCount: 0,
+        aiDueAt: null,
+        ...(firstReply ? { firstResponseSeconds: Math.max(0, Math.round((now.getTime() - conv.createdAt.getTime()) / 1000)) } : {}),
+        ...(takeover
+          ? { status: target, mode: mode === "ai" ? "human" : conv.mode, waitingSince: target === "handoff_requested" ? (conv.waitingSince ?? now) : null }
+          : {}),
+        updatedAt: now,
+      })
+      .where(eq(conversations.id, conv.id));
+    await touchContactInteraction(tx, organizationId, contact.id, now);
+
+    if (takeover) {
+      await addEvent(tx, conv, target === "handoff_requested" ? "Respondido pelo celular · aguardando um responsável" : "Atendimento assumido pelo celular", now);
+      await auditState(tx, conv, { from: conv.status, to: target, event: target === "handoff_requested" ? "handoff_requested" : "human_took_over", actor: "human", reason: "respondeu pelo celular" });
+    }
+    queueRealtime(tx, organizationId, { type: "conversation.message", conversationId: conv.id, direction: "out" });
+    if (takeover || created || reopened) {
+      queueRealtime(tx, organizationId, { type: "conversation.updated", conversationId: conv.id, reason: queuedNow ? "queue" : takeover ? "assigned" : "other" });
+      queueRealtime(tx, organizationId, { type: "home.invalidate" });
+    }
+    return { kind: "stored", conversationId: conv.id, messageId, optOut: false, consent: null, aiScheduled: null };
+  });
+}
+
 /** Handler registrado em `lib/inbound` (Canais despacha, Conversas trata). Eventos de conexão são do módulo Canais. */
 export async function handleInbound(deps: InboundDeps, context: InboundContext) {
   const { event } = context;
   if (event.type === "status") await applyStatusEvent(deps, context, event);
-  else if (event.type === "message") await handleMessage(deps, context, event);
+  else if (event.type === "message") await (event.fromMe ? handleSelfMessage(deps, context, event) : handleMessage(deps, context, event));
 }
 

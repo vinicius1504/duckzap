@@ -6,6 +6,7 @@ import {
   type AppointmentTypeInfo,
   type ContactInfo,
   type KnowledgeHit,
+  type ProductInfo,
   type Scope,
   type Slot,
 } from "./types";
@@ -31,6 +32,10 @@ export type FakeState = {
   writes: { port: string; method: string; args: unknown }[];
   humanRequests: string[];
   optOut: boolean;
+  /** Produtos DISPONÍVEIS do catálogo fictício (a porta só enxerga estes). */
+  products: ProductInfo[];
+  /** Notas internas que a IA deixou na conversa. */
+  notes: string[];
 };
 
 function slotFor(typeId: string, day: Date, hh: number, mm: number): Slot {
@@ -40,7 +45,7 @@ function slotFor(typeId: string, day: Date, hh: number, mm: number): Slot {
 }
 
 export function createInMemoryPorts(
-  seed: Partial<Pick<FakeState, "types" | "chunks" | "appointments" | "contact">> & { now?: () => Date } = {},
+  seed: Partial<Pick<FakeState, "types" | "chunks" | "appointments" | "contact" | "products">> & { now?: () => Date } = {},
 ): { ports: AgentPorts; state: FakeState } {
   const state: FakeState = {
     types: seed.types ?? FICTIONAL_TYPES,
@@ -50,6 +55,8 @@ export function createInMemoryPorts(
     writes: [],
     humanRequests: [],
     optOut: false,
+    products: seed.products ?? [],
+    notes: [],
   };
   const clock = seed.now ?? (() => new Date());
   const log = (port: string, method: string, args: unknown) => state.writes.push({ port, method, args });
@@ -135,6 +142,18 @@ export function createInMemoryPorts(
       async markOptOut() {
         log("conversations", "markOptOut", null);
         state.optOut = true;
+      },
+      async addInternalNote(_s, text) {
+        log("conversations", "addInternalNote", text);
+        state.notes.push(text);
+      },
+    },
+    catalog: {
+      async listAvailable() {
+        return state.products;
+      },
+      async getProduct(_s, productId) {
+        return state.products.find((p) => p.id === productId) ?? null;
       },
     },
   };

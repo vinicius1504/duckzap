@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Deps } from "../../lib/context";
 import { encryptSecret } from "../../lib/crypto";
 import type { InboundEvent, MessagingProvider, OutboundMessage } from "../../lib/messaging";
+import { rememberSentByUs } from "../../lib/sent-echo";
 import { onError } from "../../middleware/error-handler";
 import { loadChannelsConfig } from "../channels/config";
 import { InMemoryTokenBucket } from "../channels/rate-limit";
@@ -277,6 +278,131 @@ describe.skipIf(!enabled)("Conversas e Início — integração (precisa da migr
     if (!found) throw new Error("conversa não criada");
     return { from, ...found };
   }
+
+  // ── mensagem digitada no celular (saiu da conta, não passou pelo DuckChat) ─
+  describe("mensagem enviada pelo celular", () => {
+    const selfDeps = { ...rt.inbound, selfEchoGraceMs: 0 };
+    async function fromPhone(from: string, text: string, over: Partial<Extract<InboundEvent, { type: "message" }>> = {}) {
+      const event = { type: "message", externalId: extId("phone"), from, kind: "text", text, at: clock.now().toISOString(), fromMe: true, ...over } as Extract<InboundEvent, { type: "message" }>;
+      await handleInbound(selfDeps, { organizationId: A, channelId: ids.chan, event });
+      return event;
+    }
+    const outgoing = async (conversationId: string) => (await messagesOf(A, conversationId)).filter((m) => m.direction === "out");
+
+    it("aparece na conversa como saída de 'Celular', com o id do provedor; a IA para e a conversa vai para Aguardando", async () => {
+      const { from, conv } = await newConversation("Oi, queria saber o preço");
+      expect(conv.status).toBe("ai_active");
+      expect(conv.aiDueAt).not.toBeNull();
+
+      const event = await fromPhone(from, "Oi! Já te respondo por aqui.");
+      const after = (await conversationOf(A, from))!.conv;
+      const [message, ...rest] = await outgoing(conv.id);
+      expect(rest).toHaveLength(0);
+      expect(message).toMatchObject({ kind: "text", body: "Oi! Já te respondo por aqui.", status: "sent", senderKind: "member", senderId: null, senderName: "Celular", externalId: event.externalId, providerMessageId: event.externalId });
+      // sem responsável na conversa, o celular não "assume" para ninguém: ela entra na fila (Aguardando), que a equipe inteira vê
+      expect(after).toMatchObject({ status: "handoff_requested", mode: "human", unreadCount: 0, aiDueAt: null, assigneeId: null, lastMessageDirection: "out" });
+      expect(after.waitingSince).not.toBeNull();
+      expect(after.firstResponseSeconds).not.toBeNull();
+      const events = (await messagesOf(A, conv.id)).filter((m) => m.kind === "event");
+      expect(events.map((m) => m.body)).toContain("Respondido pelo celular · aguardando um responsável");
+    });
+
+    it("conversa que já está em Aguardando continua nela, sem novo aviso nem zerar a espera", async () => {
+      const { from, conv } = await newConversation();
+      await fromPhone(from, "primeira");
+      const first = (await conversationOf(A, from))!.conv;
+      await fromPhone(from, "segunda");
+      const second = (await conversationOf(A, from))!.conv;
+      expect(second.status).toBe("handoff_requested");
+      expect(second.waitingSince?.getTime()).toBe(first.waitingSince?.getTime());
+      const notices = (await messagesOf(A, conv.id)).filter((m) => m.kind === "event" && m.body.startsWith("Respondido pelo celular"));
+      expect(notices).toHaveLength(1);
+    });
+
+    it("conversa que já tem responsável continua com ele (humano atendendo), fora da fila", async () => {
+      const { from, conv } = await newConversation();
+      await withOrg(db, A, (tx) => tx.update(schema.conversations).set({ status: "human_active", mode: "human", assigneeId: OWNER, aiDueAt: null }).where(eq(schema.conversations.id, conv.id)));
+      await fromPhone(from, "Estou vendo isso agora");
+      const after = (await conversationOf(A, from))!.conv;
+      expect(after).toMatchObject({ status: "human_active", assigneeId: OWNER, waitingSince: null });
+    });
+
+    it("o status de entregue/lida do celular chega pelo id do provedor e atualiza a mensagem", async () => {
+      const { from, conv } = await newConversation();
+      const event = await fromPhone(from, "Combinado!");
+      await handleInbound(selfDeps, { organizationId: A, channelId: ids.chan, event: { type: "status", externalId: event.externalId, status: "read", at: clock.now().toISOString() } });
+      const [message] = await outgoing(conv.id);
+      expect(message!.status).toBe("read");
+    });
+
+    it("o mesmo aviso repetido não grava duas vezes", async () => {
+      const { from, conv } = await newConversation();
+      const event = await fromPhone(from, "Uma vez só");
+      await handleInbound(selfDeps, { organizationId: A, channelId: ids.chan, event });
+      expect(await outgoing(conv.id)).toHaveLength(1);
+    });
+
+    it("eco do que o DuckChat acabou de enviar (ainda sem commit) é ignorado", async () => {
+      const { from, conv } = await newConversation();
+      const providerId = extId("echo-mem");
+      rememberSentByUs(ids.chan, providerId);
+      await fromPhone(from, "enviada pelo DuckChat", { externalId: providerId });
+      expect(await outgoing(conv.id)).toHaveLength(0);
+      expect((await conversationOf(A, from))!.conv.status).toBe("ai_active");
+    });
+
+    it("eco de mensagem do DuckChat já gravada (id do provedor conhecido) é ignorado", async () => {
+      const { from, conv, contact } = await newConversation();
+      const providerId = extId("echo-db");
+      await withOrg(db, A, (tx) =>
+        tx.insert(schema.messages).values({
+          id: uuidv7(),
+          organizationId: A,
+          conversationId: conv.id,
+          channelId: ids.chan,
+          direction: "out",
+          kind: "text",
+          status: "sent",
+          externalId: `out:${extId("x")}`,
+          providerMessageId: providerId,
+          body: "enviada pela equipe",
+          senderKind: "member",
+          senderId: OWNER,
+          senderName: "Marina",
+        }),
+      );
+      await fromPhone(from, "enviada pela equipe", { externalId: providerId });
+      expect(await outgoing(conv.id)).toHaveLength(1);
+      expect(contact.id).toBe(conv.contactId);
+    });
+
+    it("conversa nova a partir do celular: cria o contato e a conversa na fila (Aguardando), sem usar nome nenhum", async () => {
+      const from = phone();
+      await fromPhone(from, "Oi, tudo bem? Aqui é da loja.");
+      const found = await conversationOf(A, from);
+      expect(found).not.toBeNull();
+      expect(found!.conv).toMatchObject({ status: "handoff_requested", mode: "human", unreadCount: 0, lastMessageDirection: "out" });
+      expect(found!.contact.origin).toBe("inbound");
+      expect((await outgoing(found!.conv.id)).map((m) => m.body)).toEqual(["Oi, tudo bem? Aqui é da loja."]);
+    });
+
+    it("não é o cliente falando: 'SAIR' digitado no celular não bloqueia o contato nem dispara resposta automática", async () => {
+      const { from, conv, contact } = await newConversation();
+      await fromPhone(from, "SAIR");
+      const consents = await withOrg(db, A, (tx) => tx.select().from(schema.consents).where(eq(schema.consents.contactId, contact.id)));
+      expect(consents.filter((c) => c.status === "denied")).toHaveLength(0);
+      const out = await outgoing(conv.id);
+      expect(out).toHaveLength(1);
+      expect(out[0]!.senderName).toBe("Celular");
+    });
+
+    it("fica só na empresa do canal (outra empresa não vê a mensagem)", async () => {
+      const { from, conv } = await newConversation();
+      await fromPhone(from, "Só para a empresa A");
+      const seen = await withOrg(db, other.orgId, (tx) => tx.select().from(schema.messages).where(eq(schema.messages.conversationId, conv.id)));
+      expect(seen).toHaveLength(0);
+    });
+  });
 
   // ── pipeline de entrada ───────────────────────────────────────────────────
   describe("mensagem recebida", () => {

@@ -50,6 +50,22 @@ export const SCHEDULING_RULES = [
   "   j) Todos os horários que você falar vêm das ferramentas e do bloco de dados, já no horário local do cliente. NUNCA mencione UTC nem fuso, e nunca converta horários por conta própria. Escreva dias da semana e meses sempre em português.",
 ];
 
+/**
+ * Como usar o catálogo (só entra quando a empresa tem produto disponível). `n` é o número da regra, que segue a anterior.
+ * O foco: achar o produto certo e CONFIRMAR com o cliente quando houver dúvida, nunca adivinhar nem inventar valor.
+ */
+export function catalogRules(n: number) {
+  return [
+    `${n}. CATÁLOGO. A empresa tem produtos cadastrados. Quando o cliente perguntar de um produto, de valor, de foto ou quiser comprar:`,
+    "   a) Procure com search_products, nas palavras do cliente (aceita erro de digitação e descrição). Os valores só valem se vierem desse resultado; nunca cite valor de produto de outra fonte.",
+    "   b) Leia a confiança. Se não for ALTA, ou se houver mais de um produto parecido, pergunte antes de seguir (\"Você quis dizer a Camiseta Preta M?\" ou \"Temos a M e a G, qual você prefere?\"). Modelos diferentes (tamanho, cor) são produtos separados.",
+    "   c) Sem resultado: diga que não encontrou esse produto, peça nome, cor ou tamanho, ou ofereça chamar a equipe. Nunca invente produto, estoque, prazo, frete ou desconto.",
+    "   d) Foto: use send_product_photos só do produto CONFIRMADO e quando o cliente pedir ou ao apresentá-lo; no máximo 2 produtos por vez. Escreva a mensagem normalmente (\"te mando a foto aqui\"); as fotos seguem depois dela.",
+    "   e) Valor: cite o valor unitário que o catálogo trouxe. Não some, não multiplique, não dê desconto nem parcele; o total é a equipe que confirma. Produto com \"valor sob consulta\": diga que a equipe passa o valor.",
+    "   f) Quando o cliente decidir comprar, colete o essencial em poucas perguntas (qual produto, quantidade, forma de pagamento, entrega ou retirada) e então chame register_interest, e avise na mesma mensagem que uma pessoa da equipe vai continuar. Você NÃO cobra nem fecha pagamento.",
+  ];
+}
+
 export function buildRulesBlock(config: AgentRuntimeConfig) {
   const canSchedule = config.scheduling.canBook && config.scheduling.appointmentTypeIds.length > 0;
   return [
@@ -66,6 +82,7 @@ export function buildRulesBlock(config: AgentRuntimeConfig) {
     "10. O servidor define quem é o cliente e a empresa; você não escolhe identificadores. Use as ferramentas apenas com os argumentos pedidos.",
     "11. Responda ao que o cliente disse na ÚLTIMA mensagem. Cumprimentos e conversa curta (\"oi\", \"opa\", \"e aí\", \"valeu\") são normais: responda com simpatia e pergunte como pode ajudar. Nunca chame request_human por causa de um pedido antigo que já foi respondido ou tratado por uma pessoa.",
     ...(canSchedule ? SCHEDULING_RULES : []),
+    ...(config.catalog?.enabled ? catalogRules(canSchedule ? 13 : 12) : []),
   ].join("\n");
 }
 

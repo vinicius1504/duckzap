@@ -92,6 +92,13 @@
       "when": 1793229546191,
       "tag": "0012_media_thumbnail",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793389631405,
+      "tag": "0013_catalog",
+      "breakpoints": true
     }
   ]
 }

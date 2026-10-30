@@ -82,7 +82,8 @@ const cases: Case[] = [
       { fixture: "evolution.messages-upsert.text", expected: [{ type: "message", kind: "text", from: "+5567999990000", text: "Oi, queria marcar uma limpeza", externalId: "3EB0C767D82A9F43B1E4", name: "Maria Souza" }] },
       { fixture: "evolution.messages-upsert.image", expected: [{ type: "message", kind: "image", text: "Segue o exame", mediaRef: "3EB0AABBCCDDEEFF0011" }] },
       { fixture: "evolution.messages-upsert.sticker", expected: [{ type: "message", kind: "image", sticker: true, mediaRef: "3EB0STICKER0000000001" }] },
-      { fixture: "evolution.messages-upsert.from-me", expected: [] },
+      // saiu da nossa conta (celular ou eco do DuckChat): vira evento marcado fromMe; quem decide se é eco é o módulo Conversas
+      { fixture: "evolution.messages-upsert.from-me", expected: [{ type: "message", kind: "text", from: "+5567999990000", text: "Olá!", externalId: "3EB0FROMME00000001", fromMe: true }] },
       { fixture: "evolution.messages-upsert.group", expected: [] },
       { fixture: "evolution.messages-update.read", expected: [{ type: "status", status: "read", externalId: "3EB0OUT000000000001" }] },
       { fixture: "evolution.connection-update.connecting.recorded", expected: [{ type: "connection", status: "qr_pending" }] },

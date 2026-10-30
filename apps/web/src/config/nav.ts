@@ -12,6 +12,8 @@ export const webNav = {
     { href: "/conversas", label: "Conversas", icon: "chat", mobile: "tab" },
     { href: "/clientes", label: "Clientes", icon: "contacts", mobile: "tab" },
     { href: "/agenda", label: "Agenda", icon: "calendar", mobile: "tab" },
+    // todos veem o catálogo; cadastrar e editar exige catalog.manage (checado na página e nas ações)
+    { href: "/catalogo", label: "Catálogo", icon: "tag" },
     { href: "/campanhas", label: "Campanhas", icon: "send", permission: "campaign.manage" },
     { href: "/agentes", label: "Agentes", icon: "bot", permission: "agent.manage" },
     { href: "/canais", label: "Canais", icon: "link", permission: "channel.manage" },

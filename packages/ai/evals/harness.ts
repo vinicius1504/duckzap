@@ -8,6 +8,7 @@ import {
   type FakeState,
   type HandoffKind,
   type Intent,
+  type ProductInfo,
   type TurnResult,
 } from "../src/agents";
 
@@ -51,6 +52,8 @@ export type Scenario = {
   config?: AgentRuntimeConfig;
   state?: ConversationState;
   chunks?: { id: string; documentName: string | null; text: string }[];
+  /** Produtos DISPONÍVEIS do catálogo fictício. */
+  products?: ProductInfo[];
   history: ChatMessage[];
   /** Resposta do roteador (fast). Padrão: question com confiança 0.9. */
   router?: { intent: Intent; confidence: number } | string;
@@ -106,7 +109,7 @@ export function scriptedLlm(scenario: Scenario) {
 
 export async function runScenario(scenario: Scenario, llmOverride?: LLMProvider) {
   const { llm, requests, counts } = scriptedLlm(scenario);
-  const { ports, state } = createInMemoryPorts({ chunks: scenario.chunks, now: () => new Date("2026-10-26T12:00:00Z") });
+  const { ports, state } = createInMemoryPorts({ chunks: scenario.chunks, products: scenario.products, now: () => new Date("2026-10-26T12:00:00Z") });
   const result = await runAgentTurn({
     scope: { organizationId: "org_test", conversationId: "conv_test", contactId: "contact_test", agentId: "agt_test" },
     mode: scenario.mode ?? "live",

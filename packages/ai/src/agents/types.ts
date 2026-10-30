@@ -20,6 +20,10 @@ export const TOOL_NAMES = [
   "add_tag",
   "request_human",
   "schedule_followup",
+  // catálogo (função do sistema: ligadas por `config.catalog.enabled`, nunca por `advanced.tools`)
+  "search_products",
+  "send_product_photos",
+  "register_interest",
 ] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 
@@ -55,6 +59,11 @@ export const agentRuntimeConfigSchema = z.object({
     respectBusinessHours: z.boolean(),
   }),
   scheduling: z.object({ canBook: z.boolean(), appointmentTypeIds: z.array(z.string()) }),
+  /**
+   * Catálogo de produtos: preenchido só em tempo de execução por `effectiveCatalogConfig` (a empresa tem produto disponível).
+   * Nunca vem do agente salvo; ausente = sem ferramentas de catálogo.
+   */
+  catalog: z.object({ enabled: z.boolean() }).optional(),
   advanced: z.object({
     prompt: z.string(),
     tools: z.array(z.string()),
@@ -136,6 +145,17 @@ export interface ConversationsPort {
   requestHuman(scope: Scope, reason: string): Promise<void>;
   scheduleFollowup(scope: Scope, input: { stepId: string; runAt: Date }): Promise<void>;
   markOptOut(scope: Scope): Promise<void>;
+  /** Nota INTERNA na conversa (só a equipe vê; o cliente nunca recebe). */
+  addInternalNote(scope: Scope, text: string): Promise<void>;
+}
+
+/** Produto do catálogo como a IA o enxerga. `priceCents` null = "sob consulta". */
+export type ProductInfo = { id: string; name: string; description: string; priceCents: number | null; photoCount: number };
+export interface CatalogPort {
+  /** Todos os produtos DISPONÍVEIS da empresa do escopo (no máximo ~100; a IA rankeia em memória). */
+  listAvailable(scope: Scope): Promise<ProductInfo[]>;
+  /** Um produto disponível da empresa do escopo, ou null (outra empresa, indisponível ou inexistente). */
+  getProduct(scope: Scope, productId: string): Promise<ProductInfo | null>;
 }
 
 export type AgentPorts = {
@@ -143,6 +163,7 @@ export type AgentPorts = {
   agenda: AgendaPort;
   contacts: ContactsPort;
   conversations: ConversationsPort;
+  catalog: CatalogPort;
 };
 
 /** Embeddings (Anthropic não oferece): porta para quando houver provedor. Retrieval funciona sem ela (texto/trigram). */
@@ -251,4 +272,12 @@ export type TurnResult = {
   /** Sinais de auditoria (ex.: suspeita de injeção). */
   flags: string[];
   usage: { inputTokens: number; outputTokens: number };
+  /**
+   * Produtos cujas fotos a IA pediu para mandar (`send_product_photos`): sem repetição, no máximo `MAX_PHOTO_PRODUCTS_PER_TURN`.
+   * A ferramenta NÃO envia: quem chama (turno ao vivo) entrega as imagens depois dos textos. Copiloto e simulador ignoram.
+   */
+  photoRequests: { productId: string }[];
 };
+
+/** Quantos produtos podem ter fotos enviadas num mesmo turno. */
+export const MAX_PHOTO_PRODUCTS_PER_TURN = 2;

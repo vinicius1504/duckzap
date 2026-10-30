@@ -4,6 +4,7 @@ import { adminRoutes } from "./admin/routes";
 import { agentsRoutes } from "./agents/routes";
 import { appointmentsRoutes } from "./appointments/routes";
 import { campaignsRoutes } from "./campaigns/routes";
+import { catalogRoutes } from "./catalog/routes";
 import { channelsRoutes } from "./channels/routes";
 import { contactsRoutes } from "./contacts/routes";
 import { conversationsRoutes } from "./conversations/routes";
@@ -28,6 +29,7 @@ export function mountModules(app: OpenAPIHono<AppBindings>, deps: Deps) {
   app.route("/v1", channelsRoutes(deps));
   app.route("/v1", contactsRoutes(deps));
   app.route("/v1", appointmentsRoutes(deps));
+  app.route("/v1", catalogRoutes(deps));
   app.route("/v1", agentsRoutes(deps));
   app.route("/v1", conversationsRoutes(deps));
   app.route("/v1", conversationTypingRoutes(deps));

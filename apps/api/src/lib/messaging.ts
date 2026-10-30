@@ -84,6 +84,11 @@ export type InboundEvent =
       at: string;
       /** API oficial: até quando vale a janela de 24 h para resposta em texto livre. */
       windowExpiresAt?: string;
+      /**
+       * A mensagem saiu da NOSSA conta (o provedor ecoa o que enviamos e também o que a pessoa digitou no celular). `from` continua
+       * sendo o endereço do CLIENTE (o outro lado da conversa) e `name` nunca vem preenchido (seria o nome do dono da conta).
+       */
+      fromMe?: true;
     }
   | { type: "status"; externalId: string; status: "sent" | "delivered" | "read" | "failed"; at: string }
   | {
@@ -110,6 +115,7 @@ export const inboundEventSchema: z.ZodType<InboundEvent> = z.discriminatedUnion(
     sticker: z.boolean().optional(),
     at: z.iso.datetime(),
     windowExpiresAt: z.iso.datetime().optional(),
+    fromMe: z.literal(true).optional(),
   }),
   z.object({
     type: z.literal("status"),

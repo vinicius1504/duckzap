@@ -19,7 +19,8 @@ import { registerOptOut } from "../contacts/service";
 import { appointmentNotice } from "../notifications/logic";
 import { notifyAppointmentTeam } from "../notifications/service";
 import { generateSlots, parseSlotId, slotId } from "./logic";
-import { addEvent } from "./outbound";
+import { createCatalogPort } from "./catalog-port";
+import { addEvent, addNote } from "./outbound";
 import { loadTags, type ConversationRow } from "./queries";
 import { businessHoursFor } from "./inbound";
 import { setFunnelStage } from "./service";
@@ -315,7 +316,15 @@ export function createRealPorts(env: PortsEnv): AgentPorts {
         assertScope(env, scope);
         await registerOptOut(env.tx, org, scope.contactId, env.lastCustomerText || "SAIR", env.now);
       },
+
+      /** Nota interna (só a equipe vê) em nome do agente: é onde a IA deixa o interesse de compra do cliente. */
+      async addInternalNote(scope, text) {
+        assertScope(env, scope);
+        await addNote(env.tx, env.conv, { kind: "agent", id: null, name: env.agentName }, text.slice(0, 2000), null, env.now);
+      },
     },
+
+    catalog: createCatalogPort({ tx: env.tx, organizationId: org }),
   };
 }
 

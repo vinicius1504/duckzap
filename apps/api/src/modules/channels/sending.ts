@@ -3,6 +3,7 @@ import { schema, type Transaction } from "@duckzap/db";
 import { and, eq, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { outboundMessageSchema, type MessagingProvider, type OutboundMessage, type SendResult } from "../../lib/messaging";
+import { rememberSentByUs } from "../../lib/sent-echo";
 import { buildRef, findChannel } from "./repo";
 import { getChannelsRuntime, type ChannelsRuntime } from "./runtime";
 import { isSafeMediaUrlResolved } from "./security";
@@ -122,6 +123,8 @@ export async function sendViaChannel(
     result = { ok: false, code: "unknown", message: "Falha ao enviar. Tente de novo." };
   }
 
+  // antes mesmo do commit: o eco do provedor pode chegar enquanto esta transação ainda está aberta (ver lib/sent-echo.ts)
+  if (result.ok) rememberSentByUs(row.id, result.providerMessageId);
   await tx
     .update(schema.channelOutbound)
     .set(

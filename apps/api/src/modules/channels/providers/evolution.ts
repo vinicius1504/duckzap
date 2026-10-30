@@ -490,15 +490,18 @@ function parsePresence(data: Record<string, unknown>, at: Date): InboundEvent[] 
 
 function parseUpsert(data: Record<string, unknown>, fallbackAt: Date): InboundEvent | undefined {
   const key = asRecord(data.key);
-  if (key.fromMe === true) return undefined; // eco do que enviamos (o status chega em messages.update)
+  // fromMe = saiu da nossa conta: o eco do que o DuckChat enviou OU o que a pessoa digitou no celular. Quem decide é a Conversas
+  // (ela conhece os ids que enviamos); o status do envio segue chegando em messages.update.
+  const fromMe = key.fromMe === true;
   const id = asString(key.id);
   const from = jidToAddress(asString(key.remoteJid), asString(key.remoteJidAlt) ?? asString(key.senderPn));
   if (!id || !from) return undefined;
 
   const message = asRecord(data.message);
   const at = isoFromSeconds(data.messageTimestamp, fallbackAt);
-  const name = asString(data.pushName);
-  const base = { type: "message" as const, externalId: id, from, ...(name ? { name } : {}), at };
+  // em mensagem nossa o pushName é o do DONO da conta, não o do cliente: nunca vira nome do contato
+  const name = fromMe ? undefined : asString(data.pushName);
+  const base = { type: "message" as const, externalId: id, from, ...(name ? { name } : {}), at, ...(fromMe ? { fromMe: true as const } : {}) };
 
   const text = asString(message.conversation) ?? asString(asRecord(message.extendedTextMessage).text);
   if (text) return { ...base, kind: "text", text };
@@ -508,6 +511,8 @@ function parseUpsert(data: Record<string, unknown>, fallbackAt: Date): InboundEv
   if (Object.keys(asRecord(message.audioMessage)).length) return { ...base, kind: "audio", mediaRef: id };
   const document = asRecord(message.documentMessage);
   if (Object.keys(document).length) return { ...base, kind: "document", text: asString(document.caption), mediaRef: id };
+  // o eco da nossa conta traz muita mensagem técnica (reação, apagar, editar, chaves): só o que o cliente lê interessa
+  if (fromMe) return undefined;
   return { ...base, kind: "other" };
 }
 

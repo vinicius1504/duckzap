@@ -1,13 +1,16 @@
 import { z } from "zod";
 import type { LlmTool } from "../llm";
+import { formatPrice, rankProducts, type Confidence } from "./catalog";
 import { formatLocal, hasRealName, localMinutes, parseClock, spreadSlots } from "./local-time";
 import { isWithinBusinessHours, nextBusinessTime } from "./text";
 import {
+  MAX_PHOTO_PRODUCTS_PER_TURN,
   PortError,
   type AgentPorts,
   type AgentRuntimeConfig,
   type BusinessHours,
   type KnowledgeHit,
+  type ProductInfo,
   type Scope,
   type ToolName,
 } from "./types";
@@ -30,6 +33,11 @@ export type ToolContext = {
   allowedTags: string[];
   /** Preenchido pelo pipeline com tudo que search_knowledge devolver (alimenta o guardrail de preço). */
   onKnowledge?: (hits: KnowledgeHit[]) => void;
+  /**
+   * `send_product_photos` registra aqui o produto cujas fotos devem ir na conversa (quem envia é o chamador do turno):
+   * `added` entrou; `duplicate` já estava pedido; `limit` já há `MAX_PHOTO_PRODUCTS_PER_TURN` produtos neste turno.
+   */
+  requestPhotos?: (productId: string) => "added" | "duplicate" | "limit";
 };
 
 export type ToolOutcome = {
@@ -74,7 +82,28 @@ export function enabledToolNames(config: AgentRuntimeConfig): Set<ToolName> {
   if (set.has("update_contact_fields")) enabled.add("update_contact_fields");
   if (set.has("add_tag")) enabled.add("add_tag");
   if (set.has("schedule_followup") && config.followUp.enabled && config.followUp.steps.length > 0) enabled.add("schedule_followup");
+  // catálogo é função do sistema (como a agenda): vale `config.catalog`, que o runtime preenche pela empresa; `advanced.tools` não entra
+  if (config.catalog?.enabled) {
+    enabled.add("search_products");
+    enabled.add("send_product_photos");
+    enabled.add("register_interest");
+  }
   return enabled;
+}
+
+const CONFIDENCE_LABEL: Record<Confidence, string> = { high: "ALTA", medium: "MÉDIA", low: "BAIXA" };
+
+const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
+const priceLabel = (cents: number | null) => (cents === null ? "valor sob consulta" : formatPrice(cents));
+
+/** Texto do produto que entra no corpus do guardrail de preço: só valor que está AQUI pode ser citado ao cliente. */
+function catalogFact(p: ProductInfo) {
+  return oneLine(`${p.name}. ${priceLabel(p.priceCents)}. ${p.description}`);
+}
+
+/** Motivo curto para a equipe ("Interesse de compra: …"), limitado ao teto do `request_human`. */
+export function interestReason(summary: string) {
+  return `Interesse de compra: ${oneLine(summary)}`.slice(0, 200);
 }
 
 export function buildToolDefs(ctx: ToolContext, typeNames: Map<string, string> = new Map()): ToolDef[] {
@@ -220,6 +249,103 @@ export function buildToolDefs(ctx: ToolContext, typeNames: Map<string, string> =
     },
   });
 
+  defs.push({
+    name: "search_products",
+    description:
+      "Procura no catálogo de produtos da empresa o que o cliente pediu. Aceita nome parcial, erro de digitação ou descrição (\"camiseta preta\", \"aquela do vestido azul\"). Devolve até 3 candidatos com product_id, valor e CONFIANÇA. Use SEMPRE antes de falar de um produto ou do valor dele; modelos diferentes (tamanho, cor) são produtos separados.",
+    schema: z.object({ query: z.string().trim().min(2).max(200).describe("O que o cliente pediu, nas palavras dele") }),
+    write: false,
+    async run(args, c) {
+      const products = await c.ports.catalog.listAvailable(c.scope);
+      const ranked = rankProducts(String(args.query), products, { limit: 3 });
+      if (!ranked.length) {
+        return {
+          output: "Nenhum produto parecido no catálogo. Não invente nem adivinhe: diga que não encontrou, peça o nome, a cor ou o tamanho, ou ofereça chamar a equipe.",
+        };
+      }
+      // os valores do catálogo passam a valer para o guardrail de preço (e só eles: preço inventado continua barrado)
+      c.onKnowledge?.(ranked.map((r) => ({ id: r.product.id, documentName: "Catálogo", text: catalogFact(r.product), score: r.score })));
+      const top = ranked[0]!;
+      const several = ranked.some((r) => r.ambiguous);
+      const advice = several
+        ? "Há mais de um produto parecido: pergunte ao cliente QUAL deles ele quer (cite os nomes), antes de falar de valor, mandar foto ou fechar."
+        : top.confidence === "high"
+          ? `Correspondência de confiança ALTA: ${top.product.name}. Pode seguir com ela.`
+          : `Não tenho certeza de que é este: CONFIRME com o cliente ("Você quis dizer ${top.product.name}?") antes de falar de valor, mandar foto ou fechar.`;
+      const lines = ranked.map((r) => {
+        const p = r.product;
+        const parts = [
+          `product_id=${p.id}`,
+          p.name,
+          priceLabel(p.priceCents),
+          p.photoCount === 0 ? "sem fotos" : `${p.photoCount} foto${p.photoCount === 1 ? "" : "s"}`,
+          `confiança ${CONFIDENCE_LABEL[r.confidence]}${r.ambiguous ? " (parecido com outro)" : ""}`,
+        ];
+        const description = oneLine(p.description).slice(0, 200);
+        return description ? `${parts.join(" | ")} | ${description}` : parts.join(" | ");
+      });
+      return { output: `${advice}\n${lines.join("\n")}` };
+    },
+  });
+
+  defs.push({
+    name: "send_product_photos",
+    description:
+      "Manda as fotos de um produto do catálogo para o cliente (até 2 produtos por vez). Use só depois de search_products, com o product_id do produto CONFIRMADO, e quando o cliente pedir foto ou ao apresentar o produto. As fotos seguem logo depois da sua mensagem.",
+    schema: z.object({ product_id: z.string().trim().min(1).max(80).describe("product_id devolvido por search_products") }),
+    write: true,
+    async run(args, c) {
+      const product = await c.ports.catalog.getProduct(c.scope, String(args.product_id));
+      if (!product) throw new PortError("not_found", "Produto não encontrado no catálogo. Use um product_id devolvido por search_products.");
+      if (product.photoCount === 0) {
+        return { output: `${product.name} não tem fotos cadastradas. Descreva o produto em texto e, se o cliente quiser ver, ofereça chamar a equipe.` };
+      }
+      const added = c.requestPhotos?.(product.id) ?? "added";
+      if (added === "limit") {
+        throw new PortError("invalid", `Só dá para mandar fotos de ${MAX_PHOTO_PRODUCTS_PER_TURN} produtos por vez. Mande as outras se o cliente pedir depois.`);
+      }
+      return {
+        output:
+          added === "duplicate"
+            ? `As fotos de ${product.name} já vão ser enviadas.`
+            : `As fotos de ${product.name} vão ser enviadas logo depois da sua mensagem. Escreva a resposta normalmente (ex.: "te mando a foto aqui") e não repita a descrição inteira.`,
+      };
+    },
+  });
+
+  defs.push({
+    name: "register_interest",
+    description:
+      "O cliente quer COMPRAR. Deixa uma nota interna para a equipe com o que foi combinado e chama a equipe para fechar. Use depois de coletar o essencial (produto, quantidade, forma de pagamento, entrega ou retirada). NÃO escreva valores no resumo: o sistema anexa os produtos e os preços do catálogo.",
+    schema: z.object({
+      summary: z.string().trim().min(3).max(500).describe("O que o cliente quer: quantidade, pagamento, entrega/retirada e observações, sem valores"),
+      product_ids: z.array(z.string().trim().min(1).max(80)).max(5).optional().describe("product_id dos produtos de interesse"),
+    }),
+    write: true,
+    async run(args, c) {
+      const summary = oneLine(String(args.summary));
+      const ids = [...new Set(Array.isArray(args.product_ids) ? args.product_ids.map(String) : [])];
+      const products: ProductInfo[] = [];
+      for (const id of ids) {
+        const p = await c.ports.catalog.getProduct(c.scope, id);
+        if (p) products.push(p);
+      }
+      // nome e preço vêm do CATÁLOGO, nunca do texto livre do modelo
+      const note = [
+        "Interesse de compra (registrado pela IA)",
+        ...(products.length ? ["Produtos:", ...products.map((p) => `- ${p.name} — ${priceLabel(p.priceCents)}`)] : []),
+        `Combinado com o cliente: ${summary}`,
+      ].join("\n");
+      await c.ports.conversations.addInternalNote(c.scope, note);
+      const reason = interestReason(summary);
+      await c.ports.conversations.requestHuman(c.scope, reason);
+      return {
+        output: "Interesse registrado e conversa enviada para a equipe. Avise o cliente que uma pessoa vai continuar para confirmar o total, o pagamento e a entrega. Não cobre nem prometa prazo.",
+        handoffReason: reason,
+      };
+    },
+  });
+
   const steps = ctx.config.followUp.steps;
   if (steps.length > 0) {
     defs.push({
@@ -282,6 +408,7 @@ export async function executeTool(defs: ToolDef[], ctx: ToolContext, name: strin
       output: result,
       trace: { tool: def.name, args: stringify(args), result, ok: true },
       ...(def.name === "request_human" ? { handoffReason: String(args.reason) } : {}),
+      ...(def.name === "register_interest" ? { handoffReason: interestReason(String(args.summary)) } : {}),
     };
   }
   try {
