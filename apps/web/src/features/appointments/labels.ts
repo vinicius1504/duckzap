@@ -16,16 +16,16 @@ export const statusActions: Record<AppointmentStatus, { to: AppointmentStatus; l
   pending: [
     { to: "confirmed", label: "Confirmar", primary: true },
     { to: "reschedule", label: "Marcar para remarcar" },
-    { to: "canceled", label: "Cancelar" },
+    { to: "canceled", label: "Cancelar agendamento" },
   ],
   confirmed: [
     { to: "done", label: "Concluir", primary: true },
     { to: "reschedule", label: "Marcar para remarcar" },
-    { to: "canceled", label: "Cancelar" },
+    { to: "canceled", label: "Cancelar agendamento" },
   ],
   reschedule: [
     { to: "confirmed", label: "Confirmar mesmo horário" },
-    { to: "canceled", label: "Cancelar" },
+    { to: "canceled", label: "Cancelar agendamento" },
   ],
   done: [{ to: "confirmed", label: "Reabrir" }],
   canceled: [{ to: "pending", label: "Reativar" }],

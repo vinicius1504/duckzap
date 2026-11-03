@@ -9,9 +9,10 @@ import {
   type ReminderSettings,
 } from "@duckzap/contracts/appointments";
 import { Button } from "@duckzap/ui/components/button";
-import { Alert, Spinner } from "@duckzap/ui/components/feedback";
+import { Alert, EmptyState, Spinner } from "@duckzap/ui/components/feedback";
 import { Select } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { Segmented } from "@duckzap/ui/components/segmented";
 import { cn } from "@duckzap/ui/cn";
 import { addMonths } from "date-fns";
@@ -145,7 +146,7 @@ export function AgendaBoard({
     <div className="flex min-w-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="mr-1 text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">Agenda</h1>
+          <h1 className={cn(pageTitleClass, "mr-1")}>Agenda</h1>
           <Button size="sm" onClick={() => void setParams({ data: null })} className="max-md:h-11">
             Hoje
           </Button>
@@ -174,7 +175,7 @@ export function AgendaBoard({
               id="ag-f-resp"
               value={ownerFilter ?? ""}
               onChange={(e) => void setParams({ responsavel: e.target.value || null })}
-              className="w-auto max-md:h-11"
+              className="w-auto"
             >
               <option value="">Responsável: Todos</option>
               {owners.map((o) => (
@@ -192,7 +193,7 @@ export function AgendaBoard({
               id="ag-f-tipo"
               value={typeFilter ?? ""}
               onChange={(e) => void setParams({ tipo: e.target.value || null })}
-              className="w-auto max-md:h-11"
+              className="w-auto"
             >
               <option value="">Tipo: Todos</option>
               {types.map((t) => (
@@ -207,7 +208,6 @@ export function AgendaBoard({
             onClick={() => setForm({ appointment: null, contactId: null })}
             disabled={!perms.manage}
             title={perms.manage ? undefined : "Seu papel não permite. Fale com um administrador."}
-            className="max-md:h-11"
           >
             <Icon name="plus" size={16} />
             Novo agendamento
@@ -243,9 +243,9 @@ export function AgendaBoard({
         {view === "lista" ? <ListView {...viewProps} canManage={perms.manage} onConfirm={(id) => changeStatus(id, "confirmed")} /> : null}
         {/* sobre a grade (não abaixo dela): uma linha a mais empurrava a página e criava rolagem */}
         {optimistic.length === 0 && view !== "lista" ? (
-          <p className="pointer-events-none absolute inset-x-0 top-24 text-center text-ink-2">
-            Nenhum agendamento neste período{ownerFilter || typeFilter ? " com esses filtros" : ""}.
-          </p>
+          <div className="pointer-events-none absolute inset-x-0 top-24">
+            <EmptyState compact icon="calendar" title={`Nenhum agendamento neste período${ownerFilter || typeFilter ? " com esses filtros" : ""}`} />
+          </div>
         ) : null}
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, buttonVariants } from "@duckzap/ui/components/button";
+import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
@@ -65,7 +65,9 @@ export function TermsDialog({
           </Alert>
         ) : null}
         <DialogFooter>
-          <DialogClose className={buttonVariants()}>Agora não</DialogClose>
+          <DialogClose asChild>
+            <Button>Cancelar</Button>
+          </DialogClose>
           <Button variant="primary" disabled={!all || pending} onClick={accept}>
             {pending ? <Spinner size={16} /> : null} Aceitar e disparar
           </Button>

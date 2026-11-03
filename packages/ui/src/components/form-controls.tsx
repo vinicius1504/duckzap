@@ -26,7 +26,7 @@ export function Select({
   return (
     <select
       aria-invalid={invalid || undefined}
-      className={cn(field, "h-10 px-3", invalid && "border-err", className)}
+      className={cn(field, "h-11 px-3", invalid && "border-err", className)}
       {...props}
     />
   );

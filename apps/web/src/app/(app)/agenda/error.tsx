@@ -1,26 +1,7 @@
 "use client";
 
-import { Button } from "@duckzap/ui/components/button";
-import { Card } from "@duckzap/ui/components/card";
-import { EmptyState } from "@duckzap/ui/components/feedback";
-import { Page } from "@duckzap/ui/components/layout";
+import { RouteError, type RouteErrorProps } from "@/components/route-error";
 
-export default function AgendaError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return (
-    <Page>
-      <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Agenda</h1>
-      <Card role="alert">
-        <EmptyState
-          icon="alert"
-          title="Não deu para carregar a agenda"
-          description="Pode ser a conexão. Seus dados estão salvos."
-          action={
-            <Button variant="primary" onClick={reset}>
-              Tentar de novo
-            </Button>
-          }
-        />
-      </Card>
-    </Page>
-  );
+export default function AgendaError({ error, retry }: RouteErrorProps) {
+  return <RouteError title="Agenda" error={error} retry={retry} />;
 }

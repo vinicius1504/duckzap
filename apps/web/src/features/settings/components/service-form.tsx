@@ -26,13 +26,15 @@ export function ServiceForm({ settings }: { settings: ServiceSettings }) {
   }
 
   return (
-    <Card className="p-6 max-sm:p-4">
+    <Card padding="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           save();
         }}
         className="flex flex-col gap-[18px]"
+        // editar de novo apaga o aviso de "salvo"/erro da vez anterior
+        onChange={() => setFeedback(null)}
         noValidate
       >
         <div>
@@ -130,7 +132,7 @@ export function ServiceForm({ settings }: { settings: ServiceSettings }) {
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? "Salvando…" : "Salvar alterações"}
+            {pending ? "Salvando…" : "Salvar"}
           </Button>
         </div>
       </form>

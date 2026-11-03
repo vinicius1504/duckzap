@@ -3,13 +3,14 @@
 import type { Appointment, AppointmentStatus } from "@duckzap/contracts/appointments";
 import { Button, buttonVariants } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogContent } from "@duckzap/ui/components/dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import Link from "next/link";
 import { OpenConversationButton } from "@/features/conversations/components/open-conversation-button";
 import { GOOGLE_CALENDAR_ENABLED } from "@/lib/features";
-import { formatDate, formatPhone } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatPhone } from "@/lib/format";
 import { sourceLabel, statusActions, statusView } from "../labels";
 import { zonedTime } from "../time";
 
@@ -83,7 +84,7 @@ export function AppointmentDetailsDialog({
                     <span>{r.kind === "24h" ? "24 h antes" : "2 h antes"}</span>
                     <span className="text-ink-2">
                       {r.status === "sent" ? "Enviado" : r.status === "scheduled" ? "Agendado" : "Não enviado"} ·{" "}
-                      {formatDate(r.at, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }, timeZone)}
+                      {formatDate(r.at, DATE_FORMATS.dayTime, timeZone)}
                     </span>
                   </li>
                 ))}
@@ -110,18 +111,32 @@ export function AppointmentDetailsDialog({
 
           {canManage ? (
             <div className="flex flex-wrap gap-2">
-              {statusActions[a.status].map((action) => (
-                <Button
-                  key={action.to}
-                  variant={action.primary ? "primary" : "secondary"}
-                  disabled={pending}
-                  onClick={() => onStatus(a.id, action.to)}
-                  className="max-md:h-11"
-                >
-                  {action.label}
-                </Button>
-              ))}
-              <Button onClick={() => onEdit(a)} className="max-md:h-11">
+              {statusActions[a.status].map((action) =>
+                action.to === "canceled" ? (
+                  <ConfirmDialog
+                    key={action.to}
+                    trigger={
+                      <Button variant="danger-ghost" disabled={pending}>
+                        {action.label}
+                      </Button>
+                    }
+                    title="Cancelar este agendamento?"
+                    description={`${typeName(a.typeId)} de ${a.contactName}. O horário volta a ficar livre na agenda.`}
+                    confirmLabel={action.label}
+                    pendingLabel="Cancelando…"
+                    danger
+                    onConfirm={async () => {
+                      onStatus(a.id, "canceled");
+                      return { ok: true };
+                    }}
+                  />
+                ) : (
+                  <Button key={action.to} variant={action.primary ? "primary" : "secondary"} disabled={pending} onClick={() => onStatus(a.id, action.to)}>
+                    {action.label}
+                  </Button>
+                ),
+              )}
+              <Button onClick={() => onEdit(a)}>
                 <Icon name="edit" size={16} />
                 {a.status === "reschedule" ? "Remarcar" : "Editar"}
               </Button>

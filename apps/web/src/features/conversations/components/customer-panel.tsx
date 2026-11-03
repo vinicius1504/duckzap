@@ -11,12 +11,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@duckzap/ui/components/dropdown-menu";
+import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Select, Textarea } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
+import { FieldError } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition, type ReactNode } from "react";
-import { formatDate, formatPhone } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatPhone } from "@/lib/format";
 import {
   moveConversationStageAction,
   setContactTagsAction,
@@ -100,9 +102,9 @@ export function CustomerPanel({ conversation, contact, lookups, canEdit, canSche
       </div>
 
       {error ? (
-        <p role="alert" className="text-center text-[13px] font-semibold text-err">
+        <Alert tone="err" live>
           {error}
-        </p>
+        </Alert>
       ) : null}
 
       <Section title="Etapa do funil">
@@ -171,13 +173,13 @@ export function CustomerPanel({ conversation, contact, lookups, canEdit, canSche
             disabled={!canSchedule || conversation.status === "resolved"}
             title={canSchedule ? undefined : NO_PERMISSION_HINT}
           >
-            <Icon name="plus" size={14} />
+            <Icon name="plus" size={16} />
             Agendar
           </Button>
         }
       >
         {upcoming.length === 0 ? (
-          <p className="text-ink-2">Nenhum agendamento futuro.</p>
+          <EmptyState compact icon="calendar" title="Nenhum agendamento futuro" />
         ) : (
           <ul className="flex flex-col gap-2">
             {upcoming.map((a) => (
@@ -197,7 +199,7 @@ export function CustomerPanel({ conversation, contact, lookups, canEdit, canSche
 
       <Section title="Tarefas do cliente">
         {tasks.length === 0 ? (
-          <p className="text-ink-2">Nenhuma tarefa.</p>
+          <EmptyState compact icon="list" title="Nenhuma tarefa" />
         ) : (
           <ul className="flex flex-col gap-2">
             {tasks.map((task) => (
@@ -232,13 +234,13 @@ export function CustomerPanel({ conversation, contact, lookups, canEdit, canSche
 
       <Section title="Histórico">
         {contact.history.length === 0 ? (
-          <p className="text-ink-2">Primeira conversa com a clínica.</p>
+          <EmptyState compact icon="history" title="Primeira conversa com este cliente" />
         ) : (
           <ul className="flex flex-col gap-1.5 text-[13px]">
             {contact.history.map((h) => (
               <li key={h.id} className="flex justify-between gap-3">
                 <span>{h.title}</span>
-                <span className="shrink-0 text-ink-2">{formatDate(h.at, { day: "2-digit", month: "2-digit" }, timeZone)}</span>
+                <span className="shrink-0 text-ink-2">{formatDate(h.at, DATE_FORMATS.dayMonth, timeZone)}</span>
               </li>
             ))}
           </ul>
@@ -297,7 +299,7 @@ function NotesEditor({ contactId, initial, canEdit }: { contactId: string; initi
         placeholder={canEdit ? "Preferências, alergias, observações…" : "Sem notas."}
       />
       <div className="mt-1.5 flex items-center justify-end gap-2" aria-live="polite">
-        {error ? <span className="text-[13px] font-semibold text-err">{error}</span> : null}
+        <FieldError id={`notes-${contactId}-erro`} message={error ?? undefined} />
         {saved && !dirty ? <span className="text-[13px] text-ok">Notas salvas</span> : null}
         {dirty && canEdit ? (
           <Button size="sm" variant="primary" onClick={save} disabled={pending}>

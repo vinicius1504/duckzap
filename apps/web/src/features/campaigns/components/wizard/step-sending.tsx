@@ -13,7 +13,7 @@ import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { Segmented } from "@duckzap/ui/components/segmented";
-import { formatDate, formatDuration } from "@/lib/format";
+import { formatDate, formatDuration, formatNumber } from "@/lib/format";
 import { describeSplit } from "../../labels";
 import { fromLocalInput, toLocalInput } from "../../time";
 import type { Draft, StepProps, WizardContext } from "./types";
@@ -122,13 +122,13 @@ export function StepSending({ draft, update, ctx }: StepProps) {
           </fieldset>
         ) : (
           <Alert tone="info" title="API oficial">
-            O ritmo é controlado pela Meta. Limite atual deste número: {channel?.dailyLimit.toLocaleString("pt-BR")} conversas por dia.
+            O ritmo é controlado pela Meta. Limite atual deste número: {channel ? formatNumber(channel.dailyLimit) : null} conversas por dia.
           </Alert>
         )}
       </div>
 
       {isQr && channel && audience ? (
-        <Card className="flex min-w-0 flex-[1_1_280px] flex-col gap-3 bg-bg p-4">
+        <Card padding="sm" className="flex min-w-0 flex-[1_1_280px] flex-col gap-3 bg-bg">
           <h3 className="font-bold">Envio seguro deste número</h3>
           <ul className="flex flex-col gap-1.5 text-[13px]">
             <li>

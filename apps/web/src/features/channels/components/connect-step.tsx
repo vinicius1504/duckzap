@@ -162,11 +162,11 @@ function OfficialConnect({ channelId, onConnected }: { channelId: string; onConn
       <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
         <div>
           <Label htmlFor={`${channelId}-pnid`}>ID do número</Label>
-          <Input id={`${channelId}-pnid`} name="phoneNumberId" inputMode="numeric" autoComplete="off" required className="h-10" />
+          <Input id={`${channelId}-pnid`} name="phoneNumberId" inputMode="numeric" autoComplete="off" required />
         </div>
         <div>
           <Label htmlFor={`${channelId}-waba`}>ID da conta do WhatsApp Business</Label>
-          <Input id={`${channelId}-waba`} name="businessAccountId" inputMode="numeric" autoComplete="off" required className="h-10" />
+          <Input id={`${channelId}-waba`} name="businessAccountId" inputMode="numeric" autoComplete="off" required />
         </div>
       </div>
       <div>
@@ -177,7 +177,6 @@ function OfficialConnect({ channelId, onConnected }: { channelId: string; onConn
           type="password"
           autoComplete="off"
           required
-          className="h-10"
           aria-describedby={error ? `${channelId}-erro` : undefined}
         />
         <FieldError id={`${channelId}-erro`} message={error ?? undefined} />

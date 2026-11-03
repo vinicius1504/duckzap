@@ -179,7 +179,7 @@ export function VariationBank({ draft, update, onPreview }: StepProps & { onPrev
                       onClick={() => review(v.id, v.review === "approved" ? "pending" : "approved")}
                       className="max-md:h-11"
                     >
-                      <Icon name="thumbUp" size={14} /> Aprovar
+                      <Icon name="thumbUp" size={16} /> Aprovar
                     </Button>
                     <Button
                       size="sm"
@@ -187,7 +187,7 @@ export function VariationBank({ draft, update, onPreview }: StepProps & { onPrev
                       onClick={() => review(v.id, v.review === "rejected" ? "pending" : "rejected")}
                       className="max-md:h-11"
                     >
-                      <Icon name="thumbDown" size={14} /> Rejeitar
+                      <Icon name="thumbDown" size={16} /> Rejeitar
                     </Button>
                     <Button
                       size="sm"
@@ -198,10 +198,10 @@ export function VariationBank({ draft, update, onPreview }: StepProps & { onPrev
                       }}
                       className="max-md:h-11"
                     >
-                      <Icon name="edit" size={14} /> Editar
+                      <Icon name="edit" size={16} /> Editar
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => onPreview(v.text)} className="max-md:h-11">
-                      <Icon name="eye" size={14} /> Ver no celular
+                      <Icon name="eye" size={16} /> Ver no celular
                     </Button>
                   </div>
                 ) : null}

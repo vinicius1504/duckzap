@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dial
 import { Radio, Textarea } from "@duckzap/ui/components/form-controls";
 import { Label } from "@duckzap/ui/components/input";
 import { Segmented } from "@duckzap/ui/components/segmented";
-import { Spinner } from "@duckzap/ui/components/feedback";
+import { Alert } from "@duckzap/ui/components/feedback";
 import { useState, useTransition, type FormEvent } from "react";
 import { transferConversationAction } from "../actions";
 
@@ -109,17 +109,14 @@ export function TransferDialog({ open, onOpenChange, conversationId, contactName
             <p className="mt-1 text-xs text-ink-2">Vira uma nota interna: o cliente não vê.</p>
           </div>
           {error ? (
-            <p role="alert" className="text-[13px] font-semibold text-err">
+            <Alert tone="err" live>
               {error}
-            </p>
+            </Alert>
           ) : null}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Spinner size={16} /> : null}
-              Transferir
+              {pending ? "Transferindo…" : "Transferir"}
             </Button>
           </DialogFooter>
         </form>

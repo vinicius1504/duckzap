@@ -3,7 +3,7 @@
 import type { Message, MessageStatus } from "@duckzap/contracts/conversations";
 import { Chip } from "@duckzap/ui/components/chip";
 import { Icon, type IconName } from "@duckzap/ui/components/icon";
-import { Spinner } from "@duckzap/ui/components/feedback";
+import { EmptyState, Spinner } from "@duckzap/ui/components/feedback";
 import { cn } from "@duckzap/ui/cn";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { MediaBubble } from "./media-bubble";
@@ -84,7 +84,11 @@ export function MessageThread({ messages, nowIso, timeZone, onResend, resendDisa
         // da rolagem e esticam a página inteira, uma vez por mensagem.
         className="relative flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-bg p-5 max-md:px-3"
       >
-        {messages.length === 0 ? <p className="m-auto text-ink-2">Nenhuma mensagem ainda.</p> : null}
+        {messages.length === 0 ? (
+          <div className="m-auto">
+            <EmptyState compact icon="chat" title="Nenhuma mensagem ainda" />
+          </div>
+        ) : null}
         {messages.map((m, index) => {
           const prev = messages[index - 1];
           const newDay = !prev || !sameDay(prev.createdAt, m.createdAt, timeZone);

@@ -123,21 +123,21 @@ export function AttachmentPreview({ item, state, onSubmit, onRetry, onCancel }: 
       <div className="mt-2 flex flex-wrap justify-end gap-2">
         {failed ? (
           <>
-            <Button variant="ghost" className="max-md:h-11" onClick={onCancel}>
+            <Button onClick={onCancel}>
               Descartar
             </Button>
-            <Button variant="primary" className="max-md:h-11" onClick={() => onRetry(caption)}>
+            <Button variant="primary" onClick={() => onRetry(caption)}>
               <Icon name="refresh" size={16} />
               Tentar de novo
             </Button>
           </>
         ) : (
           <>
-            <Button variant="ghost" className="max-md:h-11" onClick={onCancel} disabled={!canCancelUpload(state)}>
+            <Button onClick={onCancel} disabled={!canCancelUpload(state)}>
               {busy ? "Cancelar envio" : "Cancelar"}
             </Button>
             {state.phase === "chosen" ? (
-              <Button variant="primary" className="max-md:h-11" onClick={submit}>
+              <Button variant="primary" onClick={submit}>
                 <Icon name="send" size={16} strokeWidth={2} />
                 Enviar
               </Button>

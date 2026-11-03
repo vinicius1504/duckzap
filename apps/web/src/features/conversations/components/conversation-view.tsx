@@ -145,7 +145,7 @@ export function ConversationView({ detail, lookups, permissions, viewer, sending
             aria-label="Voltar para a lista"
             className="flex size-11 items-center justify-center rounded-control hover:bg-surface-hover md:hidden"
           >
-            <Icon name="arrowLeft" />
+            <Icon name="arrowLeft" size={16} />
           </Link>
           <div className="flex min-w-0 flex-[1_1_160px] items-center gap-3">
             <Avatar name={contact.name} />
@@ -181,8 +181,8 @@ export function ConversationView({ detail, lookups, permissions, viewer, sending
             />
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button size="icon" className="size-9 max-md:size-11" aria-label="Mais ações">
-                  <Icon name="dots" />
+                <Button size="icon" className="size-9" aria-label="Mais ações">
+                  <Icon name="dots" size={16} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>

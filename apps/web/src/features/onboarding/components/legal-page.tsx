@@ -1,6 +1,7 @@
 import { brand } from "@duckzap/brand";
 import { buttonVariants } from "@duckzap/ui/components/button";
 import { Logo } from "@duckzap/ui/components/logo";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import Link from "next/link";
 
 export type LegalSection = { id: string; title: string; topics?: string[] };
@@ -60,7 +61,7 @@ export function LegalPage({
         </nav>
 
         <article className="min-w-0 flex-[3_1_480px] rounded-card border border-line bg-surface p-8 leading-relaxed max-sm:p-5">
-          <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">{title}</h1>
+          <h1 className={pageTitleClass}>{title}</h1>
           <p className="mt-1 text-[13px] text-ink-2">
             Última atualização: [A DEFINIR] · Versão [A DEFINIR]
           </p>

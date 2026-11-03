@@ -100,7 +100,7 @@ export function NewChannelWizard({
     >
       <DialogTrigger asChild>
         <Button variant="primary">
-          <Icon name="plus" size={18} strokeWidth={2.2} />
+          <Icon name="plus" size={16} />
           Novo canal
         </Button>
       </DialogTrigger>
@@ -157,6 +157,7 @@ export function NewChannelWizard({
               </>
             ) : null}
             <DialogFooter>
+              <Button onClick={() => setOpen(false)}>Cancelar</Button>
               <Button variant="primary" disabled={type === "whatsapp_qr" && !riskAccepted} onClick={() => setStep(1)}>
                 Continuar
               </Button>
@@ -190,7 +191,7 @@ export function NewChannelWizard({
               </p>
               <FieldError id="novo-canal-erro" message={error ?? undefined} />
             </div>
-            <DialogFooter className="justify-between">
+            <DialogFooter>
               <Button onClick={() => setStep(0)}>Voltar</Button>
               <Button type="submit" variant="primary" disabled={pending}>
                 {pending ? "Criando…" : "Criar e conectar"}
@@ -206,7 +207,7 @@ export function NewChannelWizard({
                 {channel.name} está conectado. Agora escolha a equipe, o agente e as mensagens do canal.
               </Alert>
               <DialogFooter>
-                <Button onClick={() => setOpen(false)}>Concluir</Button>
+                <Button onClick={() => setOpen(false)}>Fechar</Button>
                 <Link
                   href={`/canais?canal=${channel.id}#mensagens`}
                   onClick={() => setOpen(false)}
@@ -219,8 +220,7 @@ export function NewChannelWizard({
           ) : (
             <>
               <ConnectStep channel={channel} onConnected={() => setConnected(true)} />
-              <DialogFooter className="justify-between">
-                <p className="self-center text-[13px] text-ink-2">Pode fechar e conectar depois pela lista.</p>
+              <DialogFooter start={<p className="self-center text-[13px] text-ink-2">Pode fechar e conectar depois pela lista.</p>}>
                 <Button onClick={() => setOpen(false)}>Fechar</Button>
               </DialogFooter>
             </>

@@ -1,4 +1,7 @@
+import { formatPriceBRL } from "@duckzap/contracts/catalog";
+
 // Formatação para exibição em pt-BR. Datas chegam em UTC (ISO) e são mostradas no fuso da organização.
+// É o ÚNICO lugar de formatação: não repita `toLocaleString`, `Intl.*` nem `n === 1 ? ... : ...` nas telas.
 
 export const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
@@ -24,10 +27,37 @@ export function formatShortWeekday(isoDate: string, timeZone = DEFAULT_TIME_ZONE
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** Centavos → "R$ 1.234,56" */
+/** Centavos → "R$ 1.234,56". Mesmo formato que a IA fala (ela e o guardrail de preço usam `formatPriceBRL`). */
 export function formatMoney(cents: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+  return formatPriceBRL(cents);
 }
+
+/** 12345 → "12.345" */
+export function formatNumber(value: number) {
+  return value.toLocaleString("pt-BR");
+}
+
+/** Plural simples: `formatPlural(1, "item", "itens")` → "1 item"; `(0|2, ...)` → "0 itens" / "2 itens". */
+export function formatPlural(count: number, one: string, many: string) {
+  return `${formatNumber(count)} ${count === 1 ? one : many}`;
+}
+
+/** "Marina Souza" → "Marina". */
+export function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/** Opções de `formatDate` com nome. Use estas em vez de repetir o objeto na tela. */
+export const DATE_FORMATS = {
+  /** 20/10/2026 */
+  day: { day: "2-digit", month: "2-digit", year: "numeric" },
+  /** 20/10 */
+  dayMonth: { day: "2-digit", month: "2-digit" },
+  /** 20/10, 14:30 */
+  dayTime: { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" },
+  /** 14:30 */
+  time: { hour: "2-digit", minute: "2-digit" },
+} as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export function formatPhone(e164: string) {
   const digits = e164.replace(/\D/g, "");

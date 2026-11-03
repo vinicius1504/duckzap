@@ -4,11 +4,12 @@ import type { Integrations, IntegrationStatus } from "@duckzap/contracts/setting
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip, type ChipTone } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Input, Label } from "@duckzap/ui/components/input";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { formatDate } from "@/lib/format";
+import { DATE_FORMATS, formatDate } from "@/lib/format";
 import {
   authorizeInstagramAction,
   connectGoogleCalendarAction,
@@ -16,7 +17,6 @@ import {
   updateWhatsappTokenAction,
 } from "../actions";
 import { GOOGLE_CALENDAR_ENABLED } from "@/lib/features";
-import { ConfirmDialog } from "./confirm-dialog";
 import { CopyField } from "./copy-field";
 
 const statusView: Record<IntegrationStatus, { label: string; tone: ChipTone }> = {
@@ -66,13 +66,13 @@ export function IntegrationCards({
   return (
     <>
       {GOOGLE_CALENDAR_ENABLED ? (
-        <Card className="flex flex-col gap-2.5 p-5 max-sm:p-4">
+        <Card padding="md" className="flex flex-col gap-2.5">
           <Header title="Google Calendar" status={googleCalendar.status} />
           <p className="text-[13px] text-ink-2">
             {googleCalendar.status === "connected" && googleCalendar.lastSyncAt
               ? `Calendário “${googleCalendar.calendarName}” sincronizado em ${formatDate(
                   googleCalendar.lastSyncAt,
-                  { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" },
+                  DATE_FORMATS.dayTime,
                   timeZone,
                 )}.`
               : "Sincronize a Agenda com o Google Calendar nos dois sentidos."}
@@ -85,13 +85,14 @@ export function IntegrationCards({
           {googleCalendar.status === "connected" ? (
             <ConfirmDialog
               trigger={
-                <Button size="sm" className="self-start">
+                <Button size="sm" variant="danger-ghost" className="self-start">
                   Desconectar
                 </Button>
               }
               title="Desconectar o Google Calendar?"
               description="Os agendamentos param de sincronizar. Os que já estão no Google continuam lá."
               confirmLabel="Desconectar"
+              pendingLabel="Desconectando…"
               danger
               onConfirm={disconnectGoogleCalendarAction}
             />
@@ -109,7 +110,7 @@ export function IntegrationCards({
         </Card>
       ) : null}
 
-      <Card className="flex flex-col gap-2.5 p-5 max-sm:p-4">
+      <Card padding="md" className="flex flex-col gap-2.5">
         <Header title="Instagram" status={instagram.status} />
         <p className="text-[13px] text-ink-2">
           {instagram.status === "connected"
@@ -138,7 +139,7 @@ export function IntegrationCards({
         )}
       </Card>
 
-      <Card className="col-span-full flex flex-col gap-3 p-5 max-sm:p-4">
+      <Card padding="md" className="col-span-full flex flex-col gap-3">
         <Header title="WhatsApp API oficial" status={whatsappOfficial.status} />
         <form
           className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]"
@@ -160,7 +161,6 @@ export function IntegrationCards({
             <Input
               id="wa-numero"
               readOnly
-              className="h-10"
               value={
                 whatsappOfficial.phoneNumberIdLast4
                   ? `•••••••••••${whatsappOfficial.phoneNumberIdLast4}`
@@ -175,16 +175,19 @@ export function IntegrationCards({
                 id="wa-token"
                 type="password"
                 autoComplete="off"
-                className="h-10 min-w-0"
+                className="min-w-0"
                 value={token}
-                onChange={(e) => setToken(e.target.value)}
+                onChange={(e) => {
+                  setToken(e.target.value);
+                  setTokenFeedback(null);
+                }}
                 placeholder={
                   whatsappOfficial.accessTokenLast4
                     ? `Termina em ${whatsappOfficial.accessTokenLast4} · cole um novo para trocar`
                     : "Cole o token"
                 }
               />
-              <Button type="submit" disabled={!token || savingToken} className="shrink-0">
+              <Button type="submit" disabled={!token || savingToken} className="h-11 shrink-0">
                 {savingToken ? "Salvando…" : "Trocar"}
               </Button>
             </div>

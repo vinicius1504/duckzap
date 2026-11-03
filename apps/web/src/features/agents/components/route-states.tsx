@@ -1,14 +1,10 @@
-"use client";
-
-import { Button } from "@duckzap/ui/components/button";
-import { Card } from "@duckzap/ui/components/card";
-import { EmptyState, Skeleton } from "@duckzap/ui/components/feedback";
+import { Skeleton } from "@duckzap/ui/components/feedback";
 import { Page } from "@duckzap/ui/components/layout";
-import { useEffect } from "react";
 
 export function AgentsSkeleton({ variant = "list" }: { variant?: "list" | "detail" }) {
   return (
-    <Page aria-busy="true" aria-label="Carregando agentes">
+    <Page aria-busy="true">
+      <span className="sr-only">Carregando agentes…</span>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-4 w-96 max-w-full" />
@@ -35,28 +31,6 @@ export function AgentsSkeleton({ variant = "list" }: { variant?: "list" | "detai
           </div>
         </div>
       )}
-    </Page>
-  );
-}
-
-export function AgentsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-  return (
-    <Page>
-      <Card>
-        <EmptyState
-          icon="alert"
-          title="Não deu para carregar os agentes"
-          description="Pode ser uma falha passageira. Os agentes continuam respondendo normalmente."
-          action={
-            <Button variant="primary" onClick={reset}>
-              Tentar de novo
-            </Button>
-          }
-        />
-      </Card>
     </Page>
   );
 }

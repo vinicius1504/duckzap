@@ -1,11 +1,10 @@
 import { INSTAGRAM_JOBS } from "@duckzap/contracts/agents";
-import { buttonVariants } from "@duckzap/ui/components/button";
 import { Alert } from "@duckzap/ui/components/feedback";
-import { Icon } from "@duckzap/ui/components/icon";
 import { Page } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/back-link";
 import { requirePermission } from "@/features/auth/permissions";
 import { getAgent, getCopilotOverview, listAgentVersions } from "@/features/agents/api";
 import { AgentEditor } from "@/features/agents/components/agent-editor";
@@ -32,9 +31,7 @@ export default async function AgentDetailPage({ params }: Params) {
 
   const header = (
     <div className="flex flex-col gap-3">
-      <Link href="/agentes" className={buttonVariants({ className: "self-start max-md:h-11" })}>
-        <Icon name="arrowLeft" size={16} /> Agentes
-      </Link>
+      <BackLink href="/agentes">Agentes</BackLink>
       {instagramLocked ? (
         <Alert
           tone="warn"

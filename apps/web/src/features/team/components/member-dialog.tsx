@@ -6,7 +6,7 @@ import type { Member } from "@duckzap/contracts/team";
 import { emailError } from "@duckzap/contracts/validation";
 import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
-import { Alert } from "@duckzap/ui/components/feedback";
+import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Checkbox, Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { useState, useTransition, type ReactElement } from "react";
@@ -161,7 +161,7 @@ export function MemberDialog({
                 ))}
               </div>
             ) : (
-              <p className="text-ink-2">Nenhuma equipe criada ainda.</p>
+              <EmptyState compact icon="users" title="Nenhuma equipe criada ainda" />
             )}
           </fieldset>
 

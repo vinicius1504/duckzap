@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@duckzap/ui/components/button";
+import { Card } from "@duckzap/ui/components/card";
 import { EmptyState } from "@duckzap/ui/components/feedback";
 import { useEffect } from "react";
 
@@ -15,7 +16,7 @@ export function ScreenError({ error, retry }: { error: unknown; retry: () => voi
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg p-4">
-      <div role="alert" className="w-full max-w-md rounded-card border border-line bg-surface">
+      <Card role="alert" className="w-full max-w-md">
         <EmptyState
           icon="alert"
           title="Serviço indisponível"
@@ -26,7 +27,7 @@ export function ScreenError({ error, retry }: { error: unknown; retry: () => voi
             </Button>
           }
         />
-      </div>
+      </Card>
     </main>
   );
 }

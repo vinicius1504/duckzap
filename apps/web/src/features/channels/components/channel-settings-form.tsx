@@ -57,12 +57,14 @@ export function ChannelSettingsForm({
   }
 
   return (
-    <Card id="mensagens" className="flex scroll-mt-20 flex-col gap-3.5 p-[22px] max-sm:p-4">
+    <Card id="mensagens" padding="lg" className="flex scroll-mt-20 flex-col gap-3.5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           save();
         }}
+        // editar de novo apaga o aviso de "salvo"/erro da vez anterior (os campos nativos soltam `change` até o form)
+        onChange={() => setFeedback(null)}
         className="flex flex-col gap-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">

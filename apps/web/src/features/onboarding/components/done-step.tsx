@@ -4,8 +4,9 @@ import { buttonVariants } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip, type ChipTone } from "@duckzap/ui/components/chip";
 import { Icon } from "@duckzap/ui/components/icon";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import Link from "next/link";
-import { formatPhone } from "@/lib/format";
+import { firstName, formatPhone } from "@/lib/format";
 import { StartOverButton } from "./start-over-button";
 
 /** Linha do agente: o que foi criado de verdade e o que ainda falta para ele responder clientes. */
@@ -53,8 +54,8 @@ export function DoneStep({ draft }: { draft: OnboardingDraft }) {
         <Icon name="check" size={34} strokeWidth={2.4} />
       </span>
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">
-          Tudo pronto, {draft.account.name.split(" ")[0]}!
+        <h1 className={pageTitleClass}>
+          Tudo pronto, {firstName(draft.account.name)}!
         </h1>
         <p className="mt-1.5 text-ink-2">
           Sua conta foi criada com o e-mail{" "}
@@ -88,7 +89,7 @@ export function DoneStep({ draft }: { draft: OnboardingDraft }) {
         className={buttonVariants({ variant: "primary", size: "lg", className: "w-full max-w-xs" })}
       >
         Entrar no {brand.name}
-        <Icon name="arrowRight" size={18} />
+        <Icon name="arrowRight" size={16} />
       </Link>
       <StartOverButton />
     </div>

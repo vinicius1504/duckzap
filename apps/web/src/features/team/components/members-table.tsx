@@ -6,11 +6,11 @@ import type { Member } from "@duckzap/contracts/team";
 import { Avatar } from "@duckzap/ui/components/avatar";
 import { Button } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Table, Td, Th } from "@duckzap/ui/components/table";
 import { cn } from "@duckzap/ui/cn";
 import { useState, useTransition } from "react";
-import { ConfirmDialog } from "@/features/settings/components/confirm-dialog";
 import { formatPhone } from "@/lib/format";
 import { cancelInviteAction, resendInviteAction, resetPasswordAction, setMemberActiveAction } from "../actions";
 import { canManageMember, requiresTwoFactor } from "../rules";
@@ -109,13 +109,14 @@ export function MembersTable({
                         {manageable ? (
                           <ConfirmDialog
                             trigger={
-                              <Button size="sm" variant="ghost" className="text-err" aria-label={`Cancelar convite: ${member.name}`}>
-                                Cancelar
+                              <Button size="sm" variant="danger-ghost" aria-label={`Cancelar convite: ${member.name}`}>
+                                Cancelar convite
                               </Button>
                             }
                             title={`Cancelar o convite de ${member.name}?`}
                             description="O link enviado por e-mail deixa de funcionar e a vaga do plano é liberada."
                             confirmLabel="Cancelar convite"
+                            pendingLabel="Cancelando…"
                             danger
                             onConfirm={() => cancelInviteAction(member.id)}
                           />
@@ -139,7 +140,7 @@ export function MembersTable({
                         {member.id !== actor.id ? (
                           <ConfirmDialog
                             trigger={
-                              <Button size="sm" variant="ghost" aria-label={`Redefinir senha: ${member.name}`}>
+                              <Button size="sm" aria-label={`Redefinir senha: ${member.name}`}>
                                 Redefinir senha
                               </Button>
                             }
@@ -156,13 +157,14 @@ export function MembersTable({
                         {manageable && !lastOwner ? (
                           <ConfirmDialog
                             trigger={
-                              <Button size="sm" variant="ghost" className="text-err" aria-label={`Inativar: ${member.name}`}>
-                                Inativar
+                              <Button size="sm" variant="danger-ghost" aria-label={`Desativar: ${member.name}`}>
+                                Desativar
                               </Button>
                             }
-                            title={`Inativar ${member.name}?`}
+                            title={`Desativar ${member.name}?`}
                             description="A pessoa perde o acesso na hora e as conversas dela voltam para a fila da equipe. Dá para reativar depois."
-                            confirmLabel="Inativar"
+                            confirmLabel="Desativar"
+                            pendingLabel="Desativando…"
                             danger
                             onConfirm={() => setMemberActiveAction(member.id, false)}
                           />

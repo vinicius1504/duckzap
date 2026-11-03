@@ -48,7 +48,8 @@ export type AiDeps = {
 };
 
 const NO_AGENT = "00000000-0000-0000-0000-000000000000";
-const HISTORY_LIMIT = 30;
+// a IA lê as últimas CONTEXT_MESSAGES (25); carrega com folga porque parte das linhas não entra (aviso, falha, foto sem legenda)
+const HISTORY_LIMIT = 40;
 const CLAIM_SLACK_MS = 250;
 
 /**

@@ -4,7 +4,7 @@ import { CATALOG_LIMITS, formatPriceBRL, type Product } from "@duckzap/contracts
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
-import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Input } from "@duckzap/ui/components/input";
@@ -12,6 +12,7 @@ import { PageHeader } from "@duckzap/ui/components/layout";
 import { Switch } from "@duckzap/ui/components/switch";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { formatPlural } from "@/lib/format";
 import { deleteProductAction, setAvailabilityAction } from "../actions";
 import { ProductFormDialog } from "./product-form-dialog";
 
@@ -29,7 +30,7 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
   const [error, setError] = useState<string | null>(null);
   /** Interruptor otimista: vale até a lista nova chegar do servidor (ou voltar atrás se a ação falhar). */
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   useEffect(() => setAvailability({}), [products]);
 
@@ -64,15 +65,12 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
     });
   }
 
-  function confirmDelete() {
-    if (!deleting) return;
-    const target = deleting;
-    startTransition(async () => {
-      const result = await deleteProductAction(target.id);
-      if ("error" in result) return setError(result.error);
-      setDeleting(null);
-      router.refresh();
-    });
+  async function confirmDelete() {
+    if (!deleting) return { error: "Produto não encontrado." };
+    const result = await deleteProductAction(deleting.id);
+    if ("error" in result) return { error: result.error };
+    router.refresh();
+    return { ok: true } as const;
   }
 
   return (
@@ -92,7 +90,7 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
 
       <div className="flex flex-wrap items-center gap-3">
         <Chip tone={full ? "warn" : "neutral"} aria-live="polite">
-          {products.length} de {limit} {limit === 1 ? "produto" : "produtos"}
+          {products.length} de {formatPlural(limit, "produto", "produtos")}
         </Chip>
         {full ? <span className="text-[13px] text-ink-2">Limite atingido: exclua um produto para cadastrar outro.</span> : null}
         {products.length >= SEARCH_FROM ? (
@@ -140,7 +138,7 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
             const coverUrl = cover?.thumbnailUrl ?? cover?.url ?? null;
             return (
               <li key={product.id} className="min-w-0">
-                <Card className="flex h-full flex-col gap-3 p-4">
+                <Card padding="sm" className="flex h-full flex-col gap-3">
                   <div className="flex min-w-0 gap-3">
                     <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface-2">
                       {coverUrl ? (
@@ -171,10 +169,10 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
                     )}
                     {canManage ? (
                       <div className="ml-auto flex gap-1.5">
-                        <Button size="icon" className="size-9" onClick={() => openEdit(product)} aria-label={`Editar ${product.name}`}>
+                        <Button size="icon" variant="ghost" className="size-9" onClick={() => openEdit(product)} aria-label={`Editar ${product.name}`}>
                           <Icon name="edit" size={16} />
                         </Button>
-                        <Button size="icon" className="size-9 text-err" onClick={() => setDeleting(product)} aria-label={`Excluir ${product.name}`}>
+                        <Button size="icon" variant="danger-ghost" className="size-9" onClick={() => setDeleting(product)} aria-label={`Excluir ${product.name}`}>
                           <Icon name="trash" size={16} />
                         </Button>
                       </div>
@@ -189,18 +187,18 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
 
       {canManage ? <ProductFormDialog open={formOpen} onOpenChange={setFormOpen} product={editing} /> : null}
 
-      <Dialog open={deleting !== null} onOpenChange={(open) => !open && !pending && setDeleting(null)}>
-        <DialogContent size="sm" title="Excluir produto?" description={deleting ? `“${deleting.name}” e as fotos dele serão apagados. A IA deixa de oferecê-lo.` : undefined}>
-          <DialogFooter>
-            <Button onClick={() => setDeleting(null)} disabled={pending}>
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={confirmDelete} disabled={pending}>
-              {pending ? "Excluindo…" : "Excluir"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        title="Excluir produto?"
+        description={deleting ? `“${deleting.name}” e as fotos dele serão apagados. A IA deixa de oferecê-lo.` : undefined}
+        confirmLabel="Excluir"
+        pendingLabel="Excluindo…"
+        danger
+        onConfirm={confirmDelete}
+      />
     </>
   );
 }

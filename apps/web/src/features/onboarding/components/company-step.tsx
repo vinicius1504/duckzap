@@ -11,6 +11,7 @@ import { Card } from "@duckzap/ui/components/card";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { brand } from "@duckzap/brand";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -57,7 +58,7 @@ export function CompanyStep({ defaults }: { defaults: CompanyStepInput }) {
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">
+        <h1 className={pageTitleClass}>
           Conte um pouco sobre a sua empresa
         </h1>
         <p className="mt-1.5 text-ink-2">
@@ -71,7 +72,7 @@ export function CompanyStep({ defaults }: { defaults: CompanyStepInput }) {
         </Alert>
       ) : null}
 
-      <Card className="flex flex-col gap-5 p-7 max-sm:p-4">
+      <Card padding="lg" className="flex flex-col gap-5">
         <div>
           <Label htmlFor="empresa-nome">Nome da empresa</Label>
           <Input
@@ -144,12 +145,9 @@ export function CompanyStep({ defaults }: { defaults: CompanyStepInput }) {
                     />
                   </div>
                   {rowError ? (
-                    <p
-                      id={`horario-${day.day}-erro`}
-                      className="w-full text-[13px] font-semibold text-err"
-                    >
-                      {label}: {rowError}
-                    </p>
+                    <div className="w-full">
+                      <FieldError id={`horario-${day.day}-erro`} message={`${label}: ${rowError}`} />
+                    </div>
                   ) : null}
                 </li>
               );
@@ -164,7 +162,7 @@ export function CompanyStep({ defaults }: { defaults: CompanyStepInput }) {
 
       <div className="flex flex-wrap justify-end gap-3">
         <Button type="submit" variant="primary" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? <Spinner /> : null}
+          {isSubmitting ? <Spinner size={16} /> : null}
           {isSubmitting ? "Salvando…" : "Continuar"}
         </Button>
       </div>

@@ -15,6 +15,7 @@ import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
@@ -69,7 +70,7 @@ export function WhatsappStep({ whatsapp }: { whatsapp: OnboardingDraft["whatsapp
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">
+        <h1 className={pageTitleClass}>
           Conecte o seu WhatsApp
         </h1>
         <p className="mt-1.5 text-ink-2">
@@ -83,7 +84,7 @@ export function WhatsappStep({ whatsapp }: { whatsapp: OnboardingDraft["whatsapp
         </Alert>
       ) : null}
 
-      <Card className="flex flex-wrap items-start gap-8 p-7 max-sm:p-4">
+      <Card padding="lg" className="flex flex-wrap items-start gap-8">
         <fieldset className="flex min-w-0 flex-[1_1_300px] flex-col gap-3">
           <legend className="sr-only">Como conectar</legend>
           {methods.map((m) => (
@@ -125,27 +126,25 @@ export function WhatsappStep({ whatsapp }: { whatsapp: OnboardingDraft["whatsapp
         </div>
       </Card>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button size="lg" onClick={() => router.push("/comecar?passo=empresa")} disabled={pending}>
           Voltar
         </Button>
-        <div className="flex flex-wrap gap-3">
-          {connectedPhone ? null : (
-            <Button size="lg" onClick={skip} disabled={pending}>
-              {pending ? <Spinner /> : null}
-              Conectar depois
-            </Button>
-          )}
-          <Button
-            size="lg"
-            variant="primary"
-            disabled={!connectedPhone || pending}
-            aria-describedby={connectedPhone ? undefined : "continuar-dica"}
-            onClick={() => router.push("/comecar?passo=agente")}
-          >
-            Continuar
+        {connectedPhone ? null : (
+          <Button size="lg" onClick={skip} disabled={pending}>
+            {pending ? <Spinner size={16} /> : null}
+            Conectar depois
           </Button>
-        </div>
+        )}
+        <Button
+          size="lg"
+          variant="primary"
+          disabled={!connectedPhone || pending}
+          aria-describedby={connectedPhone ? undefined : "continuar-dica"}
+          onClick={() => router.push("/comecar?passo=agente")}
+        >
+          Continuar
+        </Button>
         {connectedPhone ? null : (
           <p id="continuar-dica" className="w-full text-right text-[13px] text-ink-2">
             Conecte um número para continuar, ou deixe para depois.
@@ -334,7 +333,7 @@ function OfficialApiForm({ onConnected }: { onConnected: (phone: string) => void
         <FieldError id="meta-token-erro" message={errors.accessToken?.message} />
       </div>
       <Button type="submit" variant="primary" disabled={isSubmitting} className="self-start">
-        {isSubmitting ? <Spinner /> : null}
+        {isSubmitting ? <Spinner size={16} /> : null}
         {isSubmitting ? "Conectando…" : "Conectar"}
       </Button>
     </form>

@@ -4,14 +4,14 @@ import { Page } from "@duckzap/ui/components/layout";
 
 export default function SettingsLoading() {
   return (
-    <Page className="max-w-275 gap-[18px]" aria-busy="true">
+    <Page className="max-w-275" aria-busy="true">
       <span className="sr-only">Carregando configurações…</span>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-9 w-56" />
         <Skeleton className="h-5 w-96 max-w-full" />
       </div>
       <Skeleton className="h-11 w-full" />
-      <Card className="flex flex-col gap-4 p-6">
+      <Card padding="lg" className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <Skeleton className="size-18 rounded-2xl" />
           <Skeleton className="h-10 w-48" />

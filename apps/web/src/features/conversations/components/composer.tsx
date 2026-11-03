@@ -11,6 +11,7 @@ import {
 } from "@duckzap/ui/components/dropdown-menu";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
+import { FieldError } from "@duckzap/ui/components/input";
 import { Segmented } from "@duckzap/ui/components/segmented";
 import { cn } from "@duckzap/ui/cn";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
@@ -459,11 +460,7 @@ export function Composer({ conversationId, mode, agentName, quickReplies, sendin
         </div>
       )}
 
-      {error ? (
-        <p id={errorId} role="alert" className="mt-2 text-[13px] font-semibold text-err">
-          {error}
-        </p>
-      ) : null}
+      <FieldError id={errorId} role="alert" message={error ?? undefined} />
     </div>
   );
 }

@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import { LlmError, type GenerateResult, type LlmMessage } from "../llm";
 import { rankProducts } from "./catalog";
 import { checkOutput } from "./guardrails";
-import { hasKnowledgeOverlap, isSmallTalk } from "./knowledge";
+import { hasKnowledgeOverlap, isMediaPlaceholder, isShortFollowUp, isSmallTalk } from "./knowledge";
 import { isRetryableLlmError, withLlmRetry } from "./llm-retry";
 import { DEFAULT_TIME_ZONE, formatNow } from "./local-time";
-import { buildDataBlock, buildRulesBlock, buildSystemPrompt, TURN_INSTRUCTION, wrapToolResult } from "./prompt";
+import { buildDataBlock, buildRulesBlock, buildSystemPrompt, CONTEXT_MESSAGES, TURN_INSTRUCTION, wrapToolResult } from "./prompt";
 import { applyRules, classifyIntent, intentFromVerdict, MIN_ROUTER_CONFIDENCE } from "./router";
 import { aiMayRespond, canTransition, transition, type ConversationEvent } from "./state-machine";
 import { isWithinBusinessHours, looksLikeInjection, toWhatsappFormat } from "./text";
@@ -147,6 +147,18 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
   const joined = customerTexts.join("\n");
   if (customerTexts.some(looksLikeInjection)) result.flags.push("prompt_injection_suspected");
 
+  // Contexto: o que veio ANTES da rajada atual, dentro da janela que a IA lê (CONTEXT_MESSAGES). Resposta curta ("sim", "o preto")
+  // só faz sentido com a conversa à vista; e quem já respondeu antes (IA ou pessoa) significa que o assunto já foi estabelecido.
+  const prior = input.history.slice(Math.max(0, input.history.length - CONTEXT_MESSAGES), input.history.length - customerTexts.length);
+  const hasPriorExchange = prior.some((m) => m.role !== "customer");
+  const contextText = prior
+    .slice(-6)
+    .filter((m) => !isMediaPlaceholder(m.text))
+    .map((m) => m.text)
+    .join("\n");
+  // só mandou arquivo (imagem, áudio, documento) sem texto: não há pergunta para classificar nem checar no conhecimento
+  const mediaOnly = customerTexts.every(isMediaPlaceholder);
+
   apply("customer_message", "customer");
 
   // ---------- 2. regras determinísticas ----------
@@ -201,6 +213,8 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
   let intent: Intent | null = intentFromVerdict(verdict);
   // cumprimento/agradecimento/"teste": não precisa de classificador (e ele dava confiança baixa, transferindo o cliente à toa)
   if (!intent && isSmallTalk(customerTexts[customerTexts.length - 1] ?? "")) intent = "question";
+  // arquivo sem texto também não tem o que classificar: o agente explica que não abre arquivos e pede o que o cliente precisa
+  if (!intent && mediaOnly) intent = "question";
   if (!intent) {
     try {
       const d = await llmCall("agent_router", () =>
@@ -214,8 +228,13 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
       );
       intent = d.intent;
       if (d.confidence < MIN_ROUTER_CONFIDENCE) {
-        result.intent = intent;
-        return handoff("low_confidence", "O roteador não teve confiança na intenção do cliente.");
+        // com a conversa anterior à vista a dúvida do classificador (modelo pequeno) não basta para largar o cliente:
+        // segue como pergunta e o agente, que lê tudo, decide (ele chama a equipe se for o caso)
+        if (!hasPriorExchange) {
+          result.intent = intent;
+          return handoff("low_confidence", "O roteador não teve confiança na intenção do cliente.");
+        }
+        intent = "question";
       }
     } catch (error) {
       if (error instanceof BudgetExceeded) return handoff("budget", "Orçamento de IA da empresa esgotado no período.");
@@ -254,7 +273,7 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
   const staticKnowledge = `${companyInfo ? `${companyInfo}\n` : ""}${config.knowledge.productsAndServices}\n${config.knowledge.faq}`;
   const knowledgeTexts: string[] = [staticKnowledge];
   let retrieved: KnowledgeHit[] = [];
-  const needsGrounding = (intent === "question" || intent === "buy") && !isSmallTalk(customerTexts[customerTexts.length - 1] ?? "");
+  const needsGrounding = (intent === "question" || intent === "buy") && !mediaOnly && !isSmallTalk(customerTexts[customerTexts.length - 1] ?? "");
   if (needsGrounding) {
     try {
       retrieved = await input.ports.knowledge.search(scope, joined.slice(-300), 4);
@@ -269,6 +288,23 @@ export async function runAgentTurn(input: TurnInput): Promise<TurnResult> {
         grounded = rankProducts(joined.slice(-300), await input.ports.catalog.listAvailable(scope)).length > 0;
       } catch {
         grounded = false;
+      }
+    }
+    // continuação da conversa: resposta curta ("e o preço?", "o preto", "pode ser") não tem palavra do conhecimento sozinha, mas
+    // continua o assunto que a conversa já estabeleceu. Só ela herda o contexto: pergunta nova e longa continua precisando de apoio
+    // no conhecimento (palavras da conversa anterior não bastam). A busca com o contexto traz os trechos certos para o agente.
+    if (!grounded && hasPriorExchange && isShortFollowUp(joined)) {
+      grounded = true;
+      if (contextText) {
+        try {
+          const more = await input.ports.knowledge.search(scope, `${contextText}\n${joined}`.slice(-300), 4);
+          if (more.length > 0) {
+            retrieved = more;
+            knowledgeTexts.push(...more.map((h) => h.text));
+          }
+        } catch {
+          // sem a busca extra, segue só com o conhecimento fixo
+        }
       }
     }
     if (!grounded && config.behavior.handoffOnUnknown) {

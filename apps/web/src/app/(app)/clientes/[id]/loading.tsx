@@ -4,9 +4,10 @@ import { Page } from "@duckzap/ui/components/layout";
 
 export default function Loading() {
   return (
-    <Page aria-busy="true" aria-label="Carregando ficha do cliente">
+    <Page aria-busy="true">
+      <span className="sr-only">Carregando ficha do cliente…</span>
       <Skeleton className="h-6 w-24" />
-      <Card className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-6 max-sm:p-4">
+      <Card padding="lg" className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         <div className="flex items-center gap-4">
           <Skeleton className="size-14 rounded-full" />
           <div className="flex flex-1 flex-col gap-2">

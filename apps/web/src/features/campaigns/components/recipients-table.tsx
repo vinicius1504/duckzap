@@ -4,11 +4,11 @@ import { Card } from "@duckzap/ui/components/card";
 import { EmptyState } from "@duckzap/ui/components/feedback";
 import { Table, Td, Th } from "@duckzap/ui/components/table";
 import Link from "next/link";
-import { formatDate, formatDuration } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatDuration } from "@/lib/format";
 import { recipientStatusView } from "../labels";
 
 const when = (iso: string | null, tz: string) =>
-  iso ? formatDate(iso, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }, tz) : "—";
+  iso ? formatDate(iso, DATE_FORMATS.dayTime, tz) : "—";
 
 /** Rejeitados: opt-out, sem WhatsApp, falha. `showCampaign` na visão geral (todas as campanhas). */
 export function RejectedTable({ rows, timeZone, showCampaign }: { rows: CampaignRecipient[]; timeZone: string; showCampaign?: boolean }) {

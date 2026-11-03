@@ -14,6 +14,7 @@ import { Select } from "@duckzap/ui/components/form-controls";
 import { Label } from "@duckzap/ui/components/input";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { formatPlural } from "@/lib/format";
 import { inviteContactsAction } from "../actions";
 import { ineligibleLabel } from "../labels";
 
@@ -150,7 +151,7 @@ export function InviteDialog({
                 {total > 0 ? (
                   <p className="text-[13px]">
                     <strong>
-                      {total} {total === 1 ? "pessoa" : "pessoas"} → {days.length} {days.length === 1 ? "dia" : "dias"}
+                      {formatPlural(total, "pessoa", "pessoas")} → {formatPlural(days.length, "dia", "dias")}
                     </strong>{" "}
                     ({days.map((n, i) => `${n} ${dayLabel(i)}`).join(" + ")})
                   </p>
@@ -193,7 +194,7 @@ export function InviteDialog({
                 onClick={send}
                 disabled={pending || sendingPaused || total === 0 || !channel?.connected}
               >
-                {pending ? "Enviando…" : total === 0 ? "Ninguém para convidar" : `Convidar ${total} ${total === 1 ? "pessoa" : "pessoas"}`}
+                {pending ? "Enviando…" : total === 0 ? "Ninguém para convidar" : `Convidar ${formatPlural(total, "pessoa", "pessoas")}`}
               </Button>
             </DialogFooter>
           </div>

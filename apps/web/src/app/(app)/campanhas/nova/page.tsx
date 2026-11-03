@@ -1,12 +1,11 @@
 import { DEFAULT_OPT_OUT_LINE, type CampaignDraftInput } from "@duckzap/contracts/campaigns";
 import { can } from "@duckzap/contracts/permissions";
 import { isSendingPaused } from "@duckzap/contracts/session";
-import { Icon } from "@duckzap/ui/components/icon";
 import { Page, PageHeader } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { BackLink } from "@/components/back-link";
 import { requirePermission } from "@/features/auth/permissions";
 import { getCampaign, getCampaignTerms, listAudiences, listCampaignTemplates, listSendingChannels } from "@/features/campaigns/api";
 import { CampaignsPlanLock, SendingPausedAlert } from "@/features/campaigns/components/notices";
@@ -24,9 +23,7 @@ export default async function NewCampaignPage({ searchParams }: { searchParams: 
   const session = await requirePermission("campaign.manage");
   const header = (
     <>
-      <Link href="/campanhas" className="inline-flex min-h-11 items-center gap-1.5 self-start text-[13px] font-semibold text-ink-2 hover:text-ink">
-        <Icon name="arrowLeft" size={16} /> Campanhas
-      </Link>
+      <BackLink href="/campanhas">Campanhas</BackLink>
       <PageHeader title="Nova campanha" description="Quatro passos: público, mensagem, envio e revisão." />
     </>
   );

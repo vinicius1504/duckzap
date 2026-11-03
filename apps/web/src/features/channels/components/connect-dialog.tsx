@@ -47,7 +47,7 @@ export function ConnectDialog({
           <ConnectStep channel={channel} onConnected={() => setConnected(true)} />
         )}
         <DialogFooter>
-          <Button onClick={() => setOpen(false)}>{connected ? "Concluir" : "Fechar"}</Button>
+          <Button onClick={() => setOpen(false)}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

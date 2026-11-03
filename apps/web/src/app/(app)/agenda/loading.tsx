@@ -3,7 +3,8 @@ import { Page } from "@duckzap/ui/components/layout";
 
 export default function Loading() {
   return (
-    <Page className="gap-[18px]" aria-busy="true" aria-label="Carregando agenda">
+    <Page aria-busy="true">
+      <span className="sr-only">Carregando agenda…</span>
       <div className="flex flex-wrap items-start gap-5">
         <div className="flex min-w-0 flex-[1_1_680px] flex-col gap-3">
           <div className="flex flex-wrap justify-between gap-3">

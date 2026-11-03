@@ -199,7 +199,7 @@ export function SimpleConfigTab({
           />
           <div>
             <Label htmlFor="gen-tone">Modo de interação</Label>
-            <Select id="gen-tone" className="h-11" value={form.tone} aria-describedby="gen-tone-help" onChange={(e) => set("tone", e.target.value)}>
+            <Select id="gen-tone" value={form.tone} aria-describedby="gen-tone-help" onChange={(e) => set("tone", e.target.value)}>
               {agentToneSchema.options.map((tone) => (
                 <option key={tone} value={tone}>
                   {toneLabel[tone]}
@@ -305,7 +305,7 @@ export function SimpleConfigTab({
           aria-describedby="gen-submit-help"
           onClick={generation.generate}
         >
-          {generating ? <Spinner size={18} /> : <Icon name="sparkle" size={18} />}{" "}
+          {generating ? <Spinner size={16} /> : <Icon name="sparkle" size={16} />}{" "}
           {generating ? "Gerando…" : cooldownLeft > 0 ? `Aguarde ${cooldownLeft} s` : again ? "Gerar prompt de novo" : "Gerar prompt personalizado"}
         </Button>
         <p id="gen-submit-help" className={cn("text-[13px]", blocked ? "font-semibold text-warn" : "text-ink-2")}>

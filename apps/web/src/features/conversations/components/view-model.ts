@@ -8,7 +8,7 @@ import type {
   MessageStatus,
 } from "@duckzap/contracts/conversations";
 import type { ChipTone } from "@duckzap/ui/components/chip";
-import { formatDate } from "@/lib/format";
+import { DATE_FORMATS, firstName, formatDate } from "@/lib/format";
 import { formatDuration, formatFileSize, mediaPreviewLabel } from "@/lib/media";
 
 // Mapeia o dado do contrato para texto e tom da tela. Puro: serve no server e no client.
@@ -59,7 +59,8 @@ export const APPOINTMENT_STATUS: Record<ContactAppointment["status"], { label: s
   canceled: { label: "cancelado", tone: "err" },
 };
 
-export const firstName = (name: string) => name.split(" ")[0] ?? name;
+// um só `firstName` no produto (em @/lib/format); reexportado aqui porque as telas de conversa importam daqui
+export { firstName };
 
 export function memberName(lookups: InboxLookups, id: string | null) {
   return id ? (lookups.members.find((m) => m.id === id)?.name ?? null) : null;
@@ -122,7 +123,7 @@ export function listTime(iso: string, nowIso: string, timeZone: string) {
   const label = dayLabel(iso, nowIso, timeZone);
   if (label === "Hoje") return timeOf(iso, timeZone);
   if (label === "Ontem") return "Ontem";
-  return formatDate(iso, { day: "2-digit", month: "2-digit" }, timeZone);
+  return formatDate(iso, DATE_FORMATS.dayMonth, timeZone);
 }
 
 /** "há 4 min", "há 1 h 20", "ontem" */
@@ -135,7 +136,7 @@ export function relativeAgo(iso: string, nowIso: string, timeZone: string) {
     const rest = minutes % 60;
     return rest ? `há ${hours} h ${rest}` : `há ${hours} h`;
   }
-  return dayLabel(iso, nowIso, timeZone) === "Ontem" ? "ontem" : formatDate(iso, { day: "2-digit", month: "2-digit" }, timeZone);
+  return dayLabel(iso, nowIso, timeZone) === "Ontem" ? "ontem" : formatDate(iso, DATE_FORMATS.dayMonth, timeZone);
 }
 
 /** "Hoje às 16:10", "Amanhã às 10:00", "Qui, 29/10 às 09:00" */
@@ -147,7 +148,7 @@ export function whenLabel(iso: string, nowIso: string, timeZone: string) {
   if (day === today) return `Hoje às ${time}`;
   if (day === tomorrow) return `Amanhã às ${time}`;
   const weekday = formatDate(iso, { weekday: "short" }, timeZone).replace(".", "");
-  const date = formatDate(iso, { day: "2-digit", month: "2-digit" }, timeZone);
+  const date = formatDate(iso, DATE_FORMATS.dayMonth, timeZone);
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${date} às ${time}`;
 }
 

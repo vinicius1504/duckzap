@@ -30,13 +30,15 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
   const selected = channels.find((c) => c.id === selectedId) ?? channels.find((c) => c.isDefault) ?? channels[0];
   const limitReached = limit.max !== null && limit.used >= limit.max;
   const nearLimit = limit.max !== null && limit.used >= limit.max - 1;
+  // o mesmo botão no cabeçalho e no estado vazio
+  const newChannelButton = <NewChannelWizard allowedTypes={data.allowedTypes} limitReached={limitReached} limitMax={limit.max} />;
 
   return (
-    <Page className="gap-[18px]">
+    <Page>
       <PageHeader
         title="Canais"
         description="Os números e contas por onde seus clientes falam com você."
-        actions={<NewChannelWizard allowedTypes={data.allowedTypes} limitReached={limitReached} limitMax={limit.max} />}
+        actions={newChannelButton}
       />
 
       {down.map((channel) =>
@@ -121,6 +123,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
             icon="link"
             title="Nenhum canal ainda"
             description="Conecte seu WhatsApp por QR Code ou pela API oficial para começar a receber mensagens."
+            action={newChannelButton}
           />
         </Card>
       )}
@@ -132,7 +135,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
           ) : null}
         </div>
         <aside className="flex min-w-0 flex-[1_1_280px] flex-col gap-4">
-          <Card className="p-[18px]">
+          <Card padding="md">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-bold">Limite do plano</h2>
               <Chip tone={limitReached ? "err" : nearLimit ? "warn" : "neutral"}>
@@ -158,7 +161,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
               </Link>
             ) : null}
           </Card>
-          <Card className="p-[18px]">
+          <Card padding="md">
             <h2 className="font-bold">Primeiro uso</h2>
             <ol className="mt-2 list-decimal pl-[18px] text-[13px] text-ink-2">
               <li>Conecte um número</li>

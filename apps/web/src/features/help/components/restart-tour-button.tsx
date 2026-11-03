@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@duckzap/ui/components/button";
+import { Alert } from "@duckzap/ui/components/feedback";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { restartTourAction } from "../actions";
@@ -26,9 +27,9 @@ export function RestartTourButton() {
         {pending ? "Preparando…" : "Refazer tour guiado"}
       </Button>
       {error ? (
-        <p role="alert" className="mt-1.5 text-[13px] font-semibold text-err">
+        <Alert tone="err" live className="mt-1.5">
           {error}
-        </p>
+        </Alert>
       ) : null}
     </div>
   );

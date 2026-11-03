@@ -3,11 +3,10 @@ import { isSendingPaused } from "@duckzap/contracts/session";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
 import { Progress } from "@duckzap/ui/components/feedback";
-import { Icon } from "@duckzap/ui/components/icon";
-import { Page } from "@duckzap/ui/components/layout";
+import { Page, PageHeader } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { BackLink } from "@/components/back-link";
 import { requirePermission } from "@/features/auth/permissions";
 import { getCampaign, listCampaignRecipients, listRejectedRecipients } from "@/features/campaigns/api";
 import { CampaignActions } from "@/features/campaigns/components/campaign-actions";
@@ -17,7 +16,7 @@ import { RejectedTable, SendLogTable } from "@/features/campaigns/components/rec
 import { UrlTabs } from "@/features/campaigns/components/url-tabs";
 import { campaignStatusView, messageTypeLabel, sendBlockedReason } from "@/features/campaigns/labels";
 import { toLocalInput } from "@/features/campaigns/time";
-import { formatDate, formatDuration } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatDuration, formatNumber, formatPlural } from "@/lib/format";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -81,10 +80,10 @@ export default async function CampaignDetailPage({ params }: Params) {
     <div className="flex flex-wrap items-start gap-6">
       <div className="flex min-w-0 flex-[2_1_480px] flex-col gap-6">
         {campaign.dayPlan.length ? (
-          <Card className="p-5">
+          <Card padding="md">
             <CardTitle>Divisão por dia</CardTitle>
             <p className="mt-1 text-[13px] text-ink-2">
-              {stats.total} pessoas → {campaign.dayPlan.length} {campaign.dayPlan.length === 1 ? "dia" : "dias"} ({campaign.dayPlan.map((d) => d.count).join(" + ")}), respeitando o limite do número.
+              {stats.total} pessoas → {formatPlural(campaign.dayPlan.length, "dia", "dias")} ({campaign.dayPlan.map((d) => d.count).join(" + ")}), respeitando o limite do número.
             </p>
             <ol className="mt-3 flex flex-col gap-2 text-[13px]">
               {campaign.dayPlan.map((d) => (
@@ -99,7 +98,7 @@ export default async function CampaignDetailPage({ params }: Params) {
             </ol>
           </Card>
         ) : null}
-        <Card className="p-5">
+        <Card padding="md">
           <CardTitle>Configuração</CardTitle>
           <dl className="mt-2 divide-y divide-line">
             {settings.map((s) => (
@@ -119,40 +118,35 @@ export default async function CampaignDetailPage({ params }: Params) {
 
   return (
     <Page>
-      <Link href="/campanhas" className="inline-flex min-h-11 items-center gap-1.5 self-start text-[13px] font-semibold text-ink-2 hover:text-ink">
-        <Icon name="arrowLeft" size={16} /> Campanhas
-      </Link>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">{campaign.name}</h1>
-            <Chip tone={status.tone}>{status.label}</Chip>
-          </div>
-          <p className="mt-1 text-ink-2">
-            {campaign.audienceName} · {campaign.channelName}
-          </p>
-        </div>
-        <CampaignActions
-          id={campaign.id}
-          name={campaign.name}
-          status={campaign.status}
-          pauseReason={campaign.pauseReason}
-          pauseDetail={campaign.pauseDetail}
-          sendBlockedReason={blocked}
-          layout="detail"
-        />
-      </div>
+      <BackLink href="/campanhas">Campanhas</BackLink>
+      <PageHeader
+        align="start"
+        title={campaign.name}
+        badges={<Chip tone={status.tone}>{status.label}</Chip>}
+        description={`${campaign.audienceName} · ${campaign.channelName}`}
+        actions={
+          <CampaignActions
+            id={campaign.id}
+            name={campaign.name}
+            status={campaign.status}
+            pauseReason={campaign.pauseReason}
+            pauseDetail={campaign.pauseDetail}
+            sendBlockedReason={blocked}
+            layout="detail"
+          />
+        }
+      />
 
       {expired ? <SendingPausedAlert /> : null}
       {campaign.status === "paused" ? <PauseBanner campaign={campaign} /> : null}
 
-      <Card className="flex flex-col gap-4 p-5">
+      <Card padding="md" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>Progresso</CardTitle>
           <span className="text-[13px] text-ink-2">
             {stats.sent} de {stats.total}
             {campaign.status === "sending" && campaign.nextSendAt && isQr
-              ? ` · próxima mensagem às ${formatDate(campaign.nextSendAt, { hour: "2-digit", minute: "2-digit" }, tz)}`
+              ? ` · próxima mensagem às ${formatDate(campaign.nextSendAt, DATE_FORMATS.time, tz)}`
               : ""}
           </span>
         </div>
@@ -161,7 +155,7 @@ export default async function CampaignDetailPage({ params }: Params) {
           {kpis.map((k) => (
             <div key={k.label} className="flex flex-col-reverse rounded-control bg-surface-2 p-3">
               <dt className="text-xs text-ink-2">{k.label}</dt>
-              <dd className="text-2xl font-extrabold tabular-nums">{k.value.toLocaleString("pt-BR")}</dd>
+              <dd className="text-2xl font-extrabold tabular-nums">{formatNumber(k.value)}</dd>
             </div>
           ))}
         </dl>

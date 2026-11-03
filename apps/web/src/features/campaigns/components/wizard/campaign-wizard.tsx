@@ -8,6 +8,7 @@ import { Steps } from "@duckzap/ui/components/layout";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { DATE_FORMATS, formatDate } from "@/lib/format";
 import { launchCampaignAction, saveCampaignDraftAction } from "../../actions";
 import { StepAudience } from "./step-audience";
 import { StepMessage } from "./step-message";
@@ -57,7 +58,7 @@ export function CampaignWizard({ initialId, initialDraft, ctx }: { initialId: st
     }
     setServerError(null);
     setId(result.data.id);
-    setSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: ctx.timeZone }));
+    setSavedAt(formatDate(new Date().toISOString(), DATE_FORMATS.time, ctx.timeZone));
     return result.data.id;
   }
 
@@ -105,7 +106,7 @@ export function CampaignWizard({ initialId, initialDraft, ctx }: { initialId: st
   const stepProps = { draft, update, ctx, errors };
 
   return (
-    <Card className="flex flex-col gap-6 p-6 max-sm:p-4">
+    <Card padding="lg" className="flex flex-col gap-6">
       <Steps steps={STEPS} current={step} label="Passos da campanha" />
       <h2 ref={headingRef} tabIndex={-1} className="sr-only">
         Passo {step + 1} de {STEPS.length}: {STEPS[step]}
@@ -149,7 +150,7 @@ export function CampaignWizard({ initialId, initialDraft, ctx }: { initialId: st
           {step < STEPS.length - 1 ? (
             <Button variant="primary" disabled={pending} onClick={() => goTo(step + 1)}>
               {pending ? <Spinner size={16} /> : null}
-              Continuar para {STEPS[step + 1]?.toLowerCase()}
+              Continuar
             </Button>
           ) : (
             <Button

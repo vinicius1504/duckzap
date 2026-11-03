@@ -31,12 +31,12 @@ export function SupportForm({ hours, whatsappUrl }: { hours: string; whatsappUrl
   }
 
   return (
-    <Card className="p-[22px]">
+    <Card padding="lg">
       <CardTitle>Falar com o suporte</CardTitle>
       <form ref={formRef} action={submit} className="mt-3 flex flex-col gap-3" noValidate>
         <div>
           <Label htmlFor="suporte-assunto">Assunto</Label>
-          <Input id="suporte-assunto" name="subject" maxLength={120} required className="h-10" />
+          <Input id="suporte-assunto" name="subject" maxLength={120} required />
         </div>
         <div>
           <Label htmlFor="suporte-mensagem">Conte o que aconteceu</Label>

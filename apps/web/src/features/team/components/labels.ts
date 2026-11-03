@@ -5,7 +5,7 @@ import type { ChipTone } from "@duckzap/ui/components/chip";
 export const memberStatusView: Record<MemberStatus, { label: string; tone: ChipTone }> = {
   active: { label: "Ativo", tone: "ok" },
   invited: { label: "Convite pendente", tone: "warn" },
-  inactive: { label: "Inativo", tone: "neutral" },
+  inactive: { label: "Desativado", tone: "neutral" },
 };
 
 /** Classe do chip de papel (proprietário em destaque, como no canvas). */

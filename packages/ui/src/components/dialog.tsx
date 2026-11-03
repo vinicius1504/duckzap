@@ -66,6 +66,22 @@ export function DialogContent({
   );
 }
 
-export function DialogFooter({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("mt-2 flex flex-wrap justify-end gap-2", className)} {...props} />;
+/**
+ * Rodapé do diálogo: Cancelar à esquerda do botão principal, tudo à direita. `start` é para a ação que fica sozinha à esquerda
+ * (ex.: Excluir num formulário de edição).
+ */
+export function DialogFooter({ className, start, children, ...props }: ComponentProps<"div"> & { start?: ReactNode }) {
+  if (start) {
+    return (
+      <div className={cn("mt-2 flex flex-wrap items-center justify-between gap-2", className)} {...props}>
+        <div className="flex flex-wrap gap-2">{start}</div>
+        <div className="flex flex-wrap justify-end gap-2">{children}</div>
+      </div>
+    );
+  }
+  return (
+    <div className={cn("mt-2 flex flex-wrap justify-end gap-2", className)} {...props}>
+      {children}
+    </div>
+  );
 }

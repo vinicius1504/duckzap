@@ -37,7 +37,7 @@ export function GenerationStatus({ generation }: { generation: GenerationApi }) 
             </Link>
           ) : failure.retryable && !hasFieldMarks ? (
             <Button size="sm" className="max-md:h-11" disabled={cooldownLeft > 0} onClick={generation.generate}>
-              <Icon name="refresh" size={14} /> {cooldownLeft > 0 ? `Tentar de novo em ${cooldownLeft} s` : "Tentar de novo"}
+              <Icon name="refresh" size={16} /> {cooldownLeft > 0 ? `Tentar de novo em ${cooldownLeft} s` : "Tentar de novo"}
             </Button>
           ) : null
         }

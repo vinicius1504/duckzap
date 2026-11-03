@@ -4,6 +4,7 @@ import { CATALOG_LIMITS, type ProductImage } from "@duckzap/contracts/catalog";
 import { Button } from "@duckzap/ui/components/button";
 import { Progress, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
+import { FieldError } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
 import { useId, useRef, useState } from "react";
 import { acceptAttribute, mediaRulesHint } from "@/lib/media";
@@ -104,11 +105,7 @@ export function ProductPhotos({
         ) : null}
       </ul>
       <p className="mt-1.5 text-xs text-ink-2">{mediaRulesHint("image")}. A primeira foto é a capa e a IA a envia ao cliente.</p>
-      {notice ? (
-        <p role="alert" className="mt-1.5 text-[13px] font-semibold text-err">
-          {notice}
-        </p>
-      ) : null}
+      <FieldError id={`${inputId}-aviso`} role="alert" message={notice ?? undefined} />
     </fieldset>
   );
 }

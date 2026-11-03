@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@duckzap/ui/components/dropdown-menu";
+import { Alert } from "@duckzap/ui/components/feedback";
 import { Icon, type IconName } from "@duckzap/ui/components/icon";
 import { useOptimistic, useState, useTransition } from "react";
 import { cancelFollowUpAction, scheduleFollowUpAction, setConversationModeAction, setFollowUpPausedAction } from "../actions";
@@ -79,9 +80,9 @@ export function ModeControls(props: Props) {
       )}
       {!resolved ? <FollowUpControl {...props} /> : null}
       {error ? (
-        <span role="alert" className="w-full text-right text-[13px] font-semibold text-err">
+        <Alert tone="err" live className="w-full">
           {error}
-        </span>
+        </Alert>
       ) : null}
     </>
   );
@@ -108,9 +109,9 @@ function FollowUpControl({ conversationId, followUp, followUpAgentName, canFollo
 
   const schedule = (at: string) => run(() => scheduleFollowUpAction(conversationId, at));
   const errorLine = error ? (
-    <span role="alert" className="w-full text-right text-[13px] font-semibold text-err">
+    <Alert tone="err" live className="w-full">
       {error}
-    </span>
+    </Alert>
   ) : null;
 
   if (!followUp) {

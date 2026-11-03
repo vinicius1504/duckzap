@@ -1,21 +1,18 @@
-"use client";
-
-import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
-import { EmptyState, Skeleton } from "@duckzap/ui/components/feedback";
+import { Skeleton } from "@duckzap/ui/components/feedback";
 import { Page } from "@duckzap/ui/components/layout";
-import { useEffect } from "react";
 
 /** Esqueleto genérico das telas de Campanhas: título, abas e um bloco de conteúdo. */
 export function CampaignsSkeleton({ variant = "list" }: { variant?: "list" | "wizard" | "detail" }) {
   return (
-    <Page aria-busy="true" aria-label="Carregando campanhas">
+    <Page aria-busy="true">
+      <span className="sr-only">Carregando campanhas…</span>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
       {variant === "wizard" ? (
-        <Card className="flex flex-col gap-5 p-6">
+        <Card padding="lg" className="flex flex-col gap-5">
           <div className="flex flex-wrap gap-4">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-7 w-28" />
@@ -42,28 +39,6 @@ export function CampaignsSkeleton({ variant = "list" }: { variant?: "list" | "wi
           </div>
         </>
       )}
-    </Page>
-  );
-}
-
-export function CampaignsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-  return (
-    <Page>
-      <Card>
-        <EmptyState
-          icon="alert"
-          title="Não deu para carregar as campanhas"
-          description="Pode ser uma falha passageira. Nenhum envio foi afetado."
-          action={
-            <Button variant="primary" onClick={reset}>
-              Tentar de novo
-            </Button>
-          }
-        />
-      </Card>
     </Page>
   );
 }

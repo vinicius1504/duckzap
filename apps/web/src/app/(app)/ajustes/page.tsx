@@ -43,7 +43,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const tz = session.organization.timeZone;
 
   return (
-    <Page className="gap-[18px]">
+    <Page>
       <PageHeader title="Configurações" description="Ajustes da empresa, do atendimento, das integrações e da sua conta." />
 
       {/* overflow-y-hidden + pb-px: o -mb-px das abas passava 1px do fundo e o navegador mostrava uma rolagem vertical */}

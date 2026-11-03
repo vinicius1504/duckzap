@@ -9,7 +9,7 @@ import { Icon } from "@duckzap/ui/components/icon";
 import { Switch } from "@duckzap/ui/components/switch";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
-import { formatDate } from "@/lib/format";
+import { DATE_FORMATS, formatDate } from "@/lib/format";
 import { setCopilotEnabledAction } from "../actions";
 
 /** Copiloto: sugestões para a equipe, com feedback útil/ruim. Recurso do plano Empresarial (§1.2). */
@@ -20,7 +20,7 @@ export function CopilotCard({ copilot, available, timeZone }: { copilot: Copilot
 
   if (!available) {
     return (
-      <Card className="flex flex-col gap-2.5 p-4">
+      <Card padding="sm" className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between gap-2">
           <strong>Copiloto</strong>
           <Chip>Plano Empresarial</Chip>
@@ -40,7 +40,7 @@ export function CopilotCard({ copilot, available, timeZone }: { copilot: Copilot
   const usefulPct = total ? Math.round((copilot.feedback.useful / total) * 100) : 0;
 
   return (
-    <Card className="flex flex-col gap-3 p-4">
+    <Card padding="sm" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor="copilot-switch" className="font-bold">
           Copiloto
@@ -84,7 +84,7 @@ export function CopilotCard({ copilot, available, timeZone }: { copilot: Copilot
                 </p>
                 <p className="mt-1 text-xs text-ink-2">
                   {b.reason ?? "Sem motivo"} ·{" "}
-                  {formatDate(b.at, { day: "2-digit", month: "2-digit" }, timeZone)}
+                  {formatDate(b.at, DATE_FORMATS.dayMonth, timeZone)}
                 </p>
               </li>
             ))}

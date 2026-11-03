@@ -3,6 +3,7 @@
 import type { Agent, AgentVersion } from "@duckzap/contracts/agents";
 import { Button } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogContent } from "@duckzap/ui/components/dialog";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
@@ -47,14 +48,6 @@ export function VersionsDrawer({
     });
   }
 
-  function deactivate() {
-    setError(null);
-    startTransition(async () => {
-      const result = await setAgentStatusAction(agent.id, "inactive");
-      if (result.error !== undefined) setError(result.error);
-    });
-  }
-
   return (
     <Dialog
       open={open}
@@ -80,10 +73,10 @@ export function VersionsDrawer({
             </p>
             {dirty ? <Alert tone="warn">Suas alterações não salvas serão descartadas.</Alert> : null}
             <div className="flex flex-wrap gap-2">
-              <Button className="max-md:h-11" onClick={() => setTarget(null)} disabled={pending}>
+              <Button onClick={() => setTarget(null)} disabled={pending}>
                 Cancelar
               </Button>
-              <Button variant="primary" className="max-md:h-11" disabled={pending} onClick={() => rollback(target)}>
+              <Button variant="primary" disabled={pending} onClick={() => rollback(target)}>
                 {pending ? <Spinner size={16} /> : null} Voltar a esta versão
               </Button>
             </div>
@@ -126,9 +119,22 @@ export function VersionsDrawer({
               Desativar o agente
             </h3>
             <p className="text-xs text-ink-2">Pausado ou inativo, as conversas dos canais dele vão direto para a equipe. Para só pausar, use o botão no topo da página.</p>
-            <Button variant="ghost" className="self-start text-err max-md:h-11" disabled={pending} onClick={deactivate}>
-              Desativar agente
-            </Button>
+            <ConfirmDialog
+              danger
+              trigger={
+                <Button variant="danger-ghost" className="self-start" disabled={pending}>
+                  Desativar agente
+                </Button>
+              }
+              title="Desativar o agente?"
+              description="As conversas dos canais dele passam a ir direto para a equipe até você ativar o agente de novo. Nada do histórico é apagado."
+              confirmLabel="Desativar"
+              pendingLabel="Desativando…"
+              onConfirm={async () => {
+                const result = await setAgentStatusAction(agent.id, "inactive");
+                return result.error !== undefined ? { error: result.error } : { ok: true };
+              }}
+            />
           </section>
         ) : null}
       </DialogContent>

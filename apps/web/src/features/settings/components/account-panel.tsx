@@ -4,13 +4,14 @@ import type { Account, NotificationPrefs, TwoFactorSetup } from "@duckzap/contra
 import { Button } from "@duckzap/ui/components/button";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
 import { emailError, phoneError } from "@duckzap/contracts/validation";
 import { useState, useTransition } from "react";
 import { EmailField, PhoneField } from "@/components/form-fields";
-import { formatDate } from "@/lib/format";
+import { DATE_FORMATS, formatDate } from "@/lib/format";
 import {
   changePasswordAction,
   confirmTwoFactorAction,
@@ -19,7 +20,6 @@ import {
   updateNotificationsAction,
   updateProfileAction,
 } from "../actions";
-import { ConfirmDialog } from "./confirm-dialog";
 import { CopyField } from "./copy-field";
 import { FakeQr } from "./fake-qr";
 
@@ -44,6 +44,8 @@ function ProfileForm({ account }: { account: Account }) {
     <form
       className="flex flex-col gap-4"
       noValidate
+      // editar de novo apaga o aviso de "salvo"/erro da vez anterior
+      onChange={() => setFeedback(null)}
       onSubmit={(e) => {
         e.preventDefault();
         setSubmitted(true);
@@ -53,7 +55,7 @@ function ProfileForm({ account }: { account: Account }) {
         }
         startTransition(async () => {
           const result = await updateProfileAction(form);
-          setFeedback(result.ok ? { tone: "ok", text: "Dados salvos." } : { tone: "err", text: result.error });
+          setFeedback(result.ok ? { tone: "ok", text: "Alterações salvas." } : { tone: "err", text: result.error });
         });
       }}
     >
@@ -61,15 +63,15 @@ function ProfileForm({ account }: { account: Account }) {
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))]">
         <div>
           <Label htmlFor="conta-nome">Nome</Label>
-          <Input id="conta-nome" className="h-10" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
+          <Input id="conta-nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
         </div>
-        <EmailField id="conta-email" label="E-mail" className="h-10" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required showErrors={submitted} />
-        <PhoneField id="conta-telefone" label="Telefone" className="h-10" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} showErrors={submitted} />
+        <EmailField id="conta-email" label="E-mail" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required showErrors={submitted} />
+        <PhoneField id="conta-telefone" label="Telefone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} showErrors={submitted} />
       </div>
       <FeedbackAlert feedback={feedback} />
       <div className="flex justify-end">
         <Button type="submit" variant="primary" disabled={pending}>
-          {pending ? "Salvando…" : "Salvar alterações"}
+          {pending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>
@@ -84,6 +86,7 @@ function PasswordForm() {
     <form
       className="flex flex-col gap-4"
       noValidate
+      onChange={() => setFeedback(null)}
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -106,23 +109,23 @@ function PasswordForm() {
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
         <div>
           <Label htmlFor="senha-atual">Senha atual</Label>
-          <Input id="senha-atual" name="currentPassword" type="password" className="h-10" autoComplete="current-password" />
+          <Input id="senha-atual" name="currentPassword" type="password" autoComplete="current-password" />
         </div>
         <div>
           <Label htmlFor="senha-nova">Nova senha</Label>
-          <Input id="senha-nova" name="newPassword" type="password" className="h-10" autoComplete="new-password" aria-describedby="senha-nova-dica" />
+          <Input id="senha-nova" name="newPassword" type="password" autoComplete="new-password" aria-describedby="senha-nova-dica" />
           <p id="senha-nova-dica" className="mt-1 text-xs text-ink-2">
             Pelo menos 10 caracteres.
           </p>
         </div>
         <div>
           <Label htmlFor="senha-confirma">Repita a nova senha</Label>
-          <Input id="senha-confirma" name="confirmPassword" type="password" className="h-10" autoComplete="new-password" />
+          <Input id="senha-confirma" name="confirmPassword" type="password" autoComplete="new-password" />
         </div>
       </div>
       <FeedbackAlert feedback={feedback} />
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="primary" disabled={pending}>
           {pending ? "Trocando…" : "Trocar senha"}
         </Button>
       </div>
@@ -165,17 +168,18 @@ function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: s
       ) : enabled ? (
         <>
           <p className="text-ink-2">
-            Ativa desde {enabledAt ? formatDate(enabledAt, { day: "2-digit", month: "2-digit", year: "numeric" }, timeZone) : "—"}. Ao entrar,
+            Ativa desde {enabledAt ? formatDate(enabledAt, DATE_FORMATS.day, timeZone) : "—"}. Ao entrar,
             pedimos o código do app autenticador.
           </p>
           {account.twoFactorRequired ? (
             <p className="text-[13px] text-ink-2">Obrigatória para Proprietário e Administrador, por isso não pode ser desativada.</p>
           ) : (
             <ConfirmDialog
-              trigger={<Button size="sm" className="self-start">Desativar</Button>}
+              trigger={<Button size="sm" variant="danger-ghost" className="self-start">Desativar</Button>}
               title="Desativar a verificação em duas etapas?"
               description="Sua conta fica protegida só pela senha."
               confirmLabel="Desativar"
+              pendingLabel="Desativando…"
               danger
               onConfirm={() => disableTwoFactorAction(password)}
             >
@@ -185,7 +189,6 @@ function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: s
                   id="dois-fatores-senha-desativar"
                   type="password"
                   autoComplete="current-password"
-                  className="h-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -228,7 +231,7 @@ function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: s
               maxLength={7}
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="h-10 font-mono tracking-widest"
+              className="font-mono tracking-widest"
               aria-describedby={error ? "totp-erro" : undefined}
               invalid={Boolean(error)}
             />
@@ -258,7 +261,6 @@ function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: s
               id="dois-fatores-senha"
               type="password"
               autoComplete="current-password"
-              className="h-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -307,11 +309,12 @@ function PreferencesForm({ notifications }: { notifications: NotificationPrefs }
     <form
       className="flex flex-col gap-4"
       noValidate
+      onChange={() => setFeedback(null)}
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
           const result = await updateNotificationsAction(prefs);
-          setFeedback(result.ok ? { tone: "ok", text: "Preferências salvas." } : { tone: "err", text: result.error });
+          setFeedback(result.ok ? { tone: "ok", text: "Alterações salvas." } : { tone: "err", text: result.error });
         });
       }}
     >
@@ -333,7 +336,7 @@ function PreferencesForm({ notifications }: { notifications: NotificationPrefs }
       <FeedbackAlert feedback={feedback} />
       <div className="flex justify-end">
         <Button type="submit" variant="primary" disabled={pending}>
-          {pending ? "Salvando…" : "Salvar preferências"}
+          {pending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>
@@ -345,18 +348,18 @@ export function AccountPanel({ account, timeZone }: { account: Account; timeZone
     <div className="flex flex-col gap-4">
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-4">
-          <Card className="p-6 max-sm:p-4">
+          <Card padding="lg">
             <ProfileForm account={account} />
           </Card>
-          <Card className="p-6 max-sm:p-4">
+          <Card padding="lg">
             <PasswordForm />
           </Card>
         </div>
         <div className="flex min-w-0 flex-col gap-4">
-          <Card className="p-6 max-sm:p-4">
+          <Card padding="lg">
             <TwoFactorSection account={account} timeZone={timeZone} />
           </Card>
-          <Card className="p-6 max-sm:p-4">
+          <Card padding="lg">
             <PreferencesForm notifications={account.notifications} />
           </Card>
         </div>

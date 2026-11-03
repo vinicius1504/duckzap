@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@duckzap/ui/components/dropdown-menu";
-import { Skeleton } from "@duckzap/ui/components/feedback";
+import { Alert, EmptyState, Skeleton } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import Link from "next/link";
 import { useState } from "react";
@@ -144,14 +144,7 @@ function NotificationRow({ n, when, onPick }: { n: Notification; when: string; o
 }
 
 function Empty() {
-  return (
-    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center text-ink-2">
-      <span className="flex size-11 items-center justify-center rounded-full bg-surface-2">
-        <Icon name="bell" size={22} />
-      </span>
-      <p className="font-semibold">Nenhuma notificação por enquanto</p>
-    </div>
-  );
+  return <EmptyState compact icon="bell" title="Nenhuma notificação por enquanto" />;
 }
 
 function Loading() {
@@ -173,8 +166,10 @@ function Loading() {
 
 function Failed({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
-      <p className="font-semibold text-err">Não conseguimos carregar as notificações.</p>
+    <div className="flex flex-col items-stretch gap-1 px-4 py-6 text-center">
+      <Alert tone="err" live>
+        Não conseguimos carregar as notificações.
+      </Alert>
       {/* item de menu (e não botão solto): o Tab não sai do menu, as setas chegam aqui */}
       <DropdownMenuItem
         onSelect={(event) => {

@@ -51,7 +51,7 @@ export function GeneratorProgress({ startedAt, onCancel, cancelling }: { started
         <p className="min-w-0 flex-[1_1_240px] text-[13px] text-ink-2">
           Costuma levar de 20 a 30 segundos, mas pode levar até 2 minutos. Nada é salvo no agente e o que você escreveu fica guardado.
         </p>
-        <Button onClick={onCancel} disabled={cancelling} className="max-md:h-11">
+        <Button onClick={onCancel} disabled={cancelling}>
           {cancelling ? "Cancelando…" : "Cancelar"}
         </Button>
       </div>

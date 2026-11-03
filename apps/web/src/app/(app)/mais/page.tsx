@@ -1,5 +1,6 @@
 import { Card } from "@duckzap/ui/components/card";
 import { Icon } from "@duckzap/ui/components/icon";
+import { Page, PageHeader } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { navFor } from "@/config/nav";
@@ -13,9 +14,9 @@ export default async function MorePage() {
   const items = navFor(session.user.role).items.filter((item) => item.mobile !== "tab");
 
   return (
-    <main className="px-8 pb-10 pt-7 max-md:px-4">
-      <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Mais</h1>
-      <Card className="mt-6 overflow-hidden">
+    <Page>
+      <PageHeader title="Mais" />
+      <Card className="overflow-hidden">
         <ul>
           {items.map((item, index) => (
             <li key={item.href} className={index > 0 ? "border-t border-line" : undefined}>
@@ -28,6 +29,6 @@ export default async function MorePage() {
           ))}
         </ul>
       </Card>
-    </main>
+    </Page>
   );
 }

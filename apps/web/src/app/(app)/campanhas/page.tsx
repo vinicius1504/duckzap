@@ -24,7 +24,7 @@ import { RejectedTable } from "@/features/campaigns/components/recipients-table"
 import { TemplatesPanel } from "@/features/campaigns/components/templates-panel";
 import { UrlTabs } from "@/features/campaigns/components/url-tabs";
 import { campaignStatusView, messageTypeLabel, sendBlockedReason } from "@/features/campaigns/labels";
-import { formatDate, formatDuration } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatDuration } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Campanhas" };
 
@@ -56,7 +56,7 @@ export default async function CampaignsPage() {
   const statusLabel = (c: Campaign) => {
     const view = campaignStatusView[c.status];
     if (c.status === "scheduled" && c.sending.scheduledAt) {
-      return `${view.label} · ${formatDate(c.sending.scheduledAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }, tz)}`;
+      return `${view.label} · ${formatDate(c.sending.scheduledAt, DATE_FORMATS.dayTime, tz)}`;
     }
     return view.label;
   };
@@ -136,7 +136,7 @@ export default async function CampaignsPage() {
 
   const historyHeader = ["Data", "Campanha", "Status", "Enviadas", "Falhas", "Respostas"] as const;
   const historyRows = history.map((c) => [
-    c.finishedAt ? formatDate(c.finishedAt, { day: "2-digit", month: "2-digit", year: "numeric" }, tz) : "—",
+    c.finishedAt ? formatDate(c.finishedAt, DATE_FORMATS.day, tz) : "—",
     c.name,
     campaignStatusView[c.status].label,
     c.stats.sent,
@@ -196,7 +196,7 @@ export default async function CampaignsPage() {
         description="Envie mensagens para listas de clientes que aceitaram receber."
         actions={
           <Link href="/campanhas/nova" className={buttonVariants({ variant: "primary" })}>
-            <Icon name="plus" size={18} /> Nova campanha
+            <Icon name="plus" size={16} /> Nova campanha
           </Link>
         }
       />
@@ -217,10 +217,10 @@ export default async function CampaignsPage() {
 
 function RunningCard({ campaign, timeZone, blocked }: { campaign: Campaign; timeZone: string; blocked: string | null }) {
   const remaining = Math.max(0, campaign.stats.total - campaign.stats.sent - campaign.stats.failed);
-  const next = campaign.nextSendAt ? formatDate(campaign.nextSendAt, { hour: "2-digit", minute: "2-digit" }, timeZone) : null;
+  const next = campaign.nextSendAt ? formatDate(campaign.nextSendAt, DATE_FORMATS.time, timeZone) : null;
   const isQr = campaign.channelKind === "whatsapp_qr";
   return (
-    <Card className="flex min-w-0 flex-[1_1_280px] flex-col gap-3.5 p-5">
+    <Card padding="md" className="flex min-w-0 flex-[1_1_280px] flex-col gap-3.5">
       <div className="flex items-center justify-between gap-2">
         <CardTitle>Em execução</CardTitle>
         <Chip tone="info">

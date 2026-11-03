@@ -11,6 +11,7 @@ import {
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
 import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
@@ -19,7 +20,7 @@ import { Switch } from "@duckzap/ui/components/switch";
 import { Table, Td, Th } from "@duckzap/ui/components/table";
 import { cn } from "@duckzap/ui/cn";
 import { useState, useTransition } from "react";
-import { formatDate } from "@/lib/format";
+import { DATE_FORMATS, formatDate } from "@/lib/format";
 import {
   createApiKeyAction,
   createWebhookAction,
@@ -28,7 +29,6 @@ import {
   setWebhookActiveAction,
   testWebhookAction,
 } from "../actions";
-import { ConfirmDialog } from "./confirm-dialog";
 import { CopyField } from "./copy-field";
 
 const scopeLabels: Record<ApiKeyScope, string> = {
@@ -47,7 +47,7 @@ const eventLabels: Record<WebhookEvent, string> = {
 };
 
 const dateTime = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" } as const;
-const dateOnly = { day: "2-digit", month: "2-digit", year: "numeric" } as const;
+const dateOnly = DATE_FORMATS.day;
 
 function toggle<T>(list: T[], value: T, on: boolean) {
   return on ? [...list, value] : list.filter((v) => v !== value);
@@ -99,7 +99,7 @@ function CreateApiKeyDialog() {
             <SecretOnce id="nova-chave-segredo" label="A chave" secret={secret} />
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="primary">Já copiei</Button>
+                <Button variant="primary">Fechar</Button>
               </DialogClose>
             </DialogFooter>
           </>
@@ -151,7 +151,7 @@ function CreateApiKeyDialog() {
 
 export function ApiKeysSection({ apiKeys, timeZone }: { apiKeys: ApiKey[]; timeZone: string }) {
   return (
-    <Card className="col-span-full flex flex-col gap-3 p-5 max-sm:p-4">
+    <Card padding="md" className="col-span-full flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold">Chaves de API</h3>
@@ -192,13 +192,14 @@ export function ApiKeysSection({ apiKeys, timeZone }: { apiKeys: ApiKey[]; timeZ
                   ) : (
                     <ConfirmDialog
                       trigger={
-                        <Button size="sm" variant="ghost" className="text-err" aria-label={`Revogar a chave ${key.name}`}>
+                        <Button size="sm" variant="danger-ghost" aria-label={`Revogar a chave ${key.name}`}>
                           Revogar
                         </Button>
                       }
                       title={`Revogar “${key.name}”?`}
                       description="Sistemas que usam esta chave param de funcionar na hora. Não dá para desfazer."
                       confirmLabel="Revogar chave"
+                      pendingLabel="Revogando…"
                       danger
                       onConfirm={() => revokeApiKeyAction(key.id)}
                     />
@@ -253,7 +254,7 @@ function CreateWebhookDialog() {
             </p>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="primary">Já copiei</Button>
+                <Button variant="primary">Fechar</Button>
               </DialogClose>
             </DialogFooter>
           </>
@@ -316,9 +317,9 @@ function WebhookRow({ webhook, timeZone }: { webhook: Webhook; timeZone: string 
           {webhook.events.map((e) => eventLabels[e]).join(", ")} · segredo ••••{webhook.secretLast4}
         </p>
         {notice ? (
-          <p role="status" className={cn("mt-1 text-xs font-semibold", notice.tone === "ok" ? "text-ok" : "text-err")}>
+          <Alert tone={notice.tone} live={notice.tone === "err"} className="mt-1.5">
             {notice.text}
-          </p>
+          </Alert>
         ) : null}
       </Td>
       <Td>
@@ -372,13 +373,14 @@ function WebhookRow({ webhook, timeZone }: { webhook: Webhook; timeZone: string 
           </Button>
           <ConfirmDialog
             trigger={
-              <Button size="sm" variant="ghost" className="text-err" aria-label={`Excluir webhook ${webhook.url}`}>
+              <Button size="sm" variant="danger-ghost" aria-label={`Excluir webhook ${webhook.url}`}>
                 Excluir
               </Button>
             }
             title="Excluir este webhook?"
             description="Os eventos deixam de ser enviados para esta URL."
             confirmLabel="Excluir"
+            pendingLabel="Excluindo…"
             danger
             onConfirm={() => deleteWebhookAction(webhook.id)}
           />
@@ -390,7 +392,7 @@ function WebhookRow({ webhook, timeZone }: { webhook: Webhook; timeZone: string 
 
 export function WebhooksSection({ webhooks, timeZone }: { webhooks: Webhook[]; timeZone: string }) {
   return (
-    <Card className="col-span-full flex flex-col gap-3 p-5 max-sm:p-4">
+    <Card padding="md" className="col-span-full flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold">Webhooks</h3>

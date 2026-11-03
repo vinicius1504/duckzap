@@ -3,7 +3,7 @@ import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { EmptyState } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Input } from "@duckzap/ui/components/input";
-import { Page } from "@duckzap/ui/components/layout";
+import { Page, PageHeader } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
@@ -27,7 +27,7 @@ export default async function HelpPage({ searchParams }: { searchParams: Promise
   return (
     <Page className="max-w-275">
       <div className="flex flex-col gap-3.5">
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">Como podemos ajudar?</h1>
+        <PageHeader title="Como podemos ajudar?" />
         <div className="flex flex-wrap gap-2">
           {/* busca na URL (?q=): funciona sem JavaScript e o link pode ser compartilhado */}
           <form action="/ajuda" role="search" className="flex flex-[1_1_320px] gap-2">
@@ -80,7 +80,7 @@ export default async function HelpPage({ searchParams }: { searchParams: Promise
             )}
           </Card>
 
-          <Card className="p-[22px] max-sm:p-4">
+          <Card padding="lg">
             <CardTitle className="mb-3">Vídeos rápidos</CardTitle>
             <ul className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
               {help.videos.map((video) => (

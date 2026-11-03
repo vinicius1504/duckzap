@@ -9,6 +9,7 @@ import { AgentCards } from "@/features/agents/components/agent-list";
 import { CopilotCard } from "@/features/agents/components/copilot-card";
 import { FollowUpPreviewCard } from "@/features/agents/components/follow-up-preview-card";
 import { CreateAgentDialog } from "@/features/agents/components/create-agent-dialog";
+import { formatPlural } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Agentes de IA" };
 
@@ -18,7 +19,7 @@ export default async function AgentsPage() {
   const [agents, channels, copilot] = await Promise.all([listAgents(), listAgentChannels(), getCopilotOverview()]);
   // maxAgents null = ilimitado
   const limitReached = maxAgents !== null && agents.length >= maxAgents;
-  const usage = maxAgents !== null ? `${agents.length} de ${maxAgents} ${maxAgents === 1 ? "agente" : "agentes"}` : "Agentes ilimitados no seu plano";
+  const usage = maxAgents !== null ? `${agents.length} de ${formatPlural(maxAgents, "agente", "agentes")}` : "Agentes ilimitados no seu plano";
 
   return (
     <Page>

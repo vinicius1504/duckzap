@@ -36,7 +36,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const nowIso = new Date().toISOString();
 
   return (
-    <Page className="gap-[18px]">
+    <Page>
       <div className="flex flex-wrap items-start gap-5 lg:items-stretch">
         <section aria-label="Calendário" className="flex min-w-0 flex-[1_1_680px] flex-col">
           <AgendaBoard

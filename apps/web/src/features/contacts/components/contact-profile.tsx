@@ -8,6 +8,8 @@ import { Chip } from "@duckzap/ui/components/chip";
 import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Textarea } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
+import { FieldError } from "@duckzap/ui/components/input";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@duckzap/ui/components/tabs";
 import { cn } from "@duckzap/ui/cn";
 import Link from "next/link";
@@ -15,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { statusView } from "@/features/appointments/labels";
 import { OpenConversationButton } from "@/features/conversations/components/open-conversation-button";
-import { formatDate, formatPhone } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatPhone } from "@/lib/format";
 import { addNoteAction } from "../actions";
 import { consentMethodLabel, eventIcon, ineligibleLabel, originLabel } from "../labels";
 import { NO_PERMISSION_HINT, type ContactPerms } from "../perms";
@@ -90,7 +92,7 @@ export function ContactProfile({
         <div className="flex flex-wrap items-center gap-4">
           <Avatar name={contact.name} size="lg" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">{contact.name}</h1>
+            <h1 className={pageTitleClass}>{contact.name}</h1>
             <p className="text-ink-2">{contactLine}</p>
           </div>
         </div>
@@ -102,12 +104,12 @@ export function ContactProfile({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <OpenConversationButton contactId={contact.id} variant="primary" className="flex-1 max-md:h-11" />
-        <Link href={`/agenda?novo=1&cliente=${contact.id}`} className={buttonVariants({ className: "max-md:h-11" })}>
+        <OpenConversationButton contactId={contact.id} variant="primary" className="flex-1" />
+        <Link href={`/agenda?novo=1&cliente=${contact.id}`} className={buttonVariants()}>
           <Icon name="calendar" size={16} />
           Agendar
         </Link>
-        <Button onClick={() => setEditOpen(true)} disabled={!perms.edit} title={perms.edit ? undefined : NO_PERMISSION_HINT} className="max-md:h-11">
+        <Button onClick={() => setEditOpen(true)} disabled={!perms.edit} title={perms.edit ? undefined : NO_PERMISSION_HINT}>
           <Icon name="edit" size={16} />
           Editar
         </Button>
@@ -139,9 +141,9 @@ export function ContactProfile({
               {contact.originNote ? <span className="block text-ink-2">{contact.originNote}</span> : null}
             </dd>
             <dt className="text-ink-2">Nascimento</dt>
-            <dd>{contact.birthDate ? fmt(contact.birthDate, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—"}</dd>
+            <dd>{contact.birthDate ? fmt(contact.birthDate, DATE_FORMATS.day) : "—"}</dd>
             <dt className="text-ink-2">Criado em</dt>
-            <dd>{fmt(contact.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</dd>
+            <dd>{fmt(contact.createdAt, DATE_FORMATS.day)}</dd>
             <dt className="text-ink-2">Etiquetas</dt>
             <dd>
               <TagChips tagIds={contact.tagIds} tags={tags} max={6} />
@@ -203,7 +205,7 @@ export function ContactProfile({
                 ))}
               </ul>
             ) : (
-              <p className="text-ink-2">Nenhum agendamento futuro.</p>
+              <EmptyState compact icon="calendar" title="Nenhum agendamento futuro" />
             )}
           </section>
 
@@ -250,11 +252,7 @@ export function ContactProfile({
                 invalid={Boolean(noteError)}
                 aria-describedby={noteError ? `nota-erro-${contact.id}` : undefined}
               />
-              {noteError ? (
-                <p id={`nota-erro-${contact.id}`} className="text-[13px] font-semibold text-err">
-                  {noteError}
-                </p>
-              ) : null}
+              <FieldError id={`nota-erro-${contact.id}`} message={noteError ?? undefined} />
               <Button type="submit" variant="primary" disabled={pending} className="self-end">
                 {pending ? "Salvando…" : "Salvar nota"}
               </Button>
@@ -272,7 +270,7 @@ export function ContactProfile({
               ))}
             </ul>
           ) : (
-            <p className="text-ink-2">Nenhuma nota ainda.</p>
+            <EmptyState compact icon="note" title="Nenhuma nota ainda" />
           )}
         </TabsContent>
 
@@ -298,7 +296,7 @@ export function ContactProfile({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-ink-2">Nenhum.</p>
+                  <EmptyState compact icon="calendar" title="Nenhum agendamento próximo" />
                 )}
               </section>
               {past.length ? (

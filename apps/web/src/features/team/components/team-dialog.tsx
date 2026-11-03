@@ -2,15 +2,15 @@
 
 import type { Member, Team, TeamColor, TeamInput } from "@duckzap/contracts/team";
 import { Button } from "@duckzap/ui/components/button";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
-import { Alert } from "@duckzap/ui/components/feedback";
+import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Checkbox, Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
 import { useState, useTransition, type ReactElement } from "react";
 import { BusinessHoursEditor } from "@/features/settings/components/business-hours-editor";
 import { defaultBusinessHours } from "@/features/settings/components/business-hours";
-import { ConfirmDialog } from "@/features/settings/components/confirm-dialog";
 import { deleteTeamAction, saveTeamAction } from "../actions";
 import { teamColorClass, teamColors } from "./labels";
 
@@ -167,7 +167,7 @@ export function TeamDialog({
                   </label>
                 ))
               ) : (
-                <p className="text-ink-2">Nenhum canal conectado.</p>
+                <EmptyState compact icon="link" title="Nenhum canal conectado" />
               )}
               <p className="mt-1 text-xs text-ink-2">Um canal pertence a uma equipe por vez.</p>
             </fieldset>
@@ -194,35 +194,31 @@ export function TeamDialog({
             </Alert>
           ) : null}
 
-          <DialogFooter className="justify-between">
-            {team ? (
-              <ConfirmDialog
-                trigger={
-                  <Button variant="ghost" className="text-err">
-                    Excluir equipe
-                  </Button>
-                }
-                title={`Excluir ${team.name}?`}
-                description="As pessoas continuam na empresa e os canais ficam sem equipe até você vincular outra."
-                confirmLabel="Excluir"
-                danger
-                onConfirm={async () => {
-                  const result = await deleteTeamAction(team.id);
-                  if (result.ok) setOpen(false);
-                  return result;
-                }}
-              />
-            ) : (
-              <span />
-            )}
-            <div className="flex flex-wrap gap-2">
-              <DialogClose asChild>
-                <Button>Cancelar</Button>
-              </DialogClose>
-              <Button type="submit" variant="primary" disabled={pending}>
-                {pending ? "Salvando…" : team ? "Salvar" : "Criar equipe"}
-              </Button>
-            </div>
+          <DialogFooter
+            start={
+              team ? (
+                <ConfirmDialog
+                  trigger={<Button variant="danger-ghost">Excluir equipe</Button>}
+                  title={`Excluir ${team.name}?`}
+                  description="As pessoas continuam na empresa e os canais ficam sem equipe até você vincular outra."
+                  confirmLabel="Excluir"
+                  pendingLabel="Excluindo…"
+                  danger
+                  onConfirm={async () => {
+                    const result = await deleteTeamAction(team.id);
+                    if (result.ok) setOpen(false);
+                    return result;
+                  }}
+                />
+              ) : undefined
+            }
+          >
+            <DialogClose asChild>
+              <Button>Cancelar</Button>
+            </DialogClose>
+            <Button type="submit" variant="primary" disabled={pending}>
+              {pending ? "Salvando…" : team ? "Salvar" : "Criar equipe"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

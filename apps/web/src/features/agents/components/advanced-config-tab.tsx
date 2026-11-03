@@ -24,7 +24,7 @@ function GeneratedNotice({ onOpenSimulator }: { onOpenSimulator: () => void }) {
         tone="info"
         action={
           <Button size="sm" className="xl:hidden max-md:h-11" onClick={onOpenSimulator}>
-            <Icon name="chat" size={14} /> Testar agora
+            <Icon name="chat" size={16} /> Testar agora
           </Button>
         }
       >

@@ -1,3 +1,7 @@
 "use client";
 
-export { AgentsError as default } from "@/features/agents/components/route-states";
+import { RouteError, type RouteErrorProps } from "@/components/route-error";
+
+export default function AgentsRouteError({ error, retry }: RouteErrorProps) {
+  return <RouteError title="Agentes" error={error} retry={retry} />;
+}

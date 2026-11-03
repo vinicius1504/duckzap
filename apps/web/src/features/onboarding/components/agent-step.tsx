@@ -14,6 +14,7 @@ import { Select, Textarea } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
 import { FieldError, Label } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -73,7 +74,7 @@ export function AgentStep({
       className="flex flex-col gap-6"
     >
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">
+        <h1 className={pageTitleClass}>
           Crie o seu primeiro agente
         </h1>
         <p className="mt-1.5 text-ink-2">
@@ -89,7 +90,7 @@ export function AgentStep({
       ) : null}
 
       <div className="flex flex-wrap items-start gap-6">
-        <Card className="flex min-w-0 flex-[1_1_420px] flex-col gap-4 p-7 max-sm:p-4">
+        <Card padding="lg" className="flex min-w-0 flex-[1_1_420px] flex-col gap-4">
           <div>
             <Label htmlFor="agente-objetivo">Qual é o objetivo?</Label>
             <Select id="agente-objetivo" className="h-11" {...register("goal")}>
@@ -157,20 +158,18 @@ export function AgentStep({
         <Preview sample={sample} getAgent={() => getValues()} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button size="lg" onClick={() => router.push("/comecar?passo=whatsapp")} disabled={busy}>
           Voltar
         </Button>
-        <div className="flex flex-wrap gap-3">
-          <Button size="lg" disabled={busy} onClick={() => startSkip(() => finish(null))}>
-            {skipping ? <Spinner /> : null}
-            Pular por agora
-          </Button>
-          <Button type="submit" size="lg" variant="primary" disabled={busy}>
-            {isSubmitting ? <Spinner /> : null}
-            {isSubmitting ? "Criando seu agente…" : "Criar agente e concluir"}
-          </Button>
-        </div>
+        <Button size="lg" disabled={busy} onClick={() => startSkip(() => finish(null))}>
+          {skipping ? <Spinner size={16} /> : null}
+          Pular por agora
+        </Button>
+        <Button type="submit" size="lg" variant="primary" disabled={busy}>
+          {isSubmitting ? <Spinner size={16} /> : null}
+          {isSubmitting ? "Criando seu agente…" : "Criar agente e concluir"}
+        </Button>
       </div>
     </form>
   );
@@ -265,9 +264,9 @@ function Preview({ sample, getAgent }: { sample: PreviewMessage[]; getAgent: () 
         ) : null}
       </ol>
       {error ? (
-        <p role="alert" className="px-4 pt-2 text-[13px] font-semibold text-err">
+        <Alert tone="err" live className="mx-4 mt-2">
           {error}
-        </p>
+        </Alert>
       ) : null}
       <div className="flex flex-wrap gap-1.5 px-4 pt-3">
         {suggestions.map((s) => (
@@ -309,7 +308,7 @@ function Preview({ sample, getAgent }: { sample: PreviewMessage[]; getAgent: () 
           disabled={pending || !text.trim()}
           onClick={() => send(text)}
         >
-          <Icon name="send" size={18} />
+          <Icon name="send" size={16} />
         </Button>
       </div>
     </aside>

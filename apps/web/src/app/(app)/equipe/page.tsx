@@ -7,6 +7,7 @@ import { Page, PageHeader } from "@duckzap/ui/components/layout";
 import { cn } from "@duckzap/ui/cn";
 import type { Metadata } from "next";
 import { requirePermission } from "@/features/auth/permissions";
+import { firstName } from "@/lib/format";
 import { summarizeBusinessHours } from "@/features/settings/components/business-hours";
 import { getTeamOverview } from "@/features/team/api";
 import { teamColorClass } from "@/features/team/components/labels";
@@ -23,35 +24,48 @@ export default async function TeamPage() {
   const { members, teams, channels, agents, userLimit } = data;
   const limitReached = userLimit.max !== null && userLimit.used >= userLimit.max;
   const teamOptions = teams.map((t) => ({ id: t.id, name: t.name }));
-  const firstName = (id: string) => members.find((m) => m.id === id)?.name.split(" ")[0];
+  const memberFirstName = (id: string) => {
+    const name = members.find((m) => m.id === id)?.name;
+    return name ? firstName(name) : undefined;
+  };
   const names = (list: { id: string; name: string }[], ids: string[]) =>
     ids.map((id) => list.find((x) => x.id === id)?.name).filter(Boolean).join(", ") || "nenhum";
   const nextPriority = Math.max(0, ...teams.map((t) => t.priority)) + 1;
   const actor = { id: session.user.id, role: session.user.role };
 
+  // o mesmo botão no cabeçalho e no estado vazio
+  const inviteButton = limitReached ? (
+    <Button variant="primary" disabled aria-describedby="convite-limite">
+      Convidar pessoa
+    </Button>
+  ) : (
+    <MemberDialog trigger={<Button variant="primary">Convidar pessoa</Button>} actorRole={actor.role} teams={teamOptions} />
+  );
+  const newTeamButton = (
+    <TeamDialog
+      trigger={<Button variant="primary">Nova equipe</Button>}
+      nextPriority={nextPriority}
+      members={members}
+      channels={channels}
+      agents={agents}
+    />
+  );
+
   const people = members.length ? (
     <MembersTable members={members} teams={teamOptions} actor={actor} limitReached={limitReached} />
   ) : (
     <Card>
-      <EmptyState icon="users" title="Ninguém na equipe ainda" description="Convide quem vai atender as conversas com você." />
+      <EmptyState icon="users" title="Ninguém na equipe ainda" description="Convide quem vai atender as conversas com você." action={inviteButton} />
     </Card>
   );
 
   const teamsPanel = (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <TeamDialog
-          trigger={<Button variant="primary">Nova equipe</Button>}
-          nextPriority={nextPriority}
-          members={members}
-          channels={channels}
-          agents={agents}
-        />
-      </div>
+      <div className="flex justify-end">{newTeamButton}</div>
       {teams.length ? (
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))]">
           {teams.map((team) => (
-            <Card key={team.id} className="flex flex-col gap-3.5 p-5 max-sm:p-4">
+            <Card key={team.id} padding="md" className="flex flex-col gap-3.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
                   <span className={cn("size-4 rounded-[5px]", teamColorClass[team.color])} aria-hidden="true" />
@@ -73,7 +87,7 @@ export default async function TeamPage() {
                 </div>
                 <div className="text-[13px] text-ink-2">
                   <h3 className="mb-1.5 font-bold text-ink">Vinculado</h3>
-                  <p>Pessoas: {team.memberIds.map(firstName).filter(Boolean).join(", ") || "nenhuma"}</p>
+                  <p>Pessoas: {team.memberIds.map(memberFirstName).filter(Boolean).join(", ") || "nenhuma"}</p>
                   <p>Canais: {names(channels, team.channelIds)}</p>
                   <p>Agente: {names(agents, team.agentId ? [team.agentId] : [])}</p>
                 </div>
@@ -99,6 +113,7 @@ export default async function TeamPage() {
             icon="users"
             title="Nenhuma equipe ainda"
             description="Equipes dividem as conversas por assunto (ex.: Recepção, Vendas), cada uma com horário e agente próprios."
+            action={newTeamButton}
           />
         </Card>
       )}
@@ -106,7 +121,7 @@ export default async function TeamPage() {
   );
 
   return (
-    <Page className="gap-[18px]">
+    <Page>
       <PageHeader
         title="Equipe"
         description="Quem atende e como as conversas são divididas."
@@ -115,19 +130,13 @@ export default async function TeamPage() {
             <Chip tone={limitReached ? "err" : userLimit.max !== null && userLimit.used >= userLimit.max - 1 ? "warn" : "neutral"}>
               {userLimit.max === null ? `${userLimit.used} usuários` : `${userLimit.used} de ${userLimit.max} usuários do plano`}
             </Chip>
-            {limitReached ? (
-              <Button variant="primary" disabled aria-describedby="convite-limite">
-                Convidar pessoa
-              </Button>
-            ) : (
-              <MemberDialog trigger={<Button variant="primary">Convidar pessoa</Button>} actorRole={actor.role} teams={teamOptions} />
-            )}
+            {inviteButton}
           </div>
         }
       />
       {limitReached ? (
         <p id="convite-limite" className="-mt-2 text-[13px] text-ink-2">
-          Você usou todos os usuários do plano. Inative alguém
+          Você usou todos os usuários do plano. Desative alguém
           {can(session.user.role, "billing.manage") ? " ou mude de plano em Ajustes › Plano e cobrança" : " ou peça ao proprietário para mudar de plano"}.
         </p>
       ) : null}

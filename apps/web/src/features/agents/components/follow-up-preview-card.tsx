@@ -3,7 +3,7 @@
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
-import { Alert } from "@duckzap/ui/components/feedback";
+import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Checkbox, Select, Textarea } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Input, Label } from "@duckzap/ui/components/input";
@@ -98,7 +98,9 @@ export function FollowUpPreviewCard() {
             </div>
 
             {state.steps.length === 0 ? (
-              <p className="rounded-control bg-surface-2 p-3 text-[13px] text-ink-2">Nenhuma etapa. Adicione a primeira, por exemplo 2 h depois da última mensagem do cliente.</p>
+              <div className="rounded-control bg-surface-2">
+                <EmptyState compact icon="clock" title="Nenhuma etapa" description="Adicione a primeira, por exemplo 2 h depois da última mensagem do cliente." />
+              </div>
             ) : (
               <ol className="flex flex-col gap-2">
                 {state.steps.map((step, index) => {
@@ -124,7 +126,6 @@ export function FollowUpPreviewCard() {
                         <Label htmlFor={`fu-unit-${step.id}`}>Unidade da etapa {index + 1}</Label>
                         <Select
                           id={`fu-unit-${step.id}`}
-                          className="h-11"
                           value={step.unit}
                           onChange={(e) => setState((current) => ({ ...current, steps: setStepUnit(current.steps, step.id, unitOf(e.target.value)) }))}
                         >
@@ -139,7 +140,6 @@ export function FollowUpPreviewCard() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="max-md:size-11"
                           aria-label={`Subir a etapa ${index + 1}`}
                           disabled={index === 0}
                           onClick={() => {
@@ -152,7 +152,6 @@ export function FollowUpPreviewCard() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="max-md:size-11"
                           aria-label={`Descer a etapa ${index + 1}`}
                           disabled={index === state.steps.length - 1}
                           onClick={() => {
@@ -164,8 +163,7 @@ export function FollowUpPreviewCard() {
                         </Button>
                         <Button
                           size="icon"
-                          variant="ghost"
-                          className="text-err max-md:size-11"
+                          variant="danger-ghost"
                           aria-label={`Remover a etapa ${index + 1}`}
                           onClick={() => {
                             setState((current) => ({ ...current, steps: removeStep(current.steps, step.id) }));
@@ -183,7 +181,6 @@ export function FollowUpPreviewCard() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Button
-                className="max-md:h-11"
                 disabled={!canAddStep(state.steps)}
                 onClick={() => {
                   setState((current) => ({ ...current, steps: addStep(current.steps) }));
@@ -245,7 +242,7 @@ export function FollowUpPreviewCard() {
           </section>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="primary" className="max-md:h-11" disabled aria-describedby="fu-save-help">
+            <Button variant="primary" disabled aria-describedby="fu-save-help">
               Salvar
             </Button>
             <p id="fu-save-help" className="min-w-0 flex-[1_1_220px] text-[13px] text-ink-2">

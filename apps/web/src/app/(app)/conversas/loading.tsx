@@ -2,7 +2,8 @@ import { Skeleton } from "@duckzap/ui/components/feedback";
 
 export default function ConversationsLoading() {
   return (
-    <main aria-busy="true" aria-label="Carregando conversas" className="flex flex-col md:h-[calc(100dvh-4rem)]">
+    <main aria-busy="true" className="flex flex-col md:h-[calc(100dvh-4rem)]">
+      <span className="sr-only">Carregando conversas…</span>
       <div className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-6 py-3.5 max-md:px-4">
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-10 w-40" />

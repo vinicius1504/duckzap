@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { GenerateRequest, LLMProvider, TokenUsage } from "../llm";
-import { buildDataBlock } from "./prompt";
+import { buildDataBlock, CONTEXT_MESSAGES } from "./prompt";
 import { normalize } from "./text";
 import { INTENTS, type ChatMessage, type Intent } from "./types";
 
@@ -99,7 +99,7 @@ export async function classifyIntent(input: {
   const request: GenerateRequest = {
     tier: "fast",
     system: ROUTER_SYSTEM,
-    messages: [{ role: "user", content: buildDataBlock({ nonce: input.nonce, history: input.history, maxMessages: 6 }) }],
+    messages: [{ role: "user", content: buildDataBlock({ nonce: input.nonce, history: input.history, maxMessages: CONTEXT_MESSAGES }) }],
     // o limite inclui o "raciocínio" de modelos que pensam antes de responder: com 60 o Claude gastava tudo pensando e o JSON
     // nunca saía (confiança 0 → transferência indevida). Só se paga o que é gerado, então folga custa quase nada.
     maxOutputTokens: ROUTER_MAX_OUTPUT_TOKENS,

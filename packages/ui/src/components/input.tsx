@@ -23,10 +23,11 @@ export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElem
   return <label className={cn("mb-1.5 block text-[13px] font-semibold", className)} {...props} />;
 }
 
-export function FieldError({ id, message }: { id: string; message?: string }) {
+/** Erro de campo. Fora de um campo (erro de uma ação), prefira `Alert tone="err" live`. */
+export function FieldError({ id, message, role }: { id: string; message?: string; role?: "alert" }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-1.5 text-[13px] font-semibold text-err">
+    <p id={id} role={role} className="mt-1.5 text-[13px] font-semibold text-err">
       {message}
     </p>
   );

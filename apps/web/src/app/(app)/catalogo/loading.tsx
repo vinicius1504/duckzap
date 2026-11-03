@@ -3,7 +3,8 @@ import { Page } from "@duckzap/ui/components/layout";
 
 export default function Loading() {
   return (
-    <Page aria-busy="true" aria-label="Carregando catálogo">
+    <Page aria-busy="true">
+      <span className="sr-only">Carregando catálogo…</span>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-5 w-full max-w-lg" />

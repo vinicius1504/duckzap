@@ -111,7 +111,7 @@ export function SignInForm() {
       <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
         {isSubmitting ? (
           <>
-            <Spinner /> Entrando…
+            <Spinner size={16} /> Entrando…
           </>
         ) : (
           "Entrar"
@@ -174,7 +174,7 @@ function TwoFactorStep({ onDone, onRestart }: { onDone: () => void; onRestart: (
       <Button type="submit" variant="primary" size="lg" disabled={pending || code.trim().length < 6} className="w-full">
         {pending ? (
           <>
-            <Spinner /> Verificando…
+            <Spinner size={16} /> Verificando…
           </>
         ) : (
           "Entrar"

@@ -1,8 +1,8 @@
 "use client";
 
 import type { BusinessHours, DayHours } from "@duckzap/contracts/settings";
+import { FieldError, Input } from "@duckzap/ui/components/input";
 import { Switch } from "@duckzap/ui/components/switch";
-import { cn } from "@duckzap/ui/cn";
 import { dayLong, dayShort, weekOrder } from "./business-hours";
 
 /** Editor de horário semanal (empresa e equipes). Controlado: `value` + `onChange`. */
@@ -42,33 +42,29 @@ export function BusinessHoursEditor({
                 <label htmlFor={`${id}-inicio`} className="sr-only">
                   Abre às ({dayLong[day]})
                 </label>
-                <input
+                <Input
                   id={`${id}-inicio`}
                   type="time"
                   value={hours.start}
                   disabled={disabled}
                   onChange={(e) => patch(day, { start: e.target.value })}
-                  className="h-10 rounded-control border border-field bg-surface px-2 text-ink"
+                  className="w-auto"
                 />
                 <span className="text-ink-2">às</span>
                 <label htmlFor={`${id}-fim`} className="sr-only">
                   Fecha às ({dayLong[day]})
                 </label>
-                <input
+                <Input
                   id={`${id}-fim`}
                   type="time"
                   value={hours.end}
                   disabled={disabled}
-                  aria-invalid={invalid || undefined}
+                  invalid={invalid}
                   aria-describedby={invalid ? `${id}-erro` : undefined}
                   onChange={(e) => patch(day, { end: e.target.value })}
-                  className={cn("h-10 rounded-control border border-field bg-surface px-2 text-ink", invalid && "border-err")}
+                  className="w-auto"
                 />
-                {invalid ? (
-                  <span id={`${id}-erro`} className="text-[13px] font-semibold text-err">
-                    O fim precisa ser depois do início.
-                  </span>
-                ) : null}
+                {invalid ? <FieldError id={`${id}-erro`} message="O fim precisa ser depois do início." /> : null}
               </div>
             ) : (
               <span className="text-ink-2">Fechado</span>

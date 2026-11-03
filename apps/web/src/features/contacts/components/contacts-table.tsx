@@ -17,7 +17,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@duckzap/ui/components/dropdown-menu";
-import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
@@ -26,7 +26,7 @@ import { cn } from "@duckzap/ui/cn";
 import { useQueryStates } from "nuqs";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { formatDate, formatPhone } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatNumber, formatPhone, formatPlural } from "@/lib/format";
 import { addToListAction, deleteContactsAction, tagContactsAction } from "../actions";
 import { NO_PERMISSION_HINT, type ContactPerms } from "../perms";
 import { contactsParsers } from "../search-params";
@@ -121,9 +121,7 @@ export function ContactsTable({
           aria-label="Ações em massa"
           className="flex flex-wrap items-center gap-2 rounded-card bg-ink py-2 pl-4 pr-2 text-bg"
         >
-          <strong className="mr-auto">
-            {selected.size} {selected.size === 1 ? "selecionado" : "selecionados"}
-          </strong>
+          <strong className="mr-auto">{formatPlural(selected.size, "selecionado", "selecionados")}</strong>
           <Button size="sm" variant="ghost" className="text-bg hover:bg-ink-2" onClick={() => setSelected(new Set())}>
             Limpar
           </Button>
@@ -187,7 +185,7 @@ export function ContactsTable({
             </Button>
           ) : null}
           {perms.delete ? (
-            <Button size="sm" className="text-err" onClick={() => setConfirmDelete(true)} disabled={pending}>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(true)} disabled={pending}>
               <Icon name="trash" size={16} />
               Excluir
             </Button>
@@ -258,7 +256,7 @@ export function ContactsTable({
                 <Td>
                   <ConsentChip consent={contact.consent} />
                 </Td>
-                <Td>{formatDate(contact.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" }, timeZone)}</Td>
+                <Td>{formatDate(contact.createdAt, DATE_FORMATS.day, timeZone)}</Td>
               </tr>
             );
           })}
@@ -267,7 +265,7 @@ export function ContactsTable({
 
       <nav aria-label="Paginação" className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-ink-2" aria-live="polite">
-          {first}–{last} de {page.total.toLocaleString("pt-BR")}
+          {first}–{last} de {formatNumber(page.total)}
         </span>
         <div className="flex gap-1.5">
           <Button size="sm" disabled={page.page <= 1 || navPending} onClick={() => void setParams({ pagina: page.page - 1 })} className="max-md:h-11">
@@ -300,28 +298,23 @@ export function ContactsTable({
         />
       ) : null}
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent
-          size="sm"
-          title={`Excluir ${selected.size} ${selected.size === 1 ? "cliente" : "clientes"}?`}
-          description="Apaga cadastro, notas e histórico. Use quando o titular pedir a exclusão dos dados (LGPD). Não dá para desfazer."
-        >
-          <DialogFooter>
-            <Button onClick={() => setConfirmDelete(false)}>Cancelar</Button>
-            <Button
-              variant="primary"
-              className="border-err bg-err text-surface hover:border-err hover:bg-err"
-              disabled={pending}
-              onClick={() => {
-                setConfirmDelete(false);
-                run(() => deleteContactsAction(selectedIds), "Clientes excluídos.", true);
-              }}
-            >
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Excluir ${formatPlural(selected.size, "cliente", "clientes")}?`}
+        description="Apaga cadastro, notas e histórico. Use quando o titular pedir a exclusão dos dados (LGPD). Não dá para desfazer."
+        confirmLabel="Excluir"
+        pendingLabel="Excluindo…"
+        danger
+        onConfirm={async () => {
+          const result = await deleteContactsAction(selectedIds);
+          if ("error" in result) return { error: result.error };
+          setNotice({ tone: "ok", text: "Clientes excluídos." });
+          setSelected(new Set());
+          router.refresh();
+          return { ok: true } as const;
+        }}
+      />
     </div>
   );
 }

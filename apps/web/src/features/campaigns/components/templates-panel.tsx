@@ -4,6 +4,7 @@ import { campaignMessageTypeSchema, type CampaignMessageType, type CampaignTempl
 import { Button, buttonVariants } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip, type ChipTone } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
 import { Alert, EmptyState, Spinner } from "@duckzap/ui/components/feedback";
 import { Select, Textarea } from "@duckzap/ui/components/form-controls";
@@ -23,16 +24,6 @@ const metaStatus: Record<NonNullable<CampaignTemplate["metaStatus"]>, { label: s
 export function TemplatesPanel({ templates }: { templates: CampaignTemplate[] }) {
   const internal = templates.filter((t) => t.source === "internal");
   const meta = templates.filter((t) => t.source === "meta");
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function remove(id: string) {
-    setError(null);
-    startTransition(async () => {
-      const result = await deleteCampaignTemplateAction(id);
-      if (result.error !== undefined) setError(result.error);
-    });
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,12 +31,11 @@ export function TemplatesPanel({ templates }: { templates: CampaignTemplate[] })
         <p className="text-ink-2">Mensagens prontas para começar uma campanha mais rápido.</p>
         <NewTemplateDialog />
       </div>
-      {error ? <Alert tone="err" live>{error}</Alert> : null}
       {internal.length ? (
         <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]">
           {internal.map((t) => (
             <li key={t.id}>
-              <Card className="flex h-full flex-col gap-2 p-4">
+              <Card padding="sm" className="flex h-full flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <strong>{t.name}</strong>
                   <Chip>{messageTypeLabel[t.type]}</Chip>
@@ -55,9 +45,22 @@ export function TemplatesPanel({ templates }: { templates: CampaignTemplate[] })
                   <Link href={`/campanhas/nova?modelo=${t.id}`} className={buttonVariants({ size: "sm", variant: "primary" })}>
                     Usar modelo
                   </Link>
-                  <Button size="sm" variant="ghost" disabled={pending} onClick={() => remove(t.id)} aria-label={`Excluir modelo ${t.name}`}>
-                    <Icon name="trash" size={16} />
-                  </Button>
+                  <ConfirmDialog
+                    danger
+                    trigger={
+                      <Button size="sm" variant="danger-ghost" aria-label={`Excluir modelo ${t.name}`}>
+                        <Icon name="trash" size={16} />
+                      </Button>
+                    }
+                    title="Excluir este modelo?"
+                    description={`“${t.name}” deixa de aparecer nos modelos. As campanhas que já usaram esse texto não mudam.`}
+                    confirmLabel="Excluir"
+                    pendingLabel="Excluindo…"
+                    onConfirm={async () => {
+                      const result = await deleteCampaignTemplateAction(t.id);
+                      return result.error !== undefined ? { error: result.error } : { ok: true };
+                    }}
+                  />
                 </div>
               </Card>
             </li>
@@ -81,7 +84,7 @@ export function TemplatesPanel({ templates }: { templates: CampaignTemplate[] })
         <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]">
           {meta.map((t) => (
             <li key={t.id}>
-              <Card className="flex h-full flex-col gap-2 p-4">
+              <Card padding="sm" className="flex h-full flex-col gap-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <code className="text-[13px] font-bold">{t.name}</code>
                   {t.metaStatus ? <Chip tone={metaStatus[t.metaStatus].tone}>{metaStatus[t.metaStatus].label}</Chip> : null}
@@ -122,8 +125,10 @@ function NewTemplateDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className={buttonVariants({ variant: "secondary" })}>
-        <Icon name="plus" size={16} /> Novo modelo
+      <DialogTrigger asChild>
+        <Button variant="primary">
+          <Icon name="plus" size={16} /> Novo modelo
+        </Button>
       </DialogTrigger>
       <DialogContent title="Novo modelo" description="Use {nome} e {empresa} para personalizar.">
         <form action={submit} className="flex flex-col gap-4">
@@ -160,7 +165,9 @@ function NewTemplateDialog() {
           ) : null}
           {error ? <Alert tone="err" live>{error}</Alert> : null}
           <DialogFooter>
-            <DialogClose className={buttonVariants()}>Cancelar</DialogClose>
+            <DialogClose asChild>
+              <Button>Cancelar</Button>
+            </DialogClose>
             <Button type="submit" variant="primary" disabled={pending}>
               {pending ? <Spinner size={16} /> : null} Salvar modelo
             </Button>

@@ -4,7 +4,7 @@ import type { AssistantMessage } from "@duckzap/contracts/help";
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Icon } from "@duckzap/ui/components/icon";
-import { Input } from "@duckzap/ui/components/input";
+import { FieldError, Input } from "@duckzap/ui/components/input";
 import { Spinner } from "@duckzap/ui/components/feedback";
 import { cn } from "@duckzap/ui/cn";
 import Link from "next/link";
@@ -102,13 +102,13 @@ export function AssistantChat() {
           aria-describedby={error ? "pergunta-ajuda-erro" : undefined}
         />
         <Button type="submit" variant="primary" size="icon" aria-label="Enviar pergunta" disabled={pending} className="size-11 shrink-0">
-          <Icon name="send" size={18} strokeWidth={2} />
+          <Icon name="send" size={16} strokeWidth={2} />
         </Button>
       </form>
       {error ? (
-        <p id="pergunta-ajuda-erro" role="alert" className="px-3 pb-3 text-[13px] font-semibold text-err">
-          {error}
-        </p>
+        <div className="px-3 pb-3">
+          <FieldError id="pergunta-ajuda-erro" role="alert" message={error} />
+        </div>
       ) : null}
     </Card>
   );

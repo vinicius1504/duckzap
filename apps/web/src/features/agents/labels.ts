@@ -1,5 +1,6 @@
 import type { AgentConfig, AgentJob, AgentStatus, AgentTool, KnowledgeDocument } from "@duckzap/contracts/agents";
 import type { ChipTone } from "@duckzap/ui/components/chip";
+import { formatPlural } from "@/lib/format";
 
 export const jobView: Record<AgentJob, { label: string; description: string }> = {
   support: { label: "Atendimento", description: "Responde dúvidas e chama a equipe quando precisa" },
@@ -50,11 +51,5 @@ export function delayLabel(minutes: number) {
   const hours = minutes / 60;
   if (hours <= 24) return `Após ${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
   const days = Math.round(hours / 24);
-  return `Após ${days} ${days === 1 ? "dia" : "dias"}`;
-}
-
-export function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+  return `Após ${formatPlural(days, "dia", "dias")}`;
 }

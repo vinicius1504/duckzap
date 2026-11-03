@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@duckzap/ui/components/button";
+import { Alert } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -38,14 +39,14 @@ export function OpenConversationButton({ contactId, variant, size, className }: 
         {pending ? "Abrindo…" : "Abrir conversa"}
       </Button>
       {failure ? (
-        <p role="alert" className="basis-full text-sm text-err">
+        <Alert tone="err" live className="basis-full">
           {failure.error}{" "}
           {failure.code === "no_channel" ? (
             <Link href="/canais" className="font-semibold underline">
               Ir para Canais
             </Link>
           ) : null}
-        </p>
+        </Alert>
       ) : null}
     </>
   );

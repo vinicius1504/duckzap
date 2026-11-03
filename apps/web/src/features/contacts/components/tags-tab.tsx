@@ -4,6 +4,7 @@ import { FUNNEL_STAGE_COUNT, tagColorSchema, type Tag, type TagColor } from "@du
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Radio } from "@duckzap/ui/components/form-controls";
@@ -13,6 +14,7 @@ import { cn } from "@duckzap/ui/cn";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { formatPlural } from "@/lib/format";
 import { deleteTagAction, reorderTagsAction, saveTagAction } from "../actions";
 import { tagColorLabel, tagSwatch } from "../labels";
 import { NO_PERMISSION_HINT, type ContactPerms } from "../perms";
@@ -68,13 +70,13 @@ export function TagsTab({ tags, perms }: { tags: Tag[]; perms: ContactPerms }) {
               >
                 {perms.organize ? (
                   <span className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="size-9 max-md:size-11" aria-label={`Subir ${tag.name}`} disabled={index === 0} onClick={() => move(index, -1)}>
+                    <Button size="icon" variant="ghost" className="size-9" aria-label={`Subir ${tag.name}`} disabled={index === 0} onClick={() => move(index, -1)}>
                       <Icon name="chevronDown" size={16} className="rotate-180" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="size-9 max-md:size-11"
+                      className="size-9"
                       aria-label={`Descer ${tag.name}`}
                       disabled={index === ordered.length - 1}
                       onClick={() => move(index, 1)}
@@ -88,7 +90,7 @@ export function TagsTab({ tags, perms }: { tags: Tag[]; perms: ContactPerms }) {
                 <span className="flex-[1_1_200px] text-ink-2">{tag.description || "—"}</span>
                 <Chip tone={stage ? "info" : "neutral"}>{stage ? `Etapa ${index + 1}` : "Etiqueta livre"}</Chip>
                 <Link href={`/clientes?etiqueta=${tag.id}`} className="min-w-24 text-ink-2 underline-offset-2 hover:underline">
-                  {tag.contactCount} {tag.contactCount === 1 ? "cliente" : "clientes"}
+                  {formatPlural(tag.contactCount, "cliente", "clientes")}
                 </Link>
                 {perms.organize ? (
                   <Button size="sm" onClick={() => setEditing(tag)} className="max-md:h-11">
@@ -149,14 +151,13 @@ function TagFormDialog({
     });
   }
 
-  function remove() {
-    if (!tag) return;
-    startTransition(async () => {
-      const result = await deleteTagAction(tag.id);
-      if ("error" in result) return setError(result.error);
-      onOpenChange(false);
-      router.refresh();
-    });
+  async function remove() {
+    if (!tag) return { error: "Etiqueta não encontrada." };
+    const result = await deleteTagAction(tag.id);
+    if ("error" in result) return { error: result.error };
+    onOpenChange(false);
+    router.refresh();
+    return { ok: true } as const;
   }
 
   return (
@@ -185,13 +186,26 @@ function TagFormDialog({
           </fieldset>
           {isStage ? <p className="text-[13px] text-ink-2">Esta etiqueta é uma etapa do funil. O nome aparece como coluna no Quadro.</p> : null}
           {error ? <Alert tone="err" live>{error}</Alert> : null}
-          <DialogFooter className="justify-between">
-            {tag ? (
-              <Button className="mr-auto text-err" onClick={remove} disabled={pending || isStage} title={isStage ? "Etapas do funil não podem ser excluídas" : undefined}>
-                <Icon name="trash" size={16} />
-                Excluir
-              </Button>
-            ) : null}
+          <DialogFooter
+            start={
+              tag ? (
+                <ConfirmDialog
+                  trigger={
+                    <Button variant="danger-ghost" disabled={pending || isStage} title={isStage ? "Etapas do funil não podem ser excluídas" : undefined}>
+                      <Icon name="trash" size={16} />
+                      Excluir
+                    </Button>
+                  }
+                  title={`Excluir “${tag.name}”?`}
+                  description="A etiqueta sai dos clientes que a têm. Os clientes continuam cadastrados."
+                  confirmLabel="Excluir"
+                  pendingLabel="Excluindo…"
+                  danger
+                  onConfirm={remove}
+                />
+              ) : undefined
+            }
+          >
             <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={pending}>
               {pending ? "Salvando…" : "Salvar"}

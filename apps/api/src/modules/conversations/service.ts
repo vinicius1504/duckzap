@@ -169,10 +169,10 @@ export async function setConversationMode(
   id: string,
   mode: ConversationMode,
   now = new Date(),
-): Promise<Result<null, NotFound | "plan_feature">> {
+): Promise<Result<{ aiDue: boolean }, NotFound | "plan_feature">> {
   const conv = await findVisibleConversation(tx, ctx, id, { lock: true });
   if (!conv) return NOT_FOUND();
-  if (conv.mode === mode) return ok(null);
+  if (conv.mode === mode) return ok({ aiDue: false });
 
   if (mode === "copilot") {
     // Copiloto: recurso do plano Escala (aplicado aqui, não só na tela) e precisa estar ligado em Agentes
@@ -191,11 +191,18 @@ export async function setConversationMode(
     to = "ai_active";
   }
   if (mode !== "ai") patch.aiDueAt = null;
+  // a mensagem do cliente que ficou esperando enquanto a conversa estava com a equipe ou na fila não pode ficar sem resposta:
+  // devolvida para a IA, ela responde agora (sem isso só respondia quando o cliente escrevia de novo, às vezes um dia depois)
+  const aiDue = mode === "ai" && to === "ai_active" && conv.lastMessageDirection === "in";
+  if (aiDue) {
+    patch.aiDueAt = now;
+    patch.aiBurstStartedAt = null;
+  }
   await tx.update(conversations).set(patch).where(eq(conversations.id, conv.id));
   await addEvent(tx, conv, `${ctx.userName} mudou o modo para ${MODE_LABEL[mode]}`, now);
   if (to !== conv.status) await auditState(tx, conv, { from: conv.status, to, event: "ai_resumed", actor: "human", userId: ctx.userId });
   notifyUpdated(tx, ctx.organizationId, conv.id, "mode", to !== conv.status);
-  return ok(null);
+  return ok({ aiDue });
 }
 
 export async function resolveConversation(tx: Transaction, ctx: ConvCtx, id: string, now = new Date()): Promise<Result<null, NotFound>> {

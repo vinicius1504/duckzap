@@ -42,9 +42,9 @@ export function CopyField({
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className={cn("h-10 min-w-0", mono && "font-mono text-[13px]")}
+          className={cn("min-w-0", mono && "font-mono text-[13px]")}
         />
-        <Button onClick={copy} className="shrink-0" aria-label={`Copiar ${label.toLowerCase()}`}>
+        <Button onClick={copy} className="h-11 shrink-0" aria-label={`Copiar ${label.toLowerCase()}`}>
           <Icon name={copied ? "check" : "copy"} size={16} />
           <span className="max-sm:sr-only">{copied ? "Copiado" : "Copiar"}</span>
         </Button>

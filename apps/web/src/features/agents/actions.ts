@@ -13,6 +13,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { authorize } from "@/features/auth/permissions";
+import { formatPlural } from "@/lib/format";
 import * as api from "./api";
 
 // Server Actions finas: permissão → validação → api.ts → revalidar.
@@ -39,7 +40,7 @@ export async function createAgentAction(input: unknown): Promise<ActionResult<{ 
   const { features, maxAgents } = auth.session.organization;
   if (!features.includes("instagram") && INSTAGRAM_JOBS.includes(parsed.data.job)) return { error: INSTAGRAM_PLAN };
   if (maxAgents !== null && (await api.getAgentPlanUsage()).agents >= maxAgents) {
-    return { error: `O seu plano permite ${maxAgents} ${maxAgents === 1 ? "agente" : "agentes"}. Mude de plano para ter mais.` };
+    return { error: `O seu plano permite ${formatPlural(maxAgents, "agente", "agentes")}. Mude de plano para ter mais.` };
   }
   const result = await api.createAgent(parsed.data, auth.session.user.name);
   if (!result.ok) return { error: result.message };

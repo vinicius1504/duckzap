@@ -14,6 +14,7 @@ import { navFor } from "@/config/nav";
 import { signOutAction } from "@/features/auth/actions";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import type { ShellStatus } from "@/features/shell/api";
+import { formatPlural } from "@/lib/format";
 import { BrowserNotifyToggle, RealtimeStatusChip, SoundToggle } from "@/lib/realtime/controls";
 
 export function ShellFrame({
@@ -40,7 +41,7 @@ export function ShellFrame({
         <Link href="/canais" className="max-sm:hidden">
           <Chip tone="warn">
             <span className="size-2 rounded-full bg-current" aria-hidden="true" />
-            {status.disconnectedChannels === 1 ? "1 canal desconectado" : `${status.disconnectedChannels} canais desconectados`}
+            {formatPlural(status.disconnectedChannels, "canal desconectado", "canais desconectados")}
           </Chip>
         </Link>
       ) : (

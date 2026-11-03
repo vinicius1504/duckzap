@@ -1,3 +1,4 @@
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { onboardingStepSchema, type OnboardingStep } from "@duckzap/contracts/onboarding";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export default async function OnboardingPage({
   if (!draft) {
     return (
       <AuthSplit>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Crie sua conta grátis</h1>
+        <h1 className={pageTitleClass}>Crie sua conta grátis</h1>
         <p className="mb-7 mt-1.5 text-ink-2">
           Em poucos minutos seu WhatsApp já responde com um agente de IA.
         </p>

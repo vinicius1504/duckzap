@@ -18,10 +18,12 @@ import { ContactsTable } from "@/features/contacts/components/contacts-table";
 import { ContactsToolbar } from "@/features/contacts/components/contacts-toolbar";
 import { ContactsHeaderActions, ContactsTabs } from "@/features/contacts/components/header-actions";
 import { ListsTab } from "@/features/contacts/components/lists-tab";
+import { NewContactButton } from "@/features/contacts/components/new-contact-button";
 import { TagsTab } from "@/features/contacts/components/tags-tab";
 import { contactPerms } from "@/features/contacts/perms";
 import { loadProfileAppointments } from "@/features/contacts/profile-data";
 import { filterFromQuery, hasActiveFilters, parseContactsSearch, type RawSearchParams } from "@/features/contacts/search-params";
+import { formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -47,10 +49,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const filtered = hasActiveFilters(query);
 
   return (
-    <Page className="gap-[18px]">
+    <Page>
       <PageHeader
         title="Clientes"
-        description={`${page.overall.contacts.toLocaleString("pt-BR")} pessoas · ${page.overall.granted.toLocaleString("pt-BR")} aceitam receber campanhas`}
+        description={`${formatNumber(page.overall.contacts)} pessoas · ${formatNumber(page.overall.granted)} aceitam receber campanhas`}
         actions={
           <ContactsHeaderActions
             tags={tags}
@@ -87,6 +89,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                     icon="contacts"
                     title="Nenhum cliente ainda"
                     description="Importe do WhatsApp ou de uma planilha, ou cadastre o primeiro cliente. Quem conversar com a sua empresa também aparece aqui."
+                    action={perms.edit ? <NewContactButton tags={tags} owners={owners} perms={perms} /> : undefined}
                   />
                 )}
               </Card>

@@ -135,7 +135,7 @@ describe.skipIf(!enabled)("Conversas e Início — integração (precisa da migr
   const app = new OpenAPIHono();
   app.route(
     "/v1",
-    conversationsRoutes(deps, { config, now: () => clock.now(), scheduleAiTurn: () => {}, register: false }),
+    conversationsRoutes(deps, { config, now: () => clock.now(), scheduleAiTurn: (org, conversationId, delayMs) => void aiQueue.push({ org, conversationId, delayMs }), register: false }),
   );
   app.route("/v1", homeRoutes(deps));
   app.onError(onError);
@@ -278,6 +278,54 @@ describe.skipIf(!enabled)("Conversas e Início — integração (precisa da migr
     if (!found) throw new Error("conversa não criada");
     return { from, ...found };
   }
+
+  // ── devolver a conversa para a IA ─────────────────────────────────────────
+  describe("devolver para a IA", () => {
+    async function parkWithTeam(conversationId: string, status: "handoff_requested" | "human_active") {
+      await withOrg(db, A, (tx) =>
+        tx
+          .update(schema.conversations)
+          .set({ status, mode: "human", aiDueAt: null, waitingSince: status === "handoff_requested" ? new Date() : null, assigneeId: status === "human_active" ? OWNER : null })
+          .where(eq(schema.conversations.id, conversationId)),
+      );
+    }
+
+    it("a mensagem do cliente que ficou esperando é respondida logo, sem esperar o cliente escrever de novo", async () => {
+      const { from, conv } = await newConversation("Oi, queria saber o preço da limpeza");
+      await parkWithTeam(conv.id, "handoff_requested"); // a IA passou para a equipe e ninguém respondeu
+      aiQueue.length = 0;
+
+      expect((await call("owner", "POST", `/conversations/${conv.id}/mode`, { mode: "ai" })).status).toBe(200);
+      const after = (await conversationOf(A, from))!.conv;
+      expect(after).toMatchObject({ status: "ai_active", mode: "ai", assigneeId: null, waitingSince: null });
+      expect(after.aiDueAt).not.toBeNull();
+      expect(aiQueue.filter((q) => q.conversationId === conv.id)).toEqual([{ org: A, conversationId: conv.id, delayMs: 0 }]);
+
+      const report = await runDueAiTurn(rt.ai, rt.limiters, A, conv.id);
+      expect(report.ran).toBe(true);
+      const sent = (await messagesOf(A, conv.id)).filter((m) => m.direction === "out" && m.senderKind === "agent");
+      expect(sent.length).toBeGreaterThan(0);
+    });
+
+    it("também vale quando quem estava atendendo era uma pessoa e o cliente tinha escrito por último", async () => {
+      const { from, conv } = await newConversation("Alguém aí?");
+      await parkWithTeam(conv.id, "human_active");
+      aiQueue.length = 0;
+      expect((await call("owner", "POST", `/conversations/${conv.id}/mode`, { mode: "ai" })).status).toBe(200);
+      expect((await conversationOf(A, from))!.conv.aiDueAt).not.toBeNull();
+      expect(aiQueue.some((q) => q.conversationId === conv.id)).toBe(true);
+    });
+
+    it("se a última mensagem foi da equipe (já respondida), devolver para a IA não dispara resposta nenhuma", async () => {
+      const { from, conv } = await newConversation("Oi");
+      await parkWithTeam(conv.id, "human_active");
+      await withOrg(db, A, (tx) => tx.update(schema.conversations).set({ lastMessageDirection: "out", lastReplyAt: new Date() }).where(eq(schema.conversations.id, conv.id)));
+      aiQueue.length = 0;
+      expect((await call("owner", "POST", `/conversations/${conv.id}/mode`, { mode: "ai" })).status).toBe(200);
+      expect((await conversationOf(A, from))!.conv.aiDueAt).toBeNull();
+      expect(aiQueue.filter((q) => q.conversationId === conv.id)).toHaveLength(0);
+    });
+  });
 
   // ── mensagem digitada no celular (saiu da conta, não passou pelo DuckChat) ─
   describe("mensagem enviada pelo celular", () => {

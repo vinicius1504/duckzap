@@ -4,6 +4,7 @@ import type { AppointmentType, CalendarSync, ReminderSettings } from "@duckzap/c
 import { Button } from "@duckzap/ui/components/button";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { CollapsibleCard } from "@duckzap/ui/components/collapsible-card";
 import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
@@ -14,6 +15,7 @@ import { Switch } from "@duckzap/ui/components/switch";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
 import { createTypeAction, saveRemindersAction, setCalendarConnectedAction, setTypeActiveAction, setTypeStaffOnlyAction, syncCalendarAction } from "../actions";
+import { formatPlural } from "@/lib/format";
 import { syncView } from "../labels";
 import type { AgendaPerms } from "../search-params";
 
@@ -43,7 +45,7 @@ export function GoogleSyncCard({ sync, nowIso, perms }: { sync: CalendarSync; no
   }
 
   return (
-    <Card className="p-[18px]">
+    <Card padding="md">
       <div className="flex items-center justify-between gap-2">
         <CardTitle className="text-[15px]">Google Calendar</CardTitle>
         <Chip tone={view.tone} role="status">
@@ -76,9 +78,23 @@ export function GoogleSyncCard({ sync, nowIso, perms }: { sync: CalendarSync; no
               Sincronizar agora
             </Button>
             {perms.integration ? (
-              <Button size="sm" disabled={pending} onClick={() => run(() => setCalendarConnectedAction(false))} className="max-md:h-11">
-                Desconectar
-              </Button>
+              <ConfirmDialog
+                trigger={
+                  <Button size="sm" variant="danger-ghost" disabled={pending} className="max-md:h-11">
+                    Desconectar
+                  </Button>
+                }
+                title="Desconectar o Google Calendar?"
+                description="Os agendamentos deixam de ir para o seu calendário e os horários ocupados lá deixam de bloquear a agenda daqui. Você pode conectar de novo quando quiser."
+                confirmLabel="Desconectar"
+                pendingLabel="Desconectando…"
+                danger
+                onConfirm={async () => {
+                  const result = await setCalendarConnectedAction(false);
+                  router.refresh();
+                  return "error" in result ? { error: result.error } : { ok: true };
+                }}
+              />
             ) : null}
           </>
         )}
@@ -116,7 +132,7 @@ export function TypesCard({ types, perms }: { types: AppointmentType[]; perms: A
   }
 
   const activeCount = optimistic.filter((t) => t.active).length;
-  const summary = optimistic.length === 0 ? "Nenhum tipo ainda" : `${optimistic.length} ${optimistic.length === 1 ? "tipo" : "tipos"} · ${activeCount} ${activeCount === 1 ? "ativo" : "ativos"}`;
+  const summary = optimistic.length === 0 ? "Nenhum tipo ainda" : `${formatPlural(optimistic.length, "tipo", "tipos")} · ${formatPlural(activeCount, "ativo", "ativos")}`;
 
   return (
     <CollapsibleCard icon="list" title="Tipos de atendimento" summary={summary}>
@@ -225,19 +241,20 @@ export function RemindersCard({ settings, perms }: { settings: ReminderSettings;
   const readOnly = !perms.settings;
 
   function patch(kind: "24h" | "2h", change: Partial<ReminderSettings["reminders"][number]>) {
+    setMessage(null);
     setDraft((d) => ({ ...d, reminders: d.reminders.map((r) => (r.kind === kind ? { ...r, ...change } : r)) }));
   }
 
   function save() {
     startTransition(async () => {
       const result = await saveRemindersAction(draft);
-      setMessage("error" in result ? { tone: "err", text: result.error } : { tone: "ok", text: "Lembretes salvos." });
+      setMessage("error" in result ? { tone: "err", text: result.error } : { tone: "ok", text: "Alterações salvas." });
       router.refresh();
     });
   }
 
   const on = draft.reminders.filter((r) => r.enabled).length;
-  const summary = on === 0 ? "Desligados" : `${on} ${on === 1 ? "lembrete ligado" : "lembretes ligados"}${draft.confirmByReply ? " · confirma pela resposta" : ""}`;
+  const summary = on === 0 ? "Desligados" : `${formatPlural(on, "lembrete ligado", "lembretes ligados")}${draft.confirmByReply ? " · confirma pela resposta" : ""}`;
 
   return (
     <CollapsibleCard icon="bell" title="Lembretes automáticos" summary={summary}>
@@ -277,7 +294,10 @@ export function RemindersCard({ settings, perms }: { settings: ReminderSettings;
             id="confirmar-resposta"
             checked={draft.confirmByReply}
             disabled={readOnly}
-            onCheckedChange={(confirmByReply) => setDraft((d) => ({ ...d, confirmByReply }))}
+            onCheckedChange={(confirmByReply) => {
+              setMessage(null);
+              setDraft((d) => ({ ...d, confirmByReply }));
+            }}
           />
         </div>
         {message ? (
@@ -289,7 +309,7 @@ export function RemindersCard({ settings, perms }: { settings: ReminderSettings;
           <p className="text-xs text-ink-2">Só administradores mudam os lembretes.</p>
         ) : (
           <Button variant="primary" onClick={save} disabled={pending}>
-            {pending ? "Salvando…" : "Salvar lembretes"}
+            {pending ? "Salvando…" : "Salvar"}
           </Button>
         )}
       </div>

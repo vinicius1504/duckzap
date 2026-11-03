@@ -1,10 +1,9 @@
 import { isSendingPaused } from "@duckzap/contracts/session";
 import { Card } from "@duckzap/ui/components/card";
-import { Icon } from "@duckzap/ui/components/icon";
 import { Page } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/back-link";
 import { requireSession } from "@/features/auth/session";
 import { getContact, getInviteOverview, listContactOwners, listTags } from "@/features/contacts/api";
 import { ContactProfile } from "@/features/contacts/components/contact-profile";
@@ -32,11 +31,8 @@ export default async function ContactPage({ params }: Props) {
 
   return (
     <Page>
-      <Link href="/clientes" className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-ink-2 hover:text-ink">
-        <Icon name="arrowLeft" size={18} />
-        Clientes
-      </Link>
-      <Card className="mx-auto w-full max-w-3xl p-6 max-sm:p-4">
+      <BackLink href="/clientes">Clientes</BackLink>
+      <Card padding="lg" className="mx-auto w-full max-w-3xl">
         <ContactProfile
           contact={contact}
           tags={tags}

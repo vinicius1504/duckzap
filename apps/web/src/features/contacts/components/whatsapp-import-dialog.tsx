@@ -13,7 +13,7 @@ import { Table, Td, Th } from "@duckzap/ui/components/table";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { formatPhone } from "@/lib/format";
+import { formatNumber, formatPhone } from "@/lib/format";
 import {
   NAME_MAX_LENGTH,
   buildCommitRows,
@@ -364,15 +364,15 @@ export function WhatsappImportDialog({
                       }}
                     />
                   </div>
-                  <Button className="max-md:h-11" disabled={filtered.length === 0 || filteredSelected === filtered.length} onClick={() => setSelected((s) => setMany(s, filteredPhones, true))}>
-                    {query.trim() ? `Marcar os ${filtered.length.toLocaleString("pt-BR")} da busca` : "Marcar todos"}
+                  <Button disabled={filtered.length === 0 || filteredSelected === filtered.length} onClick={() => setSelected((s) => setMany(s, filteredPhones, true))}>
+                    {query.trim() ? `Marcar os ${formatNumber(filtered.length)} da busca` : "Marcar todos"}
                   </Button>
-                  <Button className="max-md:h-11" disabled={filteredSelected === 0} onClick={() => setSelected((s) => setMany(s, filteredPhones, false))}>
+                  <Button disabled={filteredSelected === 0} onClick={() => setSelected((s) => setMany(s, filteredPhones, false))}>
                     {query.trim() ? "Desmarcar os da busca" : "Desmarcar todos"}
                   </Button>
                 </div>
                 <p aria-live="polite" className="text-[13px] font-semibold">
-                  {stats.selected.toLocaleString("pt-BR")} de {candidates.length.toLocaleString("pt-BR")} marcados
+                  {formatNumber(stats.selected)} de {formatNumber(candidates.length)} marcados
                 </p>
                 {hasNoNameShown ? (
                   <p className="text-[13px] text-warn">Linhas em destaque estão sem nome. Escreva um ou deixe como “Sem nome”.</p>
@@ -412,11 +412,11 @@ export function WhatsappImportDialog({
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-ink-2">
                       <span>
-                        Mostrando {visible.length.toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")}
+                        Mostrando {formatNumber(visible.length)} de {formatNumber(filtered.length)}
                       </span>
                       {visible.length < filtered.length ? (
                         <Button size="sm" className="max-md:h-11" onClick={() => setShown((n) => n + PAGE_SIZE)}>
-                          Mostrar mais {Math.min(PAGE_SIZE, filtered.length - visible.length).toLocaleString("pt-BR")}
+                          Mostrar mais {formatNumber(Math.min(PAGE_SIZE, filtered.length - visible.length))}
                         </Button>
                       ) : null}
                     </div>

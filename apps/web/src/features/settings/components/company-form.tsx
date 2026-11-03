@@ -52,13 +52,15 @@ export function CompanyForm({ company }: { company: Company }) {
   }
 
   return (
-    <Card className="p-6 max-sm:p-4">
+    <Card padding="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           save();
         }}
         className="flex flex-col gap-[18px]"
+        // editar de novo apaga o aviso de "salvo"/erro da vez anterior
+        onChange={() => setFeedback(null)}
         noValidate
       >
         <div className="flex flex-wrap items-center gap-4">
@@ -77,14 +79,14 @@ export function CompanyForm({ company }: { company: Company }) {
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
           <div>
             <Label htmlFor="empresa-nome">Nome da empresa</Label>
-            <Input id="empresa-nome" value={form.name} onChange={(e) => set("name", e.target.value)} maxLength={80} required className="h-10" />
+            <Input id="empresa-nome" value={form.name} onChange={(e) => set("name", e.target.value)} maxLength={80} required />
           </div>
           <div>
             <Label htmlFor="empresa-segmento">Segmento</Label>
-            <Input id="empresa-segmento" value={form.segment} onChange={(e) => set("segment", e.target.value)} maxLength={60} className="h-10" />
+            <Input id="empresa-segmento" value={form.segment} onChange={(e) => set("segment", e.target.value)} maxLength={60} />
           </div>
-          <PhoneField id="empresa-telefone" label="Telefone de contato" value={form.phone} onChange={(v) => set("phone", v)} showErrors={submitted} className="h-10" />
-          <EmailField id="empresa-email" label="E-mail" value={form.email} onChange={(v) => set("email", v)} showErrors={submitted} className="h-10" />
+          <PhoneField id="empresa-telefone" label="Telefone de contato" value={form.phone} onChange={(v) => set("phone", v)} showErrors={submitted} />
+          <EmailField id="empresa-email" label="E-mail" value={form.email} onChange={(v) => set("email", v)} showErrors={submitted} />
           <div>
             <Label htmlFor="empresa-fuso">Fuso horário</Label>
             <Select id="empresa-fuso" value={form.timeZone} onChange={(e) => set("timeZone", e.target.value)} aria-describedby="empresa-fuso-dica">
@@ -126,7 +128,7 @@ export function CompanyForm({ company }: { company: Company }) {
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? "Salvando…" : "Salvar alterações"}
+            {pending ? "Salvando…" : "Salvar"}
           </Button>
         </div>
       </form>

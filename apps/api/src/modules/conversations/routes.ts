@@ -184,7 +184,9 @@ export function conversationsRoutes(deps: Deps, overrides: RuntimeOverrides = {}
   app.post("/conversations/:id/mode", guard, permit("conversation.assign"), jsonLimit, async (c) => {
     const id = idParam(c);
     const body = await readJson(c, modeBodySchema);
-    unwrap(await run(c, (tx, ctx) => service.setConversationMode(tx, ctx, id, body.mode)));
+    const changed = unwrap(await run(c, (tx, ctx) => service.setConversationMode(tx, ctx, id, body.mode)));
+    // devolvida para a IA com mensagem do cliente esperando: o prazo já está gravado; o temporizador só avisa o processo (já commitado)
+    if (changed.aiDue) runtime.inbound.scheduleAiTurn(convCtx(c).organizationId, id, 0);
     return c.json({ ok: true });
   });
 

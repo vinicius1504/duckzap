@@ -147,7 +147,7 @@ export function SignUpForm() {
       <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
         {isSubmitting ? (
           <>
-            <Spinner /> Criando conta…
+            <Spinner size={16} /> Criando conta…
           </>
         ) : (
           "Criar conta grátis"

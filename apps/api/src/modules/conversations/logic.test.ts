@@ -1,3 +1,4 @@
+import { isMediaPlaceholder } from "@duckzap/ai";
 import type { ConversationStatus, MessageStatus } from "@duckzap/contracts/conversations";
 import { describe, expect, it } from "vitest";
 import {
@@ -319,5 +320,17 @@ describe("horários livres para a IA", () => {
   it("datas inválidas não geram nada", () => {
     expect(generateSlots({ ...base, fromDay: "amanhã" })).toEqual([]);
     expect(generateSlots({ ...base, fromDay: "2026-11-05", toDay: "2026-11-02" })).toEqual([]);
+  });
+});
+
+describe("contexto da IA", () => {
+  it("o aviso de mídia sem texto que a API escreve é o que o pipeline reconhece (os dois lados andam juntos)", () => {
+    for (const kind of ["image", "audio", "document"]) expect(isMediaPlaceholder(aiTextFor(kind, "")), kind).toBe(true);
+    expect(isMediaPlaceholder(aiTextFor("image", "veja esta foto"))).toBe(false);
+  });
+
+  it("a espera da rajada padrão é de 3 s, com teto de 10 s", async () => {
+    const { loadConversationsConfig } = await import("./config");
+    expect(loadConversationsConfig({})).toMatchObject({ CONVERSATIONS_BURST_WINDOW_MS: 3000, CONVERSATIONS_BURST_MAX_WAIT_MS: 10_000 });
   });
 });

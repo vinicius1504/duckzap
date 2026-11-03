@@ -53,7 +53,7 @@ export function FinishLaterButton() {
               })
             }
           >
-            {pending ? <Spinner /> : null}
+            {pending ? <Spinner size={16} /> : null}
             Terminar depois
           </Button>
         </DialogFooter>

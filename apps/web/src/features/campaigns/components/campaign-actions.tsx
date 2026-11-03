@@ -2,7 +2,7 @@
 
 import type { CampaignPauseReason, CampaignStatus } from "@duckzap/contracts/campaigns";
 import { Button, buttonVariants } from "@duckzap/ui/components/button";
-import { Dialog, DialogClose, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { cn } from "@duckzap/ui/cn";
@@ -32,15 +32,11 @@ export function CampaignActions({ id, name, status, pauseReason, pauseDetail, se
   const [confirm, setConfirm] = useState<"cancel" | "resume" | "delete" | null>(null);
   const size = layout === "row" ? "sm" : "md";
 
-  function run(fn: () => Promise<{ error?: string }>, after?: () => void) {
+  function run(fn: () => Promise<{ error?: string }>) {
     setError(null);
     startTransition(async () => {
       const result = await fn();
       if (result.error) setError(result.error);
-      else {
-        setConfirm(null);
-        after?.();
-      }
     });
   }
 
@@ -52,6 +48,9 @@ export function CampaignActions({ id, name, status, pauseReason, pauseDetail, se
       else router.push(`/campanhas/nova?rascunho=${result.data.id}`);
     });
   }
+
+  /** Resultado das Server Actions de Campanhas (`{ error?: string }`) no formato do ConfirmDialog. */
+  const outcome = (result: { error?: string }) => (result.error ? { error: result.error } : { ok: true as const });
 
   const reason = pauseReason ? pauseReasonView[pauseReason] : null;
   const row = layout === "row";
@@ -66,7 +65,7 @@ export function CampaignActions({ id, name, status, pauseReason, pauseDetail, se
     );
     if (!row)
       actions.push(
-        <Button key="del" size={size} variant="ghost" onClick={() => setConfirm("delete")} className="text-err">
+        <Button key="del" size={size} variant="danger-ghost" onClick={() => setConfirm("delete")}>
           <Icon name="trash" size={16} /> Excluir rascunho
         </Button>,
       );
@@ -121,54 +120,53 @@ export function CampaignActions({ id, name, status, pauseReason, pauseDetail, se
         {pending ? <Spinner size={16} /> : null}
       </div>
       {error ? (
-        <p role="alert" className="text-[13px] font-semibold text-err">
+        <Alert tone="err" live>
           {error}
-        </p>
+        </Alert>
       ) : null}
 
-      <Dialog open={confirm === "cancel"} onOpenChange={(open) => !open && setConfirm(null)}>
-        <DialogContent size="sm" title="Cancelar o envio?" description={`“${name}” para de enviar e não pode ser retomada. O que já foi enviado continua no histórico.`}>
-          <DialogFooter>
-            <DialogClose className={buttonVariants()}>Voltar</DialogClose>
-            <Button variant="primary" disabled={pending} onClick={() => run(() => changeCampaignStatusAction(id, "cancel"))}>
-              {pending ? <Spinner size={16} /> : null} Cancelar envio
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        danger
+        open={confirm === "cancel"}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title="Cancelar o envio?"
+        description={`“${name}” para de enviar e não pode ser retomada. O que já foi enviado continua no histórico.`}
+        confirmLabel="Cancelar envio"
+        pendingLabel="Cancelando…"
+        onConfirm={async () => outcome(await changeCampaignStatusAction(id, "cancel"))}
+      />
 
-      <Dialog open={confirm === "resume"} onOpenChange={(open) => !open && setConfirm(null)}>
-        <DialogContent size="sm" title="Retomar a campanha?" description="O envio continua de onde parou, no mesmo ritmo seguro.">
-          {reason && pauseReason !== "manual" ? (
-            <Alert tone="warn" title={`Ela parou porque: ${reason.title.toLowerCase()}.`}>
-              {pauseDetail ? `${pauseDetail} ` : null}
-              {reason.hint}
-            </Alert>
-          ) : null}
-          {error ? <Alert tone="err" live>{error}</Alert> : null}
-          <DialogFooter>
-            <DialogClose className={buttonVariants()}>Agora não</DialogClose>
-            <Button variant="primary" disabled={pending || sendingPaused} onClick={() => run(() => changeCampaignStatusAction(id, "resume"))}>
-              {pending ? <Spinner size={16} /> : null} Retomar envio
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirm === "resume"}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title="Retomar a campanha?"
+        description="O envio continua de onde parou, no mesmo ritmo seguro."
+        confirmLabel="Retomar envio"
+        pendingLabel="Retomando…"
+        onConfirm={async () => outcome(await changeCampaignStatusAction(id, "resume"))}
+      >
+        {reason && pauseReason !== "manual" ? (
+          <Alert tone="warn" title={`Ela parou porque: ${reason.title.toLowerCase()}.`}>
+            {pauseDetail ? `${pauseDetail} ` : null}
+            {reason.hint}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
-      <Dialog open={confirm === "delete"} onOpenChange={(open) => !open && setConfirm(null)}>
-        <DialogContent size="sm" title="Excluir este rascunho?" description="Não dá para desfazer.">
-          <DialogFooter>
-            <DialogClose className={buttonVariants()}>Voltar</DialogClose>
-            <Button
-              variant="primary"
-              disabled={pending}
-              onClick={() => run(() => deleteCampaignDraftAction(id), () => router.push("/campanhas"))}
-            >
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        danger
+        open={confirm === "delete"}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title="Excluir este rascunho?"
+        description="Não dá para desfazer."
+        confirmLabel="Excluir"
+        pendingLabel="Excluindo…"
+        onConfirm={async () => {
+          const result = outcome(await deleteCampaignDraftAction(id));
+          if (result.ok) router.push("/campanhas");
+          return result;
+        }}
+      />
     </div>
   );
 }

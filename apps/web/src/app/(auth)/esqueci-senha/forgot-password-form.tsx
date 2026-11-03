@@ -4,6 +4,7 @@ import { Button } from "@duckzap/ui/components/button";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
 import { FieldError, Input, Label } from "@duckzap/ui/components/input";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,7 +42,7 @@ export function ForgotPasswordForm() {
         <span className="flex size-12 items-center justify-center rounded-full bg-ok-bg text-ok">
           <Icon name="mail" size={24} />
         </span>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Confira seu e-mail</h1>
+        <h1 className={pageTitleClass}>Confira seu e-mail</h1>
         <p className="text-ink-2">
           Se existir uma conta com <strong className="break-all text-ink">{sentTo}</strong>,
           enviamos um link para criar uma nova senha. O link vale por pouco tempo.
@@ -57,7 +58,7 @@ export function ForgotPasswordForm() {
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Esqueceu a senha?</h1>
+        <h1 className={pageTitleClass}>Esqueceu a senha?</h1>
         <p className="mt-1.5 text-ink-2">
           Informe seu e-mail e enviaremos um link para criar uma nova.
         </p>
@@ -83,7 +84,7 @@ export function ForgotPasswordForm() {
       <Button type="submit" variant="primary" size="lg" disabled={isSubmitting} className="w-full">
         {isSubmitting ? (
           <>
-            <Spinner /> Enviando…
+            <Spinner size={16} /> Enviando…
           </>
         ) : (
           "Enviar link"

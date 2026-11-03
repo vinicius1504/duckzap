@@ -28,6 +28,26 @@ export function isSmallTalk(text: string) {
   return (t.split(" ").length <= 5 && SMALL_TALK.test(t)) || GREETING_ONLY.test(t);
 }
 
+/**
+ * O que a IA enxerga no lugar de uma mídia sem legenda (imagem, áudio, documento). Mantido em sincronia com `aiTextFor`
+ * (apps/api/src/modules/conversations/logic.ts); há um teste que garante os dois lados.
+ */
+const MEDIA_PLACEHOLDER = /^\[o cliente enviou (uma imagem|um áudio|um documento)\]$/;
+
+/** A "mensagem" é só um aviso de que o cliente mandou um arquivo (sem texto nenhum). */
+export function isMediaPlaceholder(text: string) {
+  return MEDIA_PLACEHOLDER.test(text.trim());
+}
+
+/**
+ * Resposta curta que só faz sentido dentro da conversa ("sim", "o preto", "quanto?", "pode ser amanhã"). Sozinha ela não
+ * tem palavra do conhecimento, mas com a conversa anterior à vista é continuação, não pergunta nova fora do assunto.
+ */
+export function isShortFollowUp(text: string) {
+  const t = normalize(text);
+  return t.length > 0 && t.length <= 40 && t.split(" ").length <= 6;
+}
+
 /** Alguma palavra relevante da pergunta aparece no conhecimento? Pergunta sem palavra relevante só passa se for papo social. */
 export function hasKnowledgeOverlap(query: string, corpus: string) {
   const words = keywords(query);

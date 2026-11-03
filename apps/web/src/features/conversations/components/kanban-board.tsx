@@ -13,6 +13,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { Button } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
 import {
   DropdownMenu,
@@ -231,15 +232,16 @@ function Card({
         </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
+            <Button
+              size="icon"
+              variant="ghost"
               disabled={!canMove}
               title={canMove ? undefined : NO_PERMISSION_HINT}
               aria-label={`Mover ${name} para…`}
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-hover disabled:opacity-50 max-md:size-11"
+              className="size-8 shrink-0 text-ink-2"
             >
               <Icon name="dots" size={16} />
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>Mover para…</DropdownMenuLabel>

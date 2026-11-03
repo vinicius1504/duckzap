@@ -42,14 +42,17 @@ export function EmptyState({
   title,
   description,
   action,
+  compact,
 }: {
   icon: IconName;
   title: string;
   description?: ReactNode;
   action?: ReactNode;
+  /** Versão enxuta para dentro de um cartão/painel que já tem outro conteúdo (lista curta, bloco do Início). */
+  compact?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+    <div className={cn("flex flex-col items-center gap-3 px-6 text-center", compact ? "py-6" : "py-14")}>
       <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-ink-2">
         <Icon name={icon} size={24} />
       </span>

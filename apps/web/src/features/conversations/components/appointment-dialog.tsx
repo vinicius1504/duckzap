@@ -5,7 +5,7 @@ import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogContent, DialogFooter } from "@duckzap/ui/components/dialog";
 import { Select } from "@duckzap/ui/components/form-controls";
 import { Input, Label } from "@duckzap/ui/components/input";
-import { Spinner } from "@duckzap/ui/components/feedback";
+import { Alert } from "@duckzap/ui/components/feedback";
 import { useState, useTransition, type FormEvent } from "react";
 import { scheduleAppointmentAction } from "../actions";
 import { addDays, dateInZone, zonedIso } from "./view-model";
@@ -61,7 +61,7 @@ export function AppointmentDialog({ open, onOpenChange, conversationId, contactN
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div>
             <Label htmlFor="apt-type">Tipo de atendimento</Label>
-            <Select id="apt-type" className="h-11" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
+            <Select id="apt-type" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               {lookups.appointmentTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} · {t.durationMinutes} min
@@ -81,7 +81,7 @@ export function AppointmentDialog({ open, onOpenChange, conversationId, contactN
           </div>
           <div>
             <Label htmlFor="apt-pro">Profissional</Label>
-            <Select id="apt-pro" className="h-11" value={professional} onChange={(e) => setProfessional(e.target.value)}>
+            <Select id="apt-pro" value={professional} onChange={(e) => setProfessional(e.target.value)}>
               {lookups.professionals.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -91,17 +91,14 @@ export function AppointmentDialog({ open, onOpenChange, conversationId, contactN
           </div>
           {type ? <p className="text-[13px] text-ink-2">Duração: {type.durationMinutes} min. O lembrete sai 24 h e 2 h antes.</p> : null}
           {error ? (
-            <p role="alert" className="text-[13px] font-semibold text-err">
+            <Alert tone="err" live>
               {error}
-            </p>
+            </Alert>
           ) : null}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Spinner size={16} /> : null}
-              Agendar
+              {pending ? "Agendando…" : "Agendar"}
             </Button>
           </DialogFooter>
         </form>

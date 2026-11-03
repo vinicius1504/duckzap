@@ -2,8 +2,8 @@
 
 import type { Channel } from "@duckzap/contracts/channels";
 import { Button, buttonVariants } from "@duckzap/ui/components/button";
+import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import Link from "next/link";
-import { ConfirmDialog } from "@/features/settings/components/confirm-dialog";
 import { deleteChannelAction, disconnectChannelAction, setDefaultChannelAction } from "../actions";
 import { ConnectDialog } from "./connect-dialog";
 
@@ -25,7 +25,7 @@ export function ChannelRowActions({ channel }: { channel: Channel }) {
       {canBeDefault ? (
         <ConfirmDialog
           trigger={
-            <Button size="sm" variant="ghost" aria-label={`Tornar padrão: ${channel.name}`}>
+            <Button size="sm" aria-label={`Tornar padrão: ${channel.name}`}>
               Tornar padrão
             </Button>
           }
@@ -38,13 +38,14 @@ export function ChannelRowActions({ channel }: { channel: Channel }) {
       {connected ? (
         <ConfirmDialog
           trigger={
-            <Button size="sm" aria-label={`Desconectar: ${channel.name}`}>
+            <Button size="sm" variant="danger-ghost" aria-label={`Desconectar: ${channel.name}`}>
               Desconectar
             </Button>
           }
           title={`Desconectar ${channel.name}?`}
           description="As mensagens deste canal deixam de chegar até você reconectar. Conversas e contatos continuam salvos."
           confirmLabel="Desconectar"
+          pendingLabel="Desconectando…"
           danger
           onConfirm={() => disconnectChannelAction(channel.id)}
         />
@@ -52,13 +53,14 @@ export function ChannelRowActions({ channel }: { channel: Channel }) {
       {!connected ? (
         <ConfirmDialog
           trigger={
-            <Button size="sm" variant="ghost" className="text-err" aria-label={`Excluir: ${channel.name}`}>
+            <Button size="sm" variant="danger-ghost" aria-label={`Excluir: ${channel.name}`}>
               Excluir
             </Button>
           }
           title={`Excluir ${channel.name}?`}
           description="O canal sai da lista e libera uma vaga do plano. As conversas continuam salvas. Novas mensagens sairão pelo número que você conectar depois."
-          confirmLabel="Excluir canal"
+          confirmLabel="Excluir"
+          pendingLabel="Excluindo…"
           danger
           onConfirm={() => deleteChannelAction(channel.id)}
         />

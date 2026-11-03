@@ -111,7 +111,7 @@ function Field({
       <label htmlFor={fieldId} className="mb-1.5 block text-[13px] font-semibold">
         {name}
       </label>
-      <Select id={fieldId} className="h-11" value={value} onChange={(e) => onChange(e.target.value)}>
+      <Select id={fieldId} value={value} onChange={(e) => onChange(e.target.value)}>
         {children}
       </Select>
     </div>

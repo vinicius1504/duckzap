@@ -1,6 +1,7 @@
 import { brand } from "@duckzap/brand";
 import { Icon } from "@duckzap/ui/components/icon";
 import { Logo } from "@duckzap/ui/components/logo";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -21,7 +22,7 @@ export default async function SignInPage() {
         </Link>
 
         <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center py-10">
-          <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Que bom te ver de novo</h1>
+          <h1 className={pageTitleClass}>Que bom te ver de novo</h1>
           <p className="mb-7 mt-1.5 text-ink-2">Entre para continuar seus atendimentos.</p>
 
           <Suspense>

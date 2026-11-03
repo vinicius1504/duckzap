@@ -2,9 +2,10 @@
 
 import { type AgentExample } from "@duckzap/contracts/agents";
 import { Button } from "@duckzap/ui/components/button";
+import { EmptyState } from "@duckzap/ui/components/feedback";
 import { Textarea } from "@duckzap/ui/components/form-controls";
 import { Icon } from "@duckzap/ui/components/icon";
-import { Label } from "@duckzap/ui/components/input";
+import { FieldError, Label } from "@duckzap/ui/components/input";
 import { useEffect, useRef, useState } from "react";
 import {
   MAX_AGENT_EXAMPLES,
@@ -86,7 +87,9 @@ export function ExamplesEditor({
       ) : null}
 
       {value.length === 0 ? (
-        <p className="rounded-control bg-surface-2 p-3 text-[13px] text-ink-2">Nenhum exemplo ainda. Adicione pelo menos alguns para o agente acertar o jeito de responder.</p>
+        <div className="rounded-control bg-surface-2">
+          <EmptyState compact icon="chat" title="Nenhum exemplo ainda" description="Adicione pelo menos alguns para o agente acertar o jeito de responder." />
+        </div>
       ) : (
         <ol className="flex flex-col gap-3">
           {value.map((example, index) => {
@@ -115,11 +118,7 @@ export function ExamplesEditor({
                           aria-describedby={invalid ? `${id}-count ${id}-error` : `${id}-count`}
                           onChange={(e) => onChange(updateExample(value, index, side, e.target.value))}
                         />
-                        {invalid ? (
-                          <p id={`${id}-error`} className="mt-1 text-[13px] font-semibold text-err">
-                            Preencha este lado ou remova o exemplo.
-                          </p>
-                        ) : null}
+                        {invalid ? <FieldError id={`${id}-error`} message="Preencha este lado ou remova o exemplo." /> : null}
                       </div>
                     );
                   })}
@@ -142,7 +141,7 @@ export function ExamplesEditor({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button id={`${idPrefix}-add`} className="max-md:h-11" disabled={disabled || full} onClick={add} aria-describedby={full ? `${idPrefix}-full` : undefined}>
+        <Button id={`${idPrefix}-add`} disabled={disabled || full} onClick={add} aria-describedby={full ? `${idPrefix}-full` : undefined}>
           <Icon name="plus" size={16} /> Adicionar exemplo
         </Button>
         <span className="text-[13px] text-ink-2">{examplesCountLabel(value.length)}</span>

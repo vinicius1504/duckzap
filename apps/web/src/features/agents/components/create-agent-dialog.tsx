@@ -1,7 +1,7 @@
 "use client";
 
 import { INSTAGRAM_JOBS, agentJobSchema, type AgentChannel, type AgentJob } from "@duckzap/contracts/agents";
-import { Button, buttonVariants } from "@duckzap/ui/components/button";
+import { Button } from "@duckzap/ui/components/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from "@duckzap/ui/components/dialog";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Checkbox, Radio } from "@duckzap/ui/components/form-controls";
@@ -48,15 +48,17 @@ export function CreateAgentDialog({
   if (limitReached) {
     return (
       <Button variant="primary" disabled title="Seu plano está no limite de agentes">
-        <Icon name="plus" size={18} /> Novo agente
+        <Icon name="plus" size={16} /> Novo agente
       </Button>
     );
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className={buttonVariants({ variant: "primary" })}>
-        <Icon name="plus" size={18} /> Novo agente
+      <DialogTrigger asChild>
+        <Button variant="primary">
+          <Icon name="plus" size={16} /> Novo agente
+        </Button>
       </DialogTrigger>
       <DialogContent title="Novo agente" description="Escolha o trabalho dele. Em seguida você conta sobre a empresa e a IA monta o perfil para você testar.">
         <form
@@ -113,7 +115,9 @@ export function CreateAgentDialog({
             </Alert>
           ) : null}
           <DialogFooter>
-            <DialogClose className={buttonVariants()}>Cancelar</DialogClose>
+            <DialogClose asChild>
+              <Button>Cancelar</Button>
+            </DialogClose>
             <Button type="submit" variant="primary" disabled={pending || !name.trim()}>
               {pending ? <Spinner size={16} /> : null} Criar agente
             </Button>

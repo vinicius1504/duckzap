@@ -9,7 +9,7 @@ import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
 import { Table, Td, Th } from "@duckzap/ui/components/table";
 import { cn } from "@duckzap/ui/cn";
 import { useState, useTransition } from "react";
-import { formatDate, formatMoney } from "@/lib/format";
+import { DATE_FORMATS, formatDate, formatMoney, formatPlural } from "@/lib/format";
 import { requestPlanChangeAction } from "../actions";
 
 const invoiceStatus: Record<Invoice["status"], { label: string; tone: ChipTone }> = {
@@ -22,7 +22,7 @@ const order: PlanSlug[] = ["basico", "pro", "empresarial"];
 
 function limitsText(plan: Plan) {
   const n = (value: number | null, one: string, many: string) =>
-    value === null ? `${many} ilimitados` : `${value} ${value === 1 ? one : many}`;
+    value === null ? `${many} ilimitados` : formatPlural(value, one, many);
   const parts = [n(plan.limits.channels, "canal", "canais"), n(plan.limits.users, "usuário", "usuários"), n(plan.limits.agents, "agente", "agentes")];
   const extras = [
     plan.features.includes("campaigns") && "Campanhas",
@@ -64,7 +64,7 @@ export function BillingPanel({ billing, timeZone }: { billing: Billing; timeZone
   return (
     <div className="flex flex-col gap-4">
       <Alert tone={billing.paymentOk ? "info" : "err"}>
-        Seu plano <strong>{current?.name}</strong> renova em {formatDate(billing.renewsAt, { day: "2-digit", month: "2-digit", year: "numeric" }, timeZone)} ·{" "}
+        Seu plano <strong>{current?.name}</strong> renova em {formatDate(billing.renewsAt, DATE_FORMATS.day, timeZone)} ·{" "}
         {billing.paymentOk ? "pagamento em dia." : "pagamento pendente: o envio de mensagens pode ser pausado."}
       </Alert>
       {notice ? (
@@ -80,7 +80,8 @@ export function BillingPanel({ billing, timeZone }: { billing: Billing; timeZone
           return (
             <Card
               key={plan.slug}
-              className={cn("flex flex-col gap-2 p-[22px]", isCurrent && "border-duck ring-2 ring-duck/50")}
+              padding="lg"
+              className={cn("flex flex-col gap-2", isCurrent && "border-duck ring-2 ring-duck/50")}
               aria-label={`Plano ${plan.name}${isCurrent ? " (seu plano)" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -136,7 +137,7 @@ export function BillingPanel({ billing, timeZone }: { billing: Billing; timeZone
               return (
                 <tr key={invoice.id}>
                   <Td>{periodLabel(invoice.period)}</Td>
-                  <Td>{formatDate(invoice.dueDate, { day: "2-digit", month: "2-digit", year: "numeric" }, timeZone)}</Td>
+                  <Td>{formatDate(invoice.dueDate, DATE_FORMATS.day, timeZone)}</Td>
                   <Td>{invoice.amountCents === null ? "R$ [VALOR]" : formatMoney(invoice.amountCents)}</Td>
                   <Td>
                     <Chip tone={status.tone}>{status.label}</Chip>

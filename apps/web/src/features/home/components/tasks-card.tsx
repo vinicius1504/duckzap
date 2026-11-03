@@ -1,10 +1,11 @@
 "use client";
 
 import type { HomeOverview, TaskPriority } from "@duckzap/contracts/home";
-import { buttonVariants } from "@duckzap/ui/components/button";
+import { Button } from "@duckzap/ui/components/button";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip, type ChipTone } from "@duckzap/ui/components/chip";
 import { Icon } from "@duckzap/ui/components/icon";
+import { FieldError } from "@duckzap/ui/components/input";
 import { cn } from "@duckzap/ui/cn";
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { createTaskAction, setTaskDoneAction } from "../actions";
@@ -44,7 +45,7 @@ export function TasksCard({ tasks }: { tasks: Task[] }) {
   }
 
   return (
-    <Card className="p-5">
+    <Card padding="md">
       <div className="flex items-center justify-between">
         <CardTitle>Minhas tarefas</CardTitle>
         <span className="text-[13px] text-ink-2">{open} abertas</span>
@@ -61,14 +62,12 @@ export function TasksCard({ tasks }: { tasks: Task[] }) {
           aria-describedby={error ? "nova-tarefa-erro" : undefined}
           className="h-10 min-w-0 flex-1 rounded-control border border-field bg-surface px-3"
         />
-        <button type="submit" aria-label="Adicionar tarefa" className={buttonVariants({ variant: "primary", size: "icon" })}>
-          <Icon name="plus" size={18} strokeWidth={2.2} />
-        </button>
+        <Button type="submit" variant="primary" size="icon" aria-label="Adicionar tarefa">
+          <Icon name="plus" size={16} strokeWidth={2.2} />
+        </Button>
       </form>
       {error ? (
-        <p id="nova-tarefa-erro" className="text-[13px] font-semibold text-err">
-          {error}
-        </p>
+        <FieldError id="nova-tarefa-erro" message={error} />
       ) : null}
       <ul>
         {optimistic.map((task) => (

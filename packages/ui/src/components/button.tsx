@@ -10,12 +10,17 @@ export const buttonVariants = cva(
         primary: "border-duck bg-duck text-on-duck hover:border-duck-2 hover:bg-duck-2",
         secondary: "border-line bg-surface text-ink hover:bg-surface-hover",
         ghost: "border-transparent bg-transparent text-ink hover:bg-surface-hover",
+        /** Ação destrutiva já confirmada (Excluir, Cancelar envio). Sempre atrás de uma confirmação. */
+        danger: "border-err bg-err text-bg hover:opacity-90",
+        /** Ação destrutiva leve, em linha de tabela/lista (Desconectar, Remover). */
+        "danger-ghost": "border-transparent bg-transparent text-err hover:bg-err-bg",
       },
       size: {
         sm: "h-8 rounded-lg px-3 text-[13px]",
-        md: "h-10 px-4",
+        // alvo de toque de 44 px no celular já vem de fábrica (não repita `max-md:h-11` por cima)
+        md: "h-10 px-4 max-md:h-11",
         lg: "h-11 px-[18px] font-bold",
-        icon: "size-10 p-0",
+        icon: "size-10 p-0 max-md:size-11",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },

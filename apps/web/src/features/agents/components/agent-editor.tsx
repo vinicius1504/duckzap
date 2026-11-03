@@ -2,7 +2,7 @@
 
 import type { Agent, AgentVersion, CopilotOverview, AgentConfig } from "@duckzap/contracts/agents";
 import { Button } from "@duckzap/ui/components/button";
-import { Card } from "@duckzap/ui/components/card";
+import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Dialog, DialogContent } from "@duckzap/ui/components/dialog";
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
@@ -220,8 +220,8 @@ export function AgentEditor({
           </Alert>
         ) : null}
 
-        <Card className="flex flex-col gap-0 p-5 max-sm:p-4">
-          <h2 className="mb-3 text-lg font-bold">Configuração do agente</h2>
+        <Card padding="md" className="flex flex-col gap-0 max-sm:p-4">
+          <CardTitle className="mb-3">Configuração do agente</CardTitle>
           <p role="status" aria-live="polite" className="sr-only">
             {generation.announcement}
           </p>
@@ -256,10 +256,10 @@ export function AgentEditor({
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <p className="text-[13px] text-ink-2">{dirty ? "Alterações não salvas" : `Versão ${agent.currentVersion} em uso`}</p>
             <div className="flex flex-wrap gap-2">
-              <Button disabled={!dirty || busy} className="max-md:h-11" onClick={discard}>
+              <Button disabled={!dirty || busy} onClick={discard}>
                 Cancelar alterações
               </Button>
-              <Button variant="primary" className="max-md:h-11" disabled={!dirty || busy} onClick={() => save(false)}>
+              <Button variant="primary" disabled={!dirty || busy} onClick={() => save(false)}>
                 {pending ? <Spinner size={16} /> : null} Salvar
               </Button>
             </div>
@@ -273,7 +273,7 @@ export function AgentEditor({
       </aside>
       <div className="fixed bottom-24 right-4 z-30 xl:hidden">
         <Button variant="primary" size="lg" className="shadow-lg" onClick={openSimulator}>
-          <Icon name="chat" size={18} /> Testar no simulador
+          <Icon name="chat" size={16} /> Testar no simulador
         </Button>
       </div>
       <Dialog open={simulatorOpen} onOpenChange={setSimulatorOpen}>

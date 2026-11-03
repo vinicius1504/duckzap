@@ -1,6 +1,7 @@
 import { roleLabels } from "@duckzap/contracts/permissions";
 import { buttonVariants } from "@duckzap/ui/components/button";
 import { Alert, EmptyState } from "@duckzap/ui/components/feedback";
+import { pageTitleClass } from "@duckzap/ui/components/layout";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSession } from "@/features/auth/session";
@@ -38,7 +39,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
 
   return (
     <AuthSplit>
-      <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">Você foi convidado</h1>
+      <h1 className={pageTitleClass}>Você foi convidado</h1>
       <p className="mb-2 mt-1.5 text-ink-2">
         <strong className="text-ink">{info.organizationName}</strong> convidou {info.name} para entrar como{" "}
         <strong className="text-ink">{roleLabels[info.role]}</strong>.
@@ -53,7 +54,7 @@ export default async function InvitePage({ params }: { params: Promise<{ id: str
             Você está logado como {session.user.email}, mas este convite é para {info.email}. Saia e entre com o e-mail do convite.
           </Alert>
           <Link href="/inicio" className={buttonVariants({ variant: "secondary", size: "lg" })}>
-            Voltar ao início
+            Voltar ao Início
           </Link>
         </div>
       ) : session ? (

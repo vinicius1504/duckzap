@@ -5,6 +5,7 @@ import { Button } from "@duckzap/ui/components/button";
 import { Chip } from "@duckzap/ui/components/chip";
 import { Spinner } from "@duckzap/ui/components/feedback";
 import { Icon } from "@duckzap/ui/components/icon";
+import { PageHeader } from "@duckzap/ui/components/layout";
 import Link from "next/link";
 import { agentStatusView, jobView } from "../labels";
 
@@ -41,43 +42,47 @@ export function AgentHeader({
   const active = agent.status === "active";
   return (
     <header className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="min-w-0 break-words text-[28px] font-extrabold tracking-[-0.02em] max-md:text-2xl">{name.trim() || agent.config.name}</h1>
-        <Chip tone={status.tone}>{status.label}</Chip>
-        <Chip>{jobView[agent.job].label}</Chip>
-        {agent.isDefault ? <Chip tone="info">Padrão</Chip> : null}
-        {agent.channels.length > 0 ? (
-          <span role="group" aria-label="Canais ligados" className="flex flex-wrap items-center gap-1.5">
-            {agent.channels.map((c) => (
-              <Chip key={c.id} tone="info">
-                {c.name}
-              </Chip>
-            ))}
-          </span>
-        ) : null}
-        {agent.teams.length > 0 ? (
-          <span role="group" aria-label="Equipes" className="flex flex-wrap items-center gap-1.5">
-            {agent.teams.map((team) => (
-              <Chip key={team}>Equipe {team}</Chip>
-            ))}
-          </span>
-        ) : null}
-        <Link href="/canais" className="text-xs font-semibold text-ink-2 underline underline-offset-2 hover:text-ink max-md:py-2">
-          {agent.channels.length > 0 ? "Mudar em Canais" : "Ligar a um canal em Canais"}
-        </Link>
-      </div>
+      <PageHeader
+        title={name.trim() || agent.config.name}
+        badges={
+          <>
+            <Chip tone={status.tone}>{status.label}</Chip>
+            <Chip>{jobView[agent.job].label}</Chip>
+            {agent.isDefault ? <Chip tone="info">Padrão</Chip> : null}
+            {agent.channels.length > 0 ? (
+              <span role="group" aria-label="Canais ligados" className="flex flex-wrap items-center gap-1.5">
+                {agent.channels.map((c) => (
+                  <Chip key={c.id} tone="info">
+                    {c.name}
+                  </Chip>
+                ))}
+              </span>
+            ) : null}
+            {agent.teams.length > 0 ? (
+              <span role="group" aria-label="Equipes" className="flex flex-wrap items-center gap-1.5">
+                {agent.teams.map((team) => (
+                  <Chip key={team}>Equipe {team}</Chip>
+                ))}
+              </span>
+            ) : null}
+            <Link href="/canais" className="text-xs font-semibold text-ink-2 underline underline-offset-2 hover:text-ink max-md:py-2">
+              {agent.channels.length > 0 ? "Mudar em Canais" : "Ligar a um canal em Canais"}
+            </Link>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         {active ? (
-          <Button className="max-md:h-11" disabled={busy} onClick={onPause}>
+          <Button disabled={busy} onClick={onPause}>
             <Icon name="pause" size={16} /> Pausar
           </Button>
         ) : (
-          <Button className="max-md:h-11" disabled={busy || Boolean(activationBlocked)} aria-describedby={activationBlocked ? "ag-activate-reason" : undefined} onClick={onSaveAndActivate}>
+          <Button disabled={busy || Boolean(activationBlocked)} aria-describedby={activationBlocked ? "ag-activate-reason" : undefined} onClick={onSaveAndActivate}>
             <Icon name="play" size={16} /> {dirty ? "Salvar e ativar" : "Ativar agente"}
           </Button>
         )}
-        <Button className="max-md:h-11" onClick={onOpenHistory}>
+        <Button onClick={onOpenHistory}>
           <Icon name="history" size={16} /> Histórico de versões
         </Button>
         <span className="flex-1" />
@@ -85,11 +90,11 @@ export function AgentHeader({
           {dirty ? "Alterações não salvas" : `Versão ${agent.currentVersion} em uso`}
         </span>
         {dirty ? (
-          <Button variant="ghost" className="max-md:h-11" disabled={busy} onClick={onDiscard}>
-            Descartar
+          <Button disabled={busy} onClick={onDiscard}>
+            Cancelar alterações
           </Button>
         ) : null}
-        <Button variant="primary" className="max-md:h-11" disabled={!dirty || busy} onClick={onSave}>
+        <Button variant="primary" disabled={!dirty || busy} onClick={onSave}>
           {busy ? <Spinner size={16} /> : null} Salvar
         </Button>
       </div>
