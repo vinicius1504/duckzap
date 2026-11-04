@@ -1,4 +1,4 @@
-import { CATALOG_FULL, CATALOG_LIMITS, PRODUCT_NAME_TAKEN, type Product, type ProductImage, type ProductInput, type ProductList } from "@duckzap/contracts/catalog";
+import { CATALOG_FULL, CATALOG_LIMITS, PRODUCT_FROM_WHATSAPP, PRODUCT_NAME_TAKEN, type Product, type ProductImage, type ProductInput, type ProductList } from "@duckzap/contracts/catalog";
 import { schema, type Transaction } from "@duckzap/db";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { isGuid } from "../contacts/http";
@@ -63,6 +63,7 @@ function toProduct(row: ProductRow, images: ProductImage[]): Product {
     description: row.description,
     priceCents: row.priceCents,
     available: row.available,
+    source: row.source,
     images,
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -101,7 +102,7 @@ export async function getProduct(tx: Transaction, ctx: CatalogCtx, id: string, r
 
 // ── cadastro ────────────────────────────────────────────────────────────────
 
-type SaveError = "name_taken" | "catalog_full" | "not_found";
+type SaveError = "name_taken" | "catalog_full" | "not_found" | "read_only";
 
 async function nameTaken(tx: Transaction, organizationId: string, name: string, exceptId?: string): Promise<boolean> {
   const rows = await tx
@@ -143,6 +144,7 @@ export async function createProduct(tx: Transaction, ctx: CatalogCtx, input: Pro
 export async function updateProduct(tx: Transaction, ctx: CatalogCtx, id: string, input: ProductInputData, rt: MediaRuntime = getMediaRuntime()): Promise<Result<Product, SaveError>> {
   const current = await findRow(tx, ctx.organizationId, id, true);
   if (!current) return fail("not_found", NOT_FOUND);
+  if (current.source === "whatsapp") return fail("read_only", PRODUCT_FROM_WHATSAPP);
   if (await nameTaken(tx, ctx.organizationId, input.name, id)) return fail("name_taken", PRODUCT_NAME_TAKEN);
   try {
     await tx.transaction(async (sp) => {
@@ -202,7 +204,7 @@ async function dropFiles(tx: Transaction, organizationId: string, files: { id: s
 
 // ── fotos ───────────────────────────────────────────────────────────────────
 
-type ImageError = "not_found" | "invalid_media" | "too_many_images";
+type ImageError = "not_found" | "invalid_media" | "too_many_images" | "read_only";
 
 /**
  * Liga ao produto uma foto enviada pelo fluxo normal de mídia. Mesmas regras de `claimForSend`: da empresa, enviada por
@@ -211,6 +213,7 @@ type ImageError = "not_found" | "invalid_media" | "too_many_images";
 export async function attachImage(tx: Transaction, ctx: CatalogCtx, productId: string, mediaId: string, rt: MediaRuntime = getMediaRuntime()): Promise<Result<Product, ImageError>> {
   const product = await findRow(tx, ctx.organizationId, productId, true);
   if (!product) return fail("not_found", NOT_FOUND);
+  if (product.source === "whatsapp") return fail("read_only", PRODUCT_FROM_WHATSAPP);
   const invalid = (message: string) => fail("invalid_media", message);
   if (!isGuid(mediaId)) return invalid("Arquivo não encontrado. Envie a foto de novo.");
   const [media] = await tx
@@ -245,8 +248,9 @@ export async function attachImage(tx: Transaction, ctx: CatalogCtx, productId: s
 }
 
 /** Remove a foto (linha e arquivo) e fecha o buraco: a de menor posição vira a capa (0). */
-export async function removeImage(tx: Transaction, ctx: CatalogCtx, productId: string, imageId: string, rt: MediaRuntime = getMediaRuntime()): Promise<Result<Product, "not_found">> {
+export async function removeImage(tx: Transaction, ctx: CatalogCtx, productId: string, imageId: string, rt: MediaRuntime = getMediaRuntime()): Promise<Result<Product, "not_found" | "read_only">> {
   const product = await findRow(tx, ctx.organizationId, productId, true);
+  if (product?.source === "whatsapp") return fail("read_only", PRODUCT_FROM_WHATSAPP);
   if (!product || !isGuid(imageId)) return fail("not_found", product ? "Foto não encontrada." : NOT_FOUND);
   const [image] = await tx
     .select({ id: productImages.id, mediaId: productImages.mediaId, storageKey: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey })

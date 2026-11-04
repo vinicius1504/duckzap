@@ -185,6 +185,20 @@ export type ProviderContact = {
   name: string | null;
 };
 
+/** Produto do catálogo do WhatsApp Business (já normalizado pelo provedor). `imageUrls` são links assinados que expiram. */
+export type ProviderCatalogProduct = {
+  externalId: string;
+  name: string;
+  description: string;
+  /** Centavos; null = sem preço informado. */
+  priceCents: number | null;
+  available: boolean;
+  imageUrls: string[];
+};
+
+/** `isBusiness: false`: o número não é do WhatsApp Business (ou não tem catálogo) — `products` vem vazio. */
+export type ProviderCatalog = { isBusiness: boolean; products: ProviderCatalogProduct[] };
+
 export interface MessagingProvider {
   readonly kind: ProviderKind;
   capabilities(): ProviderCapabilities;
@@ -213,6 +227,11 @@ export interface MessagingProvider {
    * Falha de rede/recusa lança `ProviderError`; nomes e números são dado pessoal e nunca vão para log.
    */
   listContacts?(channel: ChannelRef): Promise<ProviderContact[]>;
+  /**
+   * Opcional: catálogo do WhatsApp Business do número conectado (SOMENTE leitura; o provedor não cria nem edita produto).
+   * Falha de rede/recusa lança `ProviderError`; nome, descrição e preço são dado da empresa e não vão para log.
+   */
+  listCatalog?(channel: ChannelRef): Promise<ProviderCatalog>;
   /**
    * Opcional (capacidade `downloadMedia`): baixa a mídia de uma mensagem RECEBIDA. `externalId` é o `mediaRef` do evento.
    * Passa de `maxBytes` ou falha de rede/recusa: lança `ProviderError`. O conteúdo é do cliente e nunca vai para log.

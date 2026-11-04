@@ -11,6 +11,8 @@ import {
   type MessagingProvider,
   type OutboundMessage,
   type OutboundPresence,
+  type ProviderCatalog,
+  type ProviderCatalogProduct,
   type ProviderContact,
   type ProviderCapabilities,
   type SendResult,
@@ -279,6 +281,38 @@ export class EvolutionProvider implements MessagingProvider {
     return raw.map(classifyEvolutionContact);
   }
 
+  // --- catálogo do WhatsApp Business ----------------------------------------------------------------------
+
+  /**
+   * `POST /business/getCatalog/{instância}` com `{ limit }` (Evolution 2.3.x; SOMENTE leitura — não há rota para criar, editar ou
+   * enviar produto). A Evolution busca até 5 páginas de `limit` produtos. Número que não é do WhatsApp Business (ou erro dentro da
+   * Evolution) volta com `isBusiness: false` e sem `catalog`.
+   */
+  async listCatalog(channel: ChannelRef): Promise<ProviderCatalog> {
+    const { response, body } = await this.call(`/business/getCatalog/${encodeURIComponent(this.name(channel))}`, {
+      method: "POST",
+      key: this.instanceKey(channel),
+      body: { limit: CATALOG_PAGE_SIZE },
+      timeoutMs: CONTACTS_TIMEOUT_MS,
+    });
+    if (response.status === 401 || response.status === 403 || response.status === 404) {
+      throw new ProviderError("invalid_credentials", "O número está desconectado.");
+    }
+    if (!response.ok) {
+      throw new ProviderError(response.status === 429 || response.status >= 500 ? "unavailable" : "rejected", "O provedor não devolveu o catálogo.");
+    }
+    if (body.isBusiness !== true || !Array.isArray(body.catalog)) return { isBusiness: false, products: [] };
+    const products: ProviderCatalogProduct[] = [];
+    const seen = new Set<string>();
+    for (const item of body.catalog) {
+      const product = classifyEvolutionProduct(item);
+      if (!product || seen.has(product.externalId)) continue;
+      seen.add(product.externalId);
+      products.push(product);
+    }
+    return { isBusiness: true, products };
+  }
+
   // --- envio --------------------------------------------------------------------------------------------
 
   async send(channel: ChannelRef, message: OutboundMessage): Promise<SendResult> {
@@ -429,6 +463,46 @@ function mapEvolutionState(state: string | undefined): ConnectionStatus {
     default:
       return "disconnected";
   }
+}
+
+/** Produtos por página pedida ao WhatsApp (a Evolution junta até 5 páginas: ~100 produtos). */
+const CATALOG_PAGE_SIZE = 20;
+/** Fotos de um produto do WhatsApp que a gente considera (o catálogo do sistema aceita 3). */
+const CATALOG_MAX_IMAGES = 3;
+const MAX_PRICE_CENTS = 1_000_000_000;
+
+/**
+ * Item de `getCatalog` (produto do Baileys) → produto canônico, ou null se não tiver id/nome. Nunca lança. O preço do WhatsApp vem
+ * em milésimos da moeda (`10000` = R$ 10,00), por isso `/ 10` para centavos; moeda diferente de BRL ou preço zero = sem preço
+ * (a IA não cita valor). Escondido ou "out of stock" = indisponível. Sem logs (dado da empresa).
+ */
+export function classifyEvolutionProduct(item: unknown): ProviderCatalogProduct | null {
+  const record = asRecord(item);
+  const externalId = asString(record.id)?.trim();
+  const name = asString(record.name)?.trim();
+  if (!externalId || !name) return null;
+
+  const amount = typeof record.price === "string" ? Number(record.price) : record.price;
+  const currency = asString(record.currency)?.toUpperCase();
+  const cents = typeof amount === "number" && Number.isFinite(amount) && amount > 0 ? Math.round(amount / 10) : 0;
+  const priceCents = cents > 0 && cents <= MAX_PRICE_CENTS && (!currency || currency === "BRL") ? cents : null;
+
+  const urls = asRecord(record.imageUrls);
+  const imageUrls: string[] = [];
+  for (const candidate of [urls.requested, urls.original, ...Object.values(urls)]) {
+    const url = asString(candidate);
+    if (url && /^https:\/\//i.test(url) && !imageUrls.includes(url)) imageUrls.push(url);
+  }
+
+  const outOfStock = asString(record.availability)?.toLowerCase() === "out of stock";
+  return {
+    externalId,
+    name,
+    description: asString(record.description)?.trim() ?? "",
+    priceCents,
+    available: record.isHidden !== true && !outOfStock,
+    imageUrls: imageUrls.slice(0, CATALOG_MAX_IMAGES),
+  };
 }
 
 /** Nome vazio ou só com dígitos e símbolos de telefone não é um nome útil (o WhatsApp usa o próprio número). */

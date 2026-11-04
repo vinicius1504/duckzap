@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 // Catálogo de produtos (V1): cadastro manual feito pela empresa; a IA consulta, manda foto e deixa o interesse de compra
-// como nota interna. Modelos diferentes (tamanho, cor) são produtos separados. Sem importação nem estoque numérico.
+// como nota interna. Modelos diferentes (tamanho, cor) são produtos separados. Sem importação de planilha nem estoque numérico;
+// o catálogo do WhatsApp Business pode ser lido e copiado para cá (veja o fim do arquivo).
 
 export const CATALOG_LIMITS = {
   /** Produtos por empresa (controla o custo de contexto da IA). */
@@ -23,6 +24,11 @@ export const productImageSchema = z.object({
 });
 export type ProductImage = z.infer<typeof productImageSchema>;
 
+/** `system`: cadastrado no sistema. `whatsapp`: copiado do catálogo do WhatsApp Business (somente leitura aqui, só liga/desliga a oferta). */
+export const PRODUCT_SOURCES = ["system", "whatsapp"] as const;
+export const productSourceSchema = z.enum(PRODUCT_SOURCES);
+export type ProductSource = z.infer<typeof productSourceSchema>;
+
 export const productSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -30,6 +36,7 @@ export const productSchema = z.object({
   /** Em centavos. null = "sob consulta" (a IA não cita valor). */
   priceCents: z.number().int().min(0).nullable(),
   available: z.boolean(),
+  source: productSourceSchema,
   images: z.array(productImageSchema),
   updatedAt: z.iso.datetime(),
 });
@@ -62,7 +69,65 @@ export type ProductImageAttach = z.infer<typeof productImageAttachSchema>;
 /** Troca só a disponibilidade (o interruptor da lista). */
 export const productAvailabilitySchema = z.object({ available: z.boolean() });
 
-export const PRODUCT_NAME_TAKEN = "Já existe um produto com esse nome. Use um nome diferente (ex.: inclua tamanho ou cor).";
+// ── catálogo do WhatsApp Business (somente leitura + importação) ───────────────────────────────────────────────
+// A Evolution só LÊ o catálogo (não cria nem edita produto lá): quem cadastra é o app WhatsApp Business no celular.
+
+/** Produto como está no catálogo do WhatsApp Business do canal. `imageUrl` é o link assinado do WhatsApp (expira): serve para mostrar, não para guardar. */
+export const whatsappCatalogProductSchema = z.object({
+  externalId: z.string(),
+  name: z.string(),
+  description: z.string(),
+  priceCents: z.number().int().min(0).nullable(),
+  available: z.boolean(),
+  imageUrl: z.string().nullable(),
+  imageCount: z.number().int().min(0),
+  /** Id do produto do sistema quando já foi importado; null = ainda não importado. */
+  productId: z.string().nullable(),
+});
+export type WhatsappCatalogProduct = z.infer<typeof whatsappCatalogProductSchema>;
+
+export const whatsappCatalogChannelSchema = z.object({ id: z.string(), name: z.string(), address: z.string().nullable() });
+export type WhatsappCatalogChannel = z.infer<typeof whatsappCatalogChannelSchema>;
+
+/**
+ * `ok`: catálogo lido (pode estar vazio). `no_channel`: nenhum WhatsApp por QR Code na empresa. `channel_disconnected`: o canal
+ * escolhido está desconectado. `not_business`: o número não é do WhatsApp Business (não existe catálogo). `unavailable`: a
+ * Evolution não respondeu agora.
+ */
+export const WHATSAPP_CATALOG_STATES = ["ok", "no_channel", "channel_disconnected", "not_business", "unavailable"] as const;
+export const whatsappCatalogSchema = z.object({
+  state: z.enum(WHATSAPP_CATALOG_STATES),
+  /** WhatsApps por QR Code da empresa (para escolher quando há mais de um). */
+  channels: z.array(whatsappCatalogChannelSchema),
+  channelId: z.string().nullable(),
+  products: z.array(whatsappCatalogProductSchema),
+});
+export type WhatsappCatalog = z.infer<typeof whatsappCatalogSchema>;
+
+export const WHATSAPP_IMPORT_MAX = 100;
+
+/** Importa os produtos marcados (`externalIds`) ou todos (`all`: também desliga os já importados que saíram do catálogo). */
+export const whatsappImportSchema = z
+  .object({
+    channelId: z.string().trim().min(1).max(100),
+    externalIds: z.array(z.string().trim().min(1).max(200)).min(1, "Marque ao menos um produto.").max(WHATSAPP_IMPORT_MAX).optional(),
+    all: z.boolean().optional(),
+  })
+  .refine((v) => (v.all === true) !== (v.externalIds !== undefined), { message: "Escolha os produtos ou importe todos." });
+export type WhatsappImportInput = z.infer<typeof whatsappImportSchema>;
+
+export const whatsappImportResultSchema = z.object({
+  created: z.number().int(),
+  updated: z.number().int(),
+  /** Já importados que saíram do catálogo do WhatsApp e foram desligados (só em `all`). */
+  turnedOff: z.number().int(),
+  skipped: z.array(z.object({ externalId: z.string(), name: z.string(), reason: z.string() })),
+});
+export type WhatsappImportResult = z.infer<typeof whatsappImportResultSchema>;
+
+export const PRODUCT_FROM_WHATSAPP = "Este produto veio do WhatsApp Business. Edite no app do WhatsApp Business e atualize aqui.";
+
+export const PRODUCT_NAME_TAKEN ="Já existe um produto com esse nome. Use um nome diferente (ex.: inclua tamanho ou cor).";
 export const CATALOG_FULL = `O catálogo chegou ao limite de ${CATALOG_LIMITS.maxProducts} produtos. Exclua algum para cadastrar outro.`;
 
 /** "R$ 59,90" (pt-BR). Mesmo formato que a IA usa para falar o valor, então o guardrail de preço o reconhece. */

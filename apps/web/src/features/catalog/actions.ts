@@ -1,6 +1,15 @@
 "use server";
 
-import { productAvailabilitySchema, productInputSchema, type Product, type ProductInput } from "@duckzap/contracts/catalog";
+import {
+  productAvailabilitySchema,
+  productInputSchema,
+  whatsappImportSchema,
+  type Product,
+  type ProductInput,
+  type WhatsappCatalog,
+  type WhatsappImportInput,
+  type WhatsappImportResult,
+} from "@duckzap/contracts/catalog";
 import { mediaUploadInitSchema, type MediaReady, type MediaUploadInitResult } from "@duckzap/contracts/media";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -64,6 +73,29 @@ export async function removeImageAction(productId: string, imageId: string): Pro
   const auth = await authorize("catalog.manage");
   if ("error" in auth) return auth;
   const result = await api.removeProductImage(id.parse(productId), id.parse(imageId));
+  if (!result.ok) return { error: result.message };
+  revalidatePath(PATH);
+  return { ok: true, data: result.data };
+}
+
+// Catálogo do WhatsApp Business: só lê e importa (a Evolution não cadastra nem edita produto lá).
+
+export async function loadWhatsappCatalogAction(channelId?: string): Promise<ActionResult<WhatsappCatalog>> {
+  const auth = await authorize("catalog.manage");
+  if ("error" in auth) return auth;
+  const parsed = id.optional().safeParse(channelId || undefined);
+  if (!parsed.success) return { error: "Número inválido. Atualize a página." };
+  const result = await api.getWhatsappCatalog(parsed.data);
+  if (!result.ok) return { error: result.message };
+  return { ok: true, data: result.data };
+}
+
+export async function importWhatsappAction(input: WhatsappImportInput): Promise<ActionResult<WhatsappImportResult>> {
+  const auth = await authorize("catalog.manage");
+  if ("error" in auth) return auth;
+  const parsed = whatsappImportSchema.safeParse(input);
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const result = await api.importWhatsappProducts(parsed.data);
   if (!result.ok) return { error: result.message };
   revalidatePath(PATH);
   return { ok: true, data: result.data };

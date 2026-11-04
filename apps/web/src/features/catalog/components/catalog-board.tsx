@@ -1,6 +1,6 @@
 "use client";
 
-import { CATALOG_LIMITS, formatPriceBRL, type Product } from "@duckzap/contracts/catalog";
+import { CATALOG_LIMITS, PRODUCT_FROM_WHATSAPP, formatPriceBRL, type Product } from "@duckzap/contracts/catalog";
 import { Button } from "@duckzap/ui/components/button";
 import { Card } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
@@ -11,13 +11,18 @@ import { Input } from "@duckzap/ui/components/input";
 import { PageHeader } from "@duckzap/ui/components/layout";
 import { Switch } from "@duckzap/ui/components/switch";
 import { useRouter } from "next/navigation";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { UrlTabs } from "@/features/campaigns/components/url-tabs";
 import { formatPlural } from "@/lib/format";
 import { deleteProductAction, setAvailabilityAction } from "../actions";
 import { ProductFormDialog } from "./product-form-dialog";
+import { WhatsappCatalogPanel } from "./whatsapp-catalog-panel";
 
 /** Acima disto a busca por nome aparece (lista curta não precisa dela). */
 const SEARCH_FROM = 8;
+
+const TABS = ["sistema", "whatsapp"] as const;
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -31,6 +36,7 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
   /** Interruptor otimista: vale até a lista nova chegar do servidor (ou voltar atrás se a ação falhar). */
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
+  const [tab] = useQueryState("aba", parseAsStringLiteral(TABS).withDefault("sistema"));
 
   useEffect(() => setAvailability({}), [products]);
 
@@ -73,21 +79,9 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
     return { ok: true } as const;
   }
 
-  return (
+  const systemContent = (
     <>
-      <PageHeader
-        title="Catálogo"
-        description="A IA usa estes produtos para responder, mandar foto e deixar o interesse de compra para a equipe."
-        actions={
-          canManage ? (
-            <Button variant="primary" onClick={openNew} disabled={full} title={full ? `Limite de ${limit} produtos` : undefined}>
-              <Icon name="plus" size={16} />
-              Novo produto
-            </Button>
-          ) : undefined
-        }
-      />
-
+      {canManage ? <p className="text-[13px] text-ink-2">Quer cadastrar no WhatsApp Business? Faça pelo app no celular e importe na aba WhatsApp Business.</p> : null}
       <div className="flex flex-wrap items-center gap-3">
         <Chip tone={full ? "warn" : "neutral"} aria-live="polite">
           {products.length} de {formatPlural(limit, "produto", "produtos")}
@@ -150,14 +144,18 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate font-bold" title={product.name}>
-                        {product.name}
-                      </h2>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h2 className="truncate font-bold" title={product.name}>
+                          {product.name}
+                        </h2>
+                        {product.source === "whatsapp" ? <Chip tone="info" className="shrink-0">WhatsApp</Chip> : null}
+                      </div>
                       <p className="font-semibold">{product.priceCents === null ? <span className="text-ink-2">Sob consulta</span> : formatPriceBRL(product.priceCents)}</p>
                       {product.images.length > 1 ? <p className="text-xs text-ink-2">{product.images.length} fotos</p> : null}
                     </div>
                   </div>
                   {product.description ? <p className="line-clamp-3 text-[13px] text-ink-2">{product.description}</p> : <p className="text-[13px] italic text-ink-2">Sem descrição.</p>}
+                  {product.source === "whatsapp" ? <p className="text-xs text-ink-2">{PRODUCT_FROM_WHATSAPP}</p> : null}
                   <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-line pt-3">
                     {canManage ? (
                       <label className="flex min-h-10 cursor-pointer items-center gap-2 text-[13px] font-semibold">
@@ -169,9 +167,11 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
                     )}
                     {canManage ? (
                       <div className="ml-auto flex gap-1.5">
-                        <Button size="icon" variant="ghost" className="size-9" onClick={() => openEdit(product)} aria-label={`Editar ${product.name}`}>
-                          <Icon name="edit" size={16} />
-                        </Button>
+                        {product.source === "system" ? (
+                          <Button size="icon" variant="ghost" className="size-9" onClick={() => openEdit(product)} aria-label={`Editar ${product.name}`}>
+                            <Icon name="edit" size={16} />
+                          </Button>
+                        ) : null}
                         <Button size="icon" variant="danger-ghost" className="size-9" onClick={() => setDeleting(product)} aria-label={`Excluir ${product.name}`}>
                           <Icon name="trash" size={16} />
                         </Button>
@@ -183,6 +183,36 @@ export function CatalogBoard({ products, limit, canManage }: { products: Product
             );
           })}
         </ul>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <PageHeader
+        title="Catálogo"
+        description="A IA usa estes produtos para responder, mandar foto e deixar o interesse de compra para a equipe."
+        actions={
+          canManage && tab === "sistema" ? (
+            <Button variant="primary" onClick={openNew} disabled={full} title={full ? `Limite de ${limit} produtos` : undefined}>
+              <Icon name="plus" size={16} />
+              Novo produto
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {canManage ? (
+        <UrlTabs
+          label="Origem dos produtos"
+          defaultValue="sistema"
+          tabs={[
+            { value: "sistema", label: "Sistema", content: <div className="flex flex-col gap-4">{systemContent}</div> },
+            { value: "whatsapp", label: "WhatsApp Business", content: <WhatsappCatalogPanel /> },
+          ]}
+        />
+      ) : (
+        <div className="flex flex-col gap-4">{systemContent}</div>
       )}
 
       {canManage ? <ProductFormDialog open={formOpen} onOpenChange={setFormOpen} product={editing} /> : null}

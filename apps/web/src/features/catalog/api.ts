@@ -1,5 +1,16 @@
 import "server-only";
-import { productListSchema, productSchema, type Product, type ProductInput, type ProductList } from "@duckzap/contracts/catalog";
+import {
+  productListSchema,
+  productSchema,
+  whatsappCatalogSchema,
+  whatsappImportResultSchema,
+  type Product,
+  type ProductInput,
+  type ProductList,
+  type WhatsappCatalog,
+  type WhatsappImportInput,
+  type WhatsappImportResult,
+} from "@duckzap/contracts/catalog";
 import { z } from "zod";
 import { get, readOrThrow, send, toResult, type CommonError } from "@/lib/api-result";
 import { type Result } from "@/lib/mock";
@@ -13,6 +24,14 @@ const enc = encodeURIComponent;
 const deletedSchema = z.object({ ok: z.literal(true) });
 
 export type SaveProductError = "name_taken" | "catalog_full" | "not_found" | CommonError;
+export type WhatsappCatalogError = CommonError | "rate_limited";
+export type WhatsappImportError =
+  | "channel_not_found"
+  | "channel_disconnected"
+  | "not_business"
+  | "provider_unavailable"
+  | "rate_limited"
+  | CommonError;
 export type ImageError = "too_many_images" | "not_found" | "invalid_media" | CommonError;
 
 export async function listProducts(): Promise<ProductList> {
@@ -42,4 +61,21 @@ export async function attachProductImage(id: string, mediaId: string): Promise<R
 
 export async function removeProductImage(id: string, imageId: string): Promise<Result<Product, "not_found" | CommonError>> {
   return toResult(await send("DELETE", `/v1/catalog/products/${enc(id)}/images/${enc(imageId)}`), productSchema, ["not_found"] as const);
+}
+
+/** Catálogo do WhatsApp Business do canal (só lê; `channelId` vazio = o primeiro WhatsApp por QR Code). Limite de 10 chamadas por minuto. */
+export async function getWhatsappCatalog(channelId?: string): Promise<Result<WhatsappCatalog, WhatsappCatalogError>> {
+  const query = channelId ? `?channelId=${enc(channelId)}` : "";
+  return toResult(await get(`/v1/catalog/whatsapp${query}`), whatsappCatalogSchema, ["rate_limited"] as const);
+}
+
+/** Copia produtos do catálogo do WhatsApp para o do sistema (os marcados ou todos). */
+export async function importWhatsappProducts(input: WhatsappImportInput): Promise<Result<WhatsappImportResult, WhatsappImportError>> {
+  return toResult(await send("POST", "/v1/catalog/whatsapp/import", input), whatsappImportResultSchema, [
+    "channel_not_found",
+    "channel_disconnected",
+    "not_business",
+    "provider_unavailable",
+    "rate_limited",
+  ] as const);
 }
