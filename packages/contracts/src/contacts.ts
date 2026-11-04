@@ -61,8 +61,10 @@ export const contactSchema = z.object({
   birthDate: z.iso.date().nullable(),
   createdAt: z.iso.datetime(),
   lastInteractionAt: z.iso.datetime().nullable(),
+  /** Foto de perfil do WhatsApp: URL assinada CURTA do armazenamento, ou null (sem foto/sem suporte). Opcional para clientes antigos. */
+  avatarUrl: z.string().nullable().optional(),
 });
-export type Contact = z.infer<typeof contactSchema>;
+export type Contact =z.infer<typeof contactSchema>;
 
 export const tagColorSchema = z.enum(["ink", "duck", "slate", "ok", "info", "warn", "err"]);
 export type TagColor = z.infer<typeof tagColorSchema>;

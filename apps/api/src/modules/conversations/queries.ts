@@ -20,7 +20,7 @@ import { effectiveConsentStatus } from "../contacts/consent";
 import { ensureDefaultTags } from "../contacts/service";
 import { isGuid } from "../contacts/http";
 import { newId, type ServiceCtx } from "../contacts/result";
-import { signMessageMedia, type SignedMedia } from "../media/service";
+import { signContactAvatars, signMessageMedia, type SignedMedia } from "../media/service";
 import { OPEN_STATUSES, isVisibleTo, lastMessageKindOf, likePattern, type Viewer } from "./logic";
 
 const { conversations, messages, contacts, contactTags, tags, channels, teams, teamMembers, agents, agentVersions, member, user, memberProfiles, quickReplies } = schema;
@@ -124,12 +124,12 @@ export const modeOf = (row: Pick<ConversationRow, "mode">) => conversationModeSc
 
 // ── mapeamento linha → contrato ─────────────────────────────────────────────
 
-type ContactBrief = { id: string; name: string; phone: string | null; instagram: string | null };
+type ContactBrief = { id: string; name: string; phone: string | null; instagram: string | null; avatarMediaId: string | null };
 
-function toSummary(row: ConversationRow, contact: ContactBrief, info: ContactTagInfo | undefined, defaultStageId: string): ConversationSummary {
+function toSummary(row: ConversationRow, contact: ContactBrief, info: ContactTagInfo | undefined, defaultStageId: string, avatarUrl: string | null): ConversationSummary {
   return {
     id: row.id,
-    contact: { id: contact.id, name: contact.name, phone: contact.phone, handle: contact.instagram },
+    contact: { id: contact.id, name: contact.name, phone: contact.phone, handle: contact.instagram, avatarUrl },
     channelId: row.channelId,
     teamId: row.teamId,
     assigneeId: row.assigneeId,
@@ -199,10 +199,12 @@ export function toMessage(row: MessageRow, contactName: string, signed?: SignedM
 async function summariesFor(tx: Transaction, ctx: ServiceCtx, rows: { c: ConversationRow; contact: ContactBrief }[]): Promise<ConversationSummary[]> {
   const info = await contactTagInfo(tx, [...new Set(rows.map((r) => r.contact.id))]);
   const stage1 = firstStageTag(await loadTags(tx, ctx));
-  return rows.map((r) => toSummary(r.c, r.contact, info.get(r.contact.id), stage1?.id ?? ""));
+  // foto de perfil (URL assinada curta): só de quem já está na lista que a pessoa pode ver
+  const avatars = await signContactAvatars(tx, ctx.organizationId, rows.map((r) => ({ contactId: r.contact.id, avatarMediaId: r.contact.avatarMediaId })));
+  return rows.map((r) => toSummary(r.c, r.contact, info.get(r.contact.id), stage1?.id ?? "", avatars.get(r.contact.id) ?? null));
 }
 
-const contactBrief = { id: contacts.id, name: contacts.name, phone: contacts.phone, instagram: contacts.instagram };
+const contactBrief = { id: contacts.id, name: contacts.name, phone: contacts.phone, instagram: contacts.instagram, avatarMediaId: contacts.avatarMediaId };
 
 export async function listConversations(tx: Transaction, ctx: ConvCtx, filters: InboxFilters): Promise<ConversationList> {
   const viewer = await loadViewer(tx, ctx);
@@ -347,11 +349,13 @@ async function contactProfile(tx: Transaction, ctx: ServiceCtx, contact: Contact
     .where(eq(schema.contactEvents.contactId, contact.id))
     .orderBy(desc(schema.contactEvents.createdAt))
     .limit(MAX_HISTORY_ITEMS);
+  const avatars = await signContactAvatars(tx, ctx.organizationId, [{ contactId: contact.id, avatarMediaId: contact.avatarMediaId }]);
   return {
     id: contact.id,
     name: contact.name,
     phone: contact.phone,
     handle: contact.instagram,
+    avatarUrl: avatars.get(contact.id) ?? null,
     email: contact.email && z.email().safeParse(contact.email).success ? contact.email : null,
     isCustomer: contact.isCustomer,
     consent: consent ? effectiveConsentStatus(consent, now) : "pending",

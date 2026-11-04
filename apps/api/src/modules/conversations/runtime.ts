@@ -1,6 +1,8 @@
 import type { Deps } from "../../lib/context";
 import { registerInboundHandler } from "../../lib/inbound";
 import { registerPresenceHandler } from "../../lib/presence";
+import { getChannelsRuntime } from "../channels/runtime";
+import { createAvatarPort, type AvatarPort } from "../contacts/avatar";
 import { createInboundMediaPort, type InboundMediaPort } from "../media/inbound";
 import { loadAgentsConfig } from "../agents/config";
 import { createAiRateLimiters, runDueAiTurn, type AiDeps, type AiLimiters } from "./ai-turn";
@@ -8,12 +10,18 @@ import { loadConversationsConfig, type ConversationsConfig } from "./config";
 import { registerConversationErasure } from "./erasure";
 import { handleInbound, type InboundDeps } from "./inbound";
 import { handleContactPresence } from "./presence";
+import { createNumberCheckLimiter, type NumberCheckChannels, type NumberCheckDeps } from "./number-check";
+import { createReadReceiptLimiter, type ReadReceiptChannels, type ReadReceiptDeps } from "./read-receipts";
 
 export type ConversationsRuntime = {
   config: ConversationsConfig;
   inbound: InboundDeps;
   ai: AiDeps;
   limiters: AiLimiters;
+  /** Visto azul no WhatsApp do cliente (equipe abriu a conversa / IA respondeu). */
+  readReceipts: ReadReceiptDeps;
+  /** Confere "tem WhatsApp?" antes de abrir uma conversa nova com o contato. */
+  numberCheck: NumberCheckDeps;
 };
 
 export type RuntimeOverrides = {
@@ -23,6 +31,10 @@ export type RuntimeOverrides = {
   scheduleAiTurn?: InboundDeps["scheduleAiTurn"];
   /** Substitui o download da mídia recebida (testes). Padrão: provedor do canal + armazenamento configurado. */
   media?: InboundMediaPort;
+  /** Substitui o runtime de canais usado para marcar como lida (testes injetam um provedor falso). Padrão: o do processo. */
+  channels?: () => ReadReceiptChannels & NumberCheckChannels;
+  /** Substitui a busca da foto de perfil (testes). Padrão: provedor do canal + armazenamento configurado, em segundo plano. */
+  avatars?: AvatarPort;
   /** `false` nos testes: não registra o handler global nem a varredura. */
   register?: boolean;
 };
@@ -36,7 +48,9 @@ export function createConversationsRuntime(deps: Pick<Deps, "db" | "llm">, overr
   const config = overrides.config ?? loadConversationsConfig();
   const limiters = createAiRateLimiters(config);
   const now = overrides.now ?? (() => new Date());
-  const ai: AiDeps = { db: deps.db, llm: deps.llm, config, urlAllowlist: loadAgentsConfig().AGENTS_URL_ALLOWLIST, now, log };
+  const readReceipts: ReadReceiptDeps = { db: deps.db, channels: overrides.channels ?? getChannelsRuntime, limiter: createReadReceiptLimiter() };
+  const numberCheck: NumberCheckDeps = { db: deps.db, channels: overrides.channels ?? getChannelsRuntime, limiter: createNumberCheckLimiter() };
+  const ai: AiDeps = { db: deps.db, llm: deps.llm, config, urlAllowlist: loadAgentsConfig().AGENTS_URL_ALLOWLIST, now, log, readReceipts };
   const scheduleAiTurn: InboundDeps["scheduleAiTurn"] =
     overrides.scheduleAiTurn ??
     ((organizationId, conversationId, delayMs) => {
@@ -50,7 +64,7 @@ export function createConversationsRuntime(deps: Pick<Deps, "db" | "llm">, overr
     });
   // turno adiado por falha passageira do provedor de IA: mesmo temporizador (o prazo gravado em ai_due_at é a fonte da verdade)
   ai.scheduleRetry = scheduleAiTurn;
-  return { config, limiters, ai, inbound: { db: deps.db, config, scheduleAiTurn, media: overrides.media ?? createInboundMediaPort(), now, log } };
+  return { config, limiters, ai, readReceipts, numberCheck, inbound: { db: deps.db, config, scheduleAiTurn, media: overrides.media ?? createInboundMediaPort(), avatars: overrides.avatars ?? createAvatarPort({ db: deps.db, now }), now, log } };
 }
 
 // Um único handler no processo, sempre apontando para o runtime mais recente (várias instâncias do app em teste

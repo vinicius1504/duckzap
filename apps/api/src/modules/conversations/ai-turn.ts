@@ -29,6 +29,7 @@ import type { ConversationsConfig } from "./config";
 import { businessHoursFor } from "./inbound";
 import { aiTextFor, toAiHours, trailingAgentCount } from "./logic";
 import { addEvent, auditState, deliverOutbound } from "./outbound";
+import { markInboundAsReadInBackground, type ReadReceiptDeps } from "./read-receipts";
 import { findVisibleConversation, loadActiveAgent, loadTags, type ActiveAgent, type ConvCtx, type ConversationRow } from "./queries";
 
 const { conversations, messages, contacts, aiUsageLog, conversationSuggestions, copilotFeedback, organization, conversationAiEvents, appointmentTypes } = schema;
@@ -44,6 +45,8 @@ export type AiDeps = {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Reagenda (temporizador do processo) um turno adiado; a varredura de `ai_due_at` cobre reinício/queda. */
   scheduleRetry?: (organizationId: string, conversationId: string, delayMs: number) => void;
+  /** Visto azul no WhatsApp do cliente quando a IA responde; ausente = não marca. */
+  readReceipts?: ReadReceiptDeps;
   log: { warn(message: string, meta?: Record<string, unknown>): void; error(message: string, meta?: Record<string, unknown>): void };
 };
 
@@ -409,6 +412,8 @@ export async function runDueAiTurn(deps: AiDeps, limiters: AiLimiters, organizat
   }
   // depois do commit: temporizador do processo para o turno adiado (a varredura de `ai_due_at` cobre queda/reinício)
   if (report.retryInMs !== undefined) deps.scheduleRetry?.(organizationId, conversationId, report.retryInMs);
+  // a IA respondeu: o cliente passa a ver o "visto" nas mensagens dele (melhor esforço, fora da transação do turno)
+  if (report.mode === "live" && report.sent > 0 && deps.readReceipts) markInboundAsReadInBackground(deps.readReceipts, organizationId, conversationId);
   return report;
 }
 

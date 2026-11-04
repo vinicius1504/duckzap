@@ -19,7 +19,7 @@ import {
 import { makeThumbnail, thumbnailKeyFor } from "../../lib/thumbnail";
 import { getMediaRuntime, type MediaRuntime } from "./runtime";
 
-const { mediaFiles, messages, conversations, productImages } = schema;
+const { mediaFiles, messages, conversations, productImages, contacts } = schema;
 
 export type MediaFileRow = typeof mediaFiles.$inferSelect;
 export type MediaCtx = { organizationId: string; userId: string; sendingPaused: boolean };
@@ -165,7 +165,7 @@ const DELETED_RECORD_DAYS = 7;
 /**
  * Sem job novo: a cada envio da empresa apaga um lote de sobras. Órfãos: `uploading` há mais de 1 h; `ready` que nunca foi
  * para uma mensagem (recebido há mais de 1 h; enviado há mais de 24 h); e registros `deleted` sem mensagem com mais de 7
- * dias. Fotos de produto (`product_images`) ficam de fora. Nunca falha o pedido que a chamou.
+ * dias. Fotos de produto (`product_images`) e fotos de perfil de contato (`contacts.avatar_media_id`) ficam de fora. Nunca falha o pedido que a chamou.
  */
 export async function cleanupOrphans(tx: Transaction, organizationId: string, rt: MediaRuntime = getMediaRuntime(), now = rt.now()): Promise<number> {
   if (!rt.storage) return 0;
@@ -181,6 +181,8 @@ export async function cleanupOrphans(tx: Transaction, organizationId: string, rt
           eq(mediaFiles.organizationId, organizationId),
           // foto de produto do catálogo nunca é órfã: enquanto `product_images` a referencia, ninguém a apaga
           notExists(tx.select({ one: sql`1` }).from(productImages).where(eq(productImages.mediaId, mediaFiles.id))),
+          // idem a foto de perfil de um contato: não pertence a mensagem nenhuma, mas está em uso enquanto o contato a referencia
+          notExists(tx.select({ one: sql`1` }).from(contacts).where(eq(contacts.avatarMediaId, mediaFiles.id))),
           or(
             and(eq(mediaFiles.status, "uploading"), lt(mediaFiles.createdAt, hour)),
             and(eq(mediaFiles.status, "ready"), isNull(mediaFiles.messageId), or(and(eq(mediaFiles.direction, "in"), lt(mediaFiles.createdAt, hour)), and(eq(mediaFiles.direction, "out"), lt(mediaFiles.createdAt, day)))),
@@ -281,10 +283,41 @@ export async function signMessageMedia(tx: Transaction, organizationId: string, 
   return out;
 }
 
+/**
+ * `contactId → URL assinada curta` da foto de perfil dos contatos (uma consulta só). Só devolve quem tem foto pronta; sem
+ * armazenamento, arquivo apagado ou falha ao assinar o contato simplesmente não entra no mapa (a tela mostra as iniciais).
+ * Chame apenas para contatos que a pessoa já pode ver. A foto é dado pessoal: a URL nunca vai para log.
+ */
+export async function signContactAvatars(
+  tx: Transaction,
+  organizationId: string,
+  contactsWithAvatar: readonly { contactId: string; avatarMediaId: string | null }[],
+  rt: MediaRuntime = getMediaRuntime(),
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const wanted = contactsWithAvatar.flatMap((c) => (c.avatarMediaId ? [{ contactId: c.contactId, mediaId: c.avatarMediaId }] : []));
+  if (wanted.length === 0 || !rt.storage) return out;
+  const rows = await tx
+    .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey })
+    .from(mediaFiles)
+    .where(and(eq(mediaFiles.organizationId, organizationId), eq(mediaFiles.status, "ready"), inArray(mediaFiles.id, [...new Set(wanted.map((w) => w.mediaId))])));
+  const keyOf = new Map(rows.map((r) => [r.id, r.storageKey]));
+  for (const { contactId, mediaId } of wanted) {
+    const key = keyOf.get(mediaId);
+    if (!key) continue;
+    try {
+      out.set(contactId, await rt.storage.presignGet(key, { expiresInSeconds: READ_URL_SECONDS, contentType: "image/webp" }));
+    } catch {
+      rt.log.warn("media.avatar_sign_failed", { organizationId });
+    }
+  }
+  return out;
+}
+
 // ── LGPD ────────────────────────────────────────────────────────────────────
 
 /**
- * Apaga objetos e registros dos arquivos das conversas dos contatos (exclusão do titular). Roda ANTES de o contato sumir, na
+ * Apaga objetos e registros dos arquivos das conversas dos contatos e da foto de perfil deles (exclusão do titular). Roda ANTES de o contato sumir, na
  * mesma transação: se o armazenamento recusar o apagamento a exclusão inteira falha (nada fica pela metade).
  * Sem armazenamento configurado e com arquivos guardados: falha também (configure ou limpe por prefixo; ver runbook).
  */
@@ -296,12 +329,19 @@ export async function eraseMediaForContacts(tx: Transaction, organizationId: str
     .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey, status: mediaFiles.status })
     .from(mediaFiles)
     .where(and(eq(mediaFiles.organizationId, organizationId), inArray(mediaFiles.messageId, msgIds)));
-  if (rows.length === 0) return 0;
-  const keys = rows.filter((r) => r.status !== "deleted").flatMap(objectKeys);
+  // a foto de perfil do WhatsApp também é dado do titular (não está em mensagem nenhuma: o contato a referencia)
+  const avatars = await tx
+    .select({ id: mediaFiles.id, storageKey: mediaFiles.storageKey, thumbKey: mediaFiles.thumbKey, status: mediaFiles.status })
+    .from(contacts)
+    .innerJoin(mediaFiles, eq(mediaFiles.id, contacts.avatarMediaId))
+    .where(and(eq(contacts.organizationId, organizationId), inArray(contacts.id, contactIds)));
+  const all = [...rows, ...avatars];
+  if (all.length === 0) return 0;
+  const keys = all.filter((r) => r.status !== "deleted").flatMap(objectKeys);
   if (keys.length > 0) {
     if (!rt.storage) throw new Error("Não foi possível apagar os arquivos das conversas: o armazenamento de mídia não está configurado.");
     await rt.storage.deleteMany(keys);
   }
-  await tx.delete(mediaFiles).where(inArray(mediaFiles.id, rows.map((r) => r.id)));
-  return rows.length;
+  await tx.delete(mediaFiles).where(inArray(mediaFiles.id, all.map((r) => r.id)));
+  return all.length;
 }

@@ -91,6 +91,11 @@ export const conversationContactSchema = z.object({
   phone: z.string().nullable(),
   /** Instagram: "lucas.prado" (sem @). */
   handle: z.string().nullable(),
+  /**
+   * Foto de perfil do WhatsApp: URL assinada CURTA (minutos) do armazenamento, ou null (sem foto, privada, canal sem suporte ou
+   * armazenamento indisponível: a tela mostra as iniciais). Opcional para não quebrar clientes antigos.
+   */
+  avatarUrl: z.string().nullable().optional(),
 });
 export type ConversationContact = z.infer<typeof conversationContactSchema>;
 

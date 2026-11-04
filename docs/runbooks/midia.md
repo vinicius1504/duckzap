@@ -31,7 +31,7 @@ O script lê `MEDIA_STORAGE_*` e `DATABASE_URL` do `apps/api/.env`. Faça isto d
 
 ## 3. Exclusão de um contato (LGPD)
 
-Já é automática: excluir o contato apaga as mensagens e TAMBÉM os objetos e registros `media_files` das conversas dele, na mesma transação. Se o bucket estiver fora do ar a exclusão falha inteira (erro 500): tente de novo quando o armazenamento voltar. Se o armazenamento foi desconfigurado e ainda há arquivos, a exclusão também falha: reconfigure as variáveis ou limpe o prefixo da empresa antes.
+Já é automática: excluir o contato apaga as mensagens e TAMBÉM os objetos e registros `media_files` das conversas dele E a foto de perfil do WhatsApp dele (`contacts.avatar_media_id`), na mesma transação. Se o bucket estiver fora do ar a exclusão falha inteira (erro 500): tente de novo quando o armazenamento voltar. Se o armazenamento foi desconfigurado e ainda há arquivos, a exclusão também falha: reconfigure as variáveis ou limpe o prefixo da empresa antes.
 
 ## 4. Sobras do dia a dia
 

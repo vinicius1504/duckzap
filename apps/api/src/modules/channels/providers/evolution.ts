@@ -1,4 +1,5 @@
 import {
+  CHECK_NUMBERS_MAX,
   MAX_PRESENCE_MS,
   MAX_TYPING_MS,
   ProviderError,
@@ -15,6 +16,7 @@ import {
   type ProviderCatalogProduct,
   type ProviderContact,
   type ProviderCapabilities,
+  type ProviderNumberCheck,
   type SendResult,
 } from "../../../lib/messaging";
 import {
@@ -35,6 +37,8 @@ export const EVOLUTION_WEBHOOK_HEADER = "x-duckzap-key";
 
 /** A lista de contatos tem milhares de itens: prazo maior que o das outras chamadas (20 s). */
 const CONTACTS_TIMEOUT_MS = 60_000;
+/** Mensagens marcadas como lidas por chamada (as mais recentes do cliente bastam: ler uma marca as anteriores). */
+const MARK_READ_MAX = 20;
 
 const WEBHOOK_EVENTS = ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"];
 /** Evento extra pedido quando a presença está ligada (`PRESENCE_ENABLED`): o contato digitando/gravando. */
@@ -311,6 +315,76 @@ export class EvolutionProvider implements MessagingProvider {
       products.push(product);
     }
     return { isBusiness: true, products };
+  }
+
+  // --- ações sobre a conversa ---------------------------------------------------------------------------
+
+  /** Lança o `ProviderError` certo para uma resposta que não foi 2xx. 401/403 = número desconectado. */
+  private failure(response: Response, refused: string): never {
+    if (response.status === 401 || response.status === 403) throw new ProviderError("invalid_credentials", "O número está desconectado.");
+    throw new ProviderError(response.status === 429 || response.status >= 500 ? "unavailable" : "rejected", refused);
+  }
+
+  /**
+   * `POST /chat/markMessageAsRead/{instância}` com `{ readMessages: [{ remoteJid, fromMe: false, id }] }`: o cliente passa a ver o
+   * "visto" azul. Só mensagens RECEBIDAS fazem sentido (`fromMe: false`).
+   */
+  async markAsRead(channel: ChannelRef, input: { to: string; messageIds: string[] }): Promise<void> {
+    const number = toDigits(input.to);
+    const ids = [...new Set(input.messageIds)].slice(0, MARK_READ_MAX);
+    if (number.length < 8 || ids.length === 0) return;
+    const { response } = await this.call(`/chat/markMessageAsRead/${encodeURIComponent(this.name(channel))}`, {
+      method: "POST",
+      key: this.instanceKey(channel),
+      body: { readMessages: ids.map((id) => ({ remoteJid: `${number}@s.whatsapp.net`, fromMe: false, id })) },
+    });
+    if (!response.ok) this.failure(response, "O provedor não marcou como lida.");
+  }
+
+  // --- contato ------------------------------------------------------------------------------------------
+
+  /**
+   * `POST /chat/fetchProfilePictureUrl/{instância}` com `{ number }` → `{ wuid, profilePictureUrl }`. Sem foto (ou foto privada)
+   * a Evolution responde 200 com `profilePictureUrl: null`; se o número nem existir no WhatsApp ela responde 400/404 — para o
+   * chamador isso também é "sem foto". Só aceita URL https devolvida; o link expira.
+   */
+  async fetchProfilePicture(channel: ChannelRef, input: { to: string }): Promise<string | null> {
+    const number = toDigits(input.to);
+    if (number.length < 8) return null;
+    const { response, body } = await this.call(`/chat/fetchProfilePictureUrl/${encodeURIComponent(this.name(channel))}`, {
+      method: "POST",
+      key: this.instanceKey(channel),
+      body: { number },
+    });
+    if (response.status === 400 || response.status === 404) return null;
+    if (!response.ok) this.failure(response, "O provedor não devolveu a foto.");
+    const url = asString(body.profilePictureUrl);
+    return url?.startsWith("https://") ? url : null;
+  }
+
+  /**
+   * `POST /chat/whatsappNumbers/{instância}` com `{ numbers }` → `[{ exists, jid, number }]` (um item por número pedido, na ordem
+   * em que a Evolution devolver; ela pode devolver o `number` já corrigido, por isso casamos pelo que voltou).
+   */
+  async checkNumbers(channel: ChannelRef, input: { numbers: string[] }): Promise<ProviderNumberCheck[]> {
+    const numbers = [...new Set(input.numbers.map(toDigits).filter((n) => n.length >= 8))].slice(0, CHECK_NUMBERS_MAX);
+    if (numbers.length === 0) return [];
+    const { response, raw } = await this.call(`/chat/whatsappNumbers/${encodeURIComponent(this.name(channel))}`, {
+      method: "POST",
+      key: this.instanceKey(channel),
+      body: { numbers },
+      timeoutMs: CONTACTS_TIMEOUT_MS,
+    });
+    if (!response.ok) this.failure(response, "O provedor não conferiu os números.");
+    if (!Array.isArray(raw)) throw new ProviderError("unavailable", "O provedor devolveu uma resposta inesperada.");
+    const out: ProviderNumberCheck[] = [];
+    for (const item of raw) {
+      const record = asRecord(item);
+      const number = toDigits(asString(record.number) ?? asString(record.jid)?.split("@")[0] ?? "");
+      if (!number) continue;
+      out.push({ number, exists: record.exists === true, jid: record.exists === true ? (asString(record.jid) ?? null) : null });
+    }
+    return out;
   }
 
   // --- envio --------------------------------------------------------------------------------------------

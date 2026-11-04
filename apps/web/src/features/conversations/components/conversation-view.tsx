@@ -148,7 +148,7 @@ export function ConversationView({ detail, lookups, permissions, viewer, sending
             <Icon name="arrowLeft" size={16} />
           </Link>
           <div className="flex min-w-0 flex-[1_1_160px] items-center gap-3">
-            <Avatar name={contact.name} />
+            <Avatar name={contact.name} src={contact.avatarUrl} />
             <span className="min-w-0">
               <h2 className="truncate text-base font-bold">{name}</h2>
               <p className="truncate text-[13px] text-ink-2">

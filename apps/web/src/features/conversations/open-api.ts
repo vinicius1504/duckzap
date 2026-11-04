@@ -8,13 +8,13 @@ import type { Result } from "@/lib/mock";
 
 const openedSchema = z.object({ conversationId: z.string().min(1) });
 
-export type OpenConversationError = "no_channel" | "not_found" | "in_service" | "sending_paused";
+export type OpenConversationError = "no_channel" | "no_whatsapp" | "not_found" | "in_service" | "sending_paused";
 
 export async function openConversation(contactId: string): Promise<Result<{ conversationId: string }, OpenConversationError>> {
   return callApi("/v1/conversations/open", openedSchema, {
     method: "POST",
     body: { contactId },
-    errors: ["no_channel", "not_found", "in_service", "sending_paused"] as const,
+    errors: ["no_channel", "no_whatsapp", "not_found", "in_service", "sending_paused"] as const,
     fallback: "not_found",
   });
 }

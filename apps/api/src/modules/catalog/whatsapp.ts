@@ -14,6 +14,7 @@ import { ProviderError, type ChannelRef, type MessagingProvider, type ProviderCa
 import { readCredentials } from "../channels/repo";
 import { fail, newId, ok, type Result } from "../contacts/result";
 import { MAX_INBOUND_BYTES, SIGNATURE_BYTES, hasSignature, resolveInboundType, storageKeyFor } from "../media/logic";
+import { createImageFetcher, isAllowedImageUrl, type ImageFetcher } from "../media/remote-image";
 import { getMediaRuntime, type MediaRuntime } from "../media/runtime";
 import { storeThumbnail } from "../media/service";
 import type { CatalogCtx } from "./service";
@@ -32,54 +33,10 @@ export type WhatsappCatalogDeps = {
   log: { warn(message: string, meta?: Record<string, unknown>): void };
 };
 
-/** Baixa uma foto do catálogo do WhatsApp. null = não deu (host não permitido, grande demais, falha de rede). Nunca lança. */
-export type ImageFetcher = (url: string) => Promise<{ bytes: Buffer; contentType: string | undefined } | null>;
+// o download seguro de imagem de link do provedor é compartilhado (foto de perfil do contato usa o mesmo); estes nomes continuam aqui
+export { createImageFetcher, isAllowedImageUrl, type ImageFetcher };
 
 type ChannelRow = typeof channels.$inferSelect;
-
-const IMAGE_TIMEOUT_MS = 10_000;
-/** Foto de produto no catálogo do WhatsApp é pequena; acima disso não vale guardar. */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-/** Só os servidores de mídia do próprio WhatsApp/Meta (o link vem do provedor; nunca buscamos um endereço qualquer). */
-const ALLOWED_IMAGE_HOSTS = [".whatsapp.net", ".whatsapp.com", ".fbcdn.net", ".cdninstagram.com"] as const;
-
-export function isAllowedImageUrl(raw: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
-  const host = url.hostname.toLowerCase();
-  return ALLOWED_IMAGE_HOSTS.some((suffix) => host.endsWith(suffix));
-}
-
-/** Fetcher padrão: só hosts do WhatsApp, sem seguir redirecionamento, com prazo e teto de tamanho (lido aos poucos). */
-export function createImageFetcher(fetchImpl: typeof fetch = fetch): ImageFetcher {
-  return async (url) => {
-    if (!isAllowedImageUrl(url)) return null;
-    try {
-      const response = await fetchImpl(url, { redirect: "error", signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) });
-      if (!response.ok || !response.body) return null;
-      const declared = Number(response.headers.get("content-length"));
-      if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
-        await response.body.cancel().catch(() => {});
-        return null;
-      }
-      const chunks: Buffer[] = [];
-      let total = 0;
-      for await (const part of response.body as unknown as AsyncIterable<Uint8Array>) {
-        total += part.byteLength;
-        if (total > MAX_IMAGE_BYTES) return null;
-        chunks.push(Buffer.from(part));
-      }
-      return { bytes: Buffer.concat(chunks), contentType: response.headers.get("content-type") ?? undefined };
-    } catch {
-      return null;
-    }
-  };
-}
 
 // ── canal e leitura ─────────────────────────────────────────────────────────
 

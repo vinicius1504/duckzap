@@ -21,6 +21,7 @@ import {
 import { schema, type Transaction } from "@duckzap/db";
 import { and, asc, count, desc, eq, inArray, max, sql, type SQL } from "drizzle-orm";
 import type { z } from "zod";
+import { signContactAvatars } from "../media/service";
 import { effectiveConsentStatus, inviteCutoff, interpretConsentReply, nextConsentStatus, type ReplyIntent } from "./consent";
 import { buildContactCondition, buildListCondition, parseFilter } from "./filter";
 import { normalizePhone } from "./phone";
@@ -51,7 +52,7 @@ export function consentToDto(row: ConsentRow | null | undefined, now: Date): Con
   };
 }
 
-export function contactToDto(row: ContactRow, extra: { tagIds: string[]; listIds: string[]; consent: Consent | null }): Contact {
+export function contactToDto(row: ContactRow, extra: { tagIds: string[]; listIds: string[]; consent: Consent | null; avatarUrl?: string | null }): Contact {
   return {
     id: row.id,
     name: row.name,
@@ -69,6 +70,7 @@ export function contactToDto(row: ContactRow, extra: { tagIds: string[]; listIds
     birthDate: row.birthDate,
     createdAt: row.createdAt.toISOString(),
     lastInteractionAt: row.lastInteractionAt?.toISOString() ?? null,
+    avatarUrl: extra.avatarUrl ?? null,
   };
 }
 
@@ -97,7 +99,13 @@ async function loadContact(tx: Transaction, ctx: ServiceCtx, id: string, now: Da
     .limit(1);
   if (!row) return null;
   const rel = await relationsFor(tx, [id]);
-  return contactToDto(row.contact, { tagIds: rel.tagIds.get(id) ?? [], listIds: rel.listIds.get(id) ?? [], consent: consentToDto(row.consent, now) });
+  const avatars = await signContactAvatars(tx, ctx.organizationId, [{ contactId: id, avatarMediaId: row.contact.avatarMediaId }]);
+  return contactToDto(row.contact, {
+    tagIds: rel.tagIds.get(id) ?? [],
+    listIds: rel.listIds.get(id) ?? [],
+    consent: consentToDto(row.consent, now),
+    avatarUrl: avatars.get(id) ?? null,
+  });
 }
 
 export async function recordContactEvent(
@@ -182,12 +190,14 @@ export async function listContacts(tx: Transaction, ctx: ServiceCtx, query: Cont
     tx,
     rows.map((r) => r.contact.id),
   );
+  const avatars = await signContactAvatars(tx, ctx.organizationId, rows.map((r) => ({ contactId: r.contact.id, avatarMediaId: r.contact.avatarMediaId })));
   return {
     items: rows.map((r) =>
       contactToDto(r.contact, {
         tagIds: rel.tagIds.get(r.contact.id) ?? [],
         listIds: rel.listIds.get(r.contact.id) ?? [],
         consent: consentToDto(r.consent, now),
+        avatarUrl: avatars.get(r.contact.id) ?? null,
       }),
     ),
     total,

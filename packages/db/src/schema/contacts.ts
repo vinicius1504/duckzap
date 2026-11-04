@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
@@ -17,6 +18,7 @@ import {
 import { organizationId, tenantPolicy } from "./_tenant";
 import { user } from "./auth";
 import { channels } from "./channels";
+import { mediaFiles } from "./media";
 
 // Módulo Clientes (CRM). Ids: UUID v7 gerado pela aplicação (não há default no banco). Datas: timestamptz.
 // Busca por nome/telefone/e-mail usa pg_trgm (extensão já criada em docker/postgres/init).
@@ -43,6 +45,14 @@ export const contacts = pgTable(
     customFields: jsonb().$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
     /** Atualizado por Conversas a cada mensagem (ver `touchContactInteraction`). */
     lastInteractionAt: timestamp({ withTimezone: true }),
+    /**
+     * Foto de perfil do WhatsApp (DADO PESSOAL): aponta para um `media_files` com a miniatura WebP que NÓS guardamos (o link do
+     * provedor expira). Apagar o arquivo solta o vínculo (SET NULL); apagar o contato apaga o arquivo (LGPD: `eraseMediaForContacts`).
+     */
+    // `AnyPgColumn`: contacts → media_files → messages → conversations → contacts é um ciclo, e sem a anotação o TypeScript perde os tipos
+    avatarMediaId: uuid().references((): AnyPgColumn => mediaFiles.id, { onDelete: "set null" }),
+    /** Última TENTATIVA de buscar a foto (com ou sem sucesso): no máximo uma por contato a cada 7 dias. null = nunca tentou. */
+    avatarCheckedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: createdAt(),
   },
@@ -50,6 +60,8 @@ export const contacts = pgTable(
     unique("contacts_org_phone_unique").on(t.organizationId, t.phone),
     index("contacts_org_created_idx").on(t.organizationId, t.createdAt),
     index("contacts_org_owner_idx").on(t.organizationId, t.ownerId),
+    // o SET NULL de media_files procura por aqui; sem o índice, cada arquivo apagado varreria a tabela inteira
+    index("contacts_avatar_media_idx").on(t.avatarMediaId).where(sql`${t.avatarMediaId} is not null`),
     index("contacts_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
     index("contacts_phone_trgm_idx").using("gin", t.phone.op("gin_trgm_ops")),
     index("contacts_email_trgm_idx").using("gin", t.email.op("gin_trgm_ops")),

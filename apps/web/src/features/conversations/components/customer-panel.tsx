@@ -81,7 +81,7 @@ export function CustomerPanel({ conversation, contact, lookups, canEdit, canSche
   return (
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-col items-center gap-1 text-center">
-        <Avatar name={contact.name} size="lg" />
+        <Avatar name={contact.name} src={contact.avatarUrl} size="lg" />
         <strong className="mt-1.5 text-lg">{contact.name}</strong>
         {contact.handle ? <span className="text-ink-2">@{contact.handle} · Instagram</span> : null}
         {contact.phone ? <span className="text-ink-2">{formatPhone(contact.phone)}</span> : null}

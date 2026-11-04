@@ -24,3 +24,25 @@ export async function makeThumbnail(bytes: Buffer): Promise<Buffer | null> {
     return null;
   }
 }
+
+/** Lado (px) da foto de perfil guardada: o maior avatar da tela tem 56 px; 192 cobre telas 3x. */
+export const AVATAR_SIZE = 192;
+
+/**
+ * Foto de perfil pronta para guardar: quadrada (recorte central), WebP pequeno, na orientação certa e SEM metadados (EXIF pode
+ * trazer localização). Ao contrário de `makeThumbnail` ela é a ÚNICA cópia guardada, então aqui imagem ilegível = null e quem
+ * chama recusa a foto (é assim que o "tipo real" é conferido: só o que o decodificador abre passa).
+ */
+export async function makeAvatar(bytes: Buffer): Promise<Buffer | null> {
+  try {
+    const { default: sharp } = await import("sharp");
+    return await sharp(bytes, { failOn: "error", limitInputPixels: MAX_INPUT_PIXELS })
+      .rotate()
+      .resize({ width: AVATAR_SIZE, height: AVATAR_SIZE, fit: "cover", position: "centre" })
+      .flatten({ background: "#ffffff" })
+      .webp({ quality: 75 })
+      .toBuffer();
+  } catch {
+    return null;
+  }
+}

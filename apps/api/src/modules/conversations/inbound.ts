@@ -11,6 +11,7 @@ import { applyReminderReply } from "../appointments/service";
 import { interpretReminderReply } from "../appointments/logic";
 import { isSendingPausedForOrg } from "../channels/sending";
 import { findChannel, type ChannelRow } from "../channels/repo";
+import type { AvatarPort } from "../contacts/avatar";
 import { effectiveConsentStatus } from "../contacts/consent";
 import type { InboundMediaPort, PreparedInboundMedia } from "../media/inbound";
 import { linkToMessage } from "../media/service";
@@ -43,6 +44,8 @@ export type InboundDeps = {
   scheduleAiTurn(organizationId: string, conversationId: string, delayMs: number): void;
   /** Baixa e guarda a mídia recebida (imagem/áudio/documento) antes de gravar a mensagem. Sem isto a mídia entra "indisponível". */
   media?: InboundMediaPort;
+  /** Busca a foto de perfil do contato em segundo plano depois de gravar a mensagem. Melhor esforço: nunca atrasa nem derruba a mensagem. */
+  avatars?: AvatarPort;
   /** Espera antes de tratar uma mensagem enviada pela nossa conta (ver `SELF_ECHO_GRACE_MS`). Testes passam 0. */
   selfEchoGraceMs?: number;
   now(): Date;
@@ -661,6 +664,16 @@ async function storeSelfMessage(deps: InboundDeps, context: InboundContext, even
 export async function handleInbound(deps: InboundDeps, context: InboundContext) {
   const { event } = context;
   if (event.type === "status") await applyStatusEvent(deps, context, event);
-  else if (event.type === "message") await (event.fromMe ? handleSelfMessage(deps, context, event) : handleMessage(deps, context, event));
+  else if (event.type === "message") {
+    const outcome = await (event.fromMe ? handleSelfMessage(deps, context, event) : handleMessage(deps, context, event));
+    // depois do commit: foto de perfil (no máximo uma consulta a cada 7 dias por contato; ver contacts/avatar.ts)
+    if (outcome.kind === "stored") {
+      try {
+        deps.avatars?.request({ organizationId: context.organizationId, channelId: context.channelId, conversationId: outcome.conversationId });
+      } catch {
+        // a foto é enfeite: nada dela pode derrubar uma mensagem já gravada
+      }
+    }
+  }
 }
 

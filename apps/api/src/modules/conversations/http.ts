@@ -25,6 +25,7 @@ const STATUS: Record<string, 400 | 403 | 404 | 409 | 422 | 429 | 502 | 503> = {
   not_failed: 409,
   channel_down: 409,
   no_channel: 409,
+  no_whatsapp: 422,
   in_service: 409,
   no_follow_up: 409,
   sending_paused: 403,

@@ -30,6 +30,9 @@ export const MAX_TYPING_MS = 8_000;
 /** Teto (ms) de uma presença avulsa (`sendPresence`): o atendente digitando renova a cada poucos segundos. */
 export const MAX_PRESENCE_MS = 15_000;
 
+/** Números por chamada de `checkNumbers` (a Evolution aceita listas grandes, mas a resposta é por número e demora). */
+export const CHECK_NUMBERS_MAX = 50;
+
 /** Presenças que podemos ENVIAR (a Evolution também tem `available`/`unavailable`, que o produto não usa). */
 export type OutboundPresence = "composing" | "recording" | "paused";
 export type InboundPresence = OutboundPresence | "available" | "unavailable";
@@ -63,6 +66,9 @@ export const outboundMessageSchema = z.object({
   typingMs: z.number().int().min(0).max(MAX_TYPING_MS).optional(),
 });
 export type OutboundMessage = z.infer<typeof outboundMessageSchema>;
+
+/** Resultado de conferir um número no WhatsApp. `jid` é o endereço real (pode diferir do número digitado, ex.: 9º dígito). */
+export type ProviderNumberCheck = { number: string; exists: boolean; jid: string | null };
 
 export type SendResult =
   | { ok: true; providerMessageId: string }
@@ -232,6 +238,21 @@ export interface MessagingProvider {
    * Falha de rede/recusa lança `ProviderError`; nome, descrição e preço são dado da empresa e não vão para log.
    */
   listCatalog?(channel: ChannelRef): Promise<ProviderCatalog>;
+  /**
+   * Opcional: marca como lidas (visto azul para o cliente) mensagens RECEBIDAS da conversa com `to`. Melhor esforço: falha de
+   * rede/recusa lança `ProviderError` e o chamador ignora (nunca bloqueia o atendimento).
+   */
+  markAsRead?(channel: ChannelRef, input: { to: string; messageIds: string[] }): Promise<void>;
+  /**
+   * Opcional: URL da foto de perfil do contato (null quando ele não tem foto ou a deixou privada). É um link assinado que expira:
+   * serve para baixar agora, não para guardar. Foto é dado pessoal e nunca vai para log.
+   */
+  fetchProfilePicture?(channel: ChannelRef, input: { to: string }): Promise<string | null>;
+  /**
+   * Opcional: confere quais números têm WhatsApp (até {@link CHECK_NUMBERS_MAX} por chamada). Falha lança `ProviderError`; o
+   * chamador decide se segue sem a conferência (nunca bloqueia por erro do provedor, só por `exists: false`).
+   */
+  checkNumbers?(channel: ChannelRef, input: { numbers: string[] }): Promise<ProviderNumberCheck[]>;
   /**
    * Opcional (capacidade `downloadMedia`): baixa a mídia de uma mensagem RECEBIDA. `externalId` é o `mediaRef` do evento.
    * Passa de `maxBytes` ou falha de rede/recusa: lança `ProviderError`. O conteúdo é do cliente e nunca vai para log.

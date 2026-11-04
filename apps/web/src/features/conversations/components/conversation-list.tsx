@@ -116,7 +116,7 @@ export function ConversationList({ list, lookups, tab, selectedId, query, nowIso
                   )}
                 >
                   <span className="relative shrink-0">
-                    <Avatar name={c.contact.name} />
+                    <Avatar name={c.contact.name} src={c.contact.avatarUrl} />
                     {isInstagram ? (
                       <span
                         aria-hidden="true"

@@ -90,7 +90,7 @@ export function ContactProfile({
     <div className="flex flex-col gap-4">
       {variant === "page" ? (
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={contact.name} size="lg" />
+          <Avatar name={contact.name} src={contact.avatarUrl} size="lg" />
           <div className="min-w-0 flex-1">
             <h1 className={pageTitleClass}>{contact.name}</h1>
             <p className="text-ink-2">{contactLine}</p>
@@ -98,7 +98,7 @@ export function ContactProfile({
         </div>
       ) : (
         <div className="flex items-center gap-3">
-          <Avatar name={contact.name} size="lg" />
+          <Avatar name={contact.name} src={contact.avatarUrl} size="lg" />
           <p className="text-ink-2">{contactLine}</p>
         </div>
       )}

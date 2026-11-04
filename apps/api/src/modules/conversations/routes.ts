@@ -15,10 +15,13 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { z } from "zod";
 import type { AppBindings, Deps } from "../../lib/context";
 import { withOrgRealtime } from "../../lib/realtime";
-import { ApiError, idParam, jsonLimit, moduleErrorHandler, parseWith, permit, readJson, requestCtx, tenantGuard, unwrap, type ModuleContext } from "./http";
+import { fail } from "../contacts/result";
+import { ApiError, idParam, jsonLimit, moduleErrorHandler, parseWith, permit, readJson, requestCtx, tenantGuard, toApiError, unwrap, type ModuleContext } from "./http";
 import { rateSuggestion, suggestReply } from "./ai-turn";
+import { checkContactWhatsapp, NO_WHATSAPP_MESSAGE } from "./number-check";
 import { openBodySchema, openConversationForContact } from "./open";
 import * as queries from "./queries";
+import { markInboundAsReadInBackground } from "./read-receipts";
 import { activateConversations, createConversationsRuntime, type ConversationsRuntime, type RuntimeOverrides } from "./runtime";
 import * as service from "./service";
 
@@ -31,7 +34,7 @@ import * as service from "./service";
  *   GET    /conversations?tab&channelId&teamId&tagId&priority&search   lista + contagens por aba      sessão (+ visibilidade)
  *   GET    /conversations/:id                               detalhe                                  sessão (+ visibilidade)
  *   GET    /inbox/access/{conversation|contact|task}/:id    200/404: a pessoa alcança este item?     sessão
- *   POST   /conversations/:id/read                          marca como lida                          conversation.reply
+ *   POST   /conversations/:id/read                          marca como lida (+ visto azul no WhatsApp)  conversation.reply
  *   POST   /conversations/:id/assume                        assume                                   conversation.assign
  *   POST   /conversations/:id/transfer                      pessoa ou equipe (+ nota)                conversation.transfer
  *   POST   /conversations/:id/mode                          IA / Copiloto / Só humano                conversation.assign
@@ -157,6 +160,9 @@ export function conversationsRoutes(deps: Deps, overrides: RuntimeOverrides = {}
   // abre (ou cria/reabre) a conversa com um cliente a partir da ficha ou da agenda
   app.post("/conversations/open", guard, permit("conversation.reply"), jsonLimit, async (c) => {
     const body = await readJson(c, openBodySchema);
+    // conferência no provedor FORA da transação; só `exists: false` barra (erro, indisponível ou canal sem a capacidade segue)
+    const check = await checkContactWhatsapp(runtime.numberCheck, convCtx(c).organizationId, body.contactId);
+    if (check.kind === "no_whatsapp") throw toApiError(fail("no_whatsapp", NO_WHATSAPP_MESSAGE));
     const opened = unwrap(await run(c, (tx, ctx) => openConversationForContact(tx, ctx.organizationId, ctx, body.contactId, { reopenWindowDays: runtime.config.CONVERSATIONS_REOPEN_WINDOW_DAYS })));
     return c.json({ conversationId: opened.conversationId });
   });
@@ -165,6 +171,8 @@ export function conversationsRoutes(deps: Deps, overrides: RuntimeOverrides = {}
   app.post("/conversations/:id/read", guard, permit("conversation.reply"), async (c) => {
     const id = idParam(c);
     unwrap(await run(c, (tx, ctx) => service.markConversationRead(tx, ctx, id)));
+    // depois do commit e da checagem de acesso: o cliente recebe o "visto" azul (melhor esforço, em segundo plano)
+    markInboundAsReadInBackground(runtime.readReceipts, convCtx(c).organizationId, id);
     return c.json({ ok: true });
   });
 
