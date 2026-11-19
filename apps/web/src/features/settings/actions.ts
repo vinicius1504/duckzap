@@ -7,12 +7,10 @@ import {
   createWebhookInputSchema,
   notificationPrefsSchema,
   serviceSettingsSchema,
-  totpCodeSchema,
   updateCompanyInputSchema,
   updateProfileInputSchema,
   type CreatedApiKey,
   type CreatedWebhook,
-  type TwoFactorSetup,
   type WebhookTestResult,
 } from "@duckzap/contracts/settings";
 import { revalidatePath } from "next/cache";
@@ -23,17 +21,14 @@ import type { Result } from "@/lib/mock";
 import {
   authorizeInstagramIntegration,
   changePassword,
-  confirmTwoFactor,
   connectGoogleCalendar,
   createApiKey,
   createWebhook,
   deleteWebhook,
-  disableTwoFactor,
   disconnectGoogleCalendar,
   requestPlanChange,
   revokeApiKey,
   setWebhookActive,
-  startTwoFactorSetup,
   testWebhook,
   updateCompany,
   updateNotifications,
@@ -174,30 +169,6 @@ export async function changePasswordAction(input: unknown): Promise<ActionResult
   const parsed = changePasswordInputSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   return done(await changePassword(session.user.id, parsed.data), []);
-}
-
-const passwordSchema = z.string().min(1, "Informe sua senha.").max(128);
-
-/** O Better Auth pede a senha para iniciar e para desativar o 2FA. */
-export async function startTwoFactorAction(password: string): Promise<ActionResult<TwoFactorSetup>> {
-  const session = await requireSession();
-  const parsed = passwordSchema.safeParse(password);
-  if (!parsed.success) return invalid(parsed.error);
-  return done(await startTwoFactorSetup(session.user.id, parsed.data), []);
-}
-
-export async function confirmTwoFactorAction(code: string): Promise<ActionResult<{ recoveryCodes: string[] }>> {
-  const session = await requireSession();
-  const parsed = totpCodeSchema.safeParse(code.replace(/\s/g, ""));
-  if (!parsed.success) return invalid(parsed.error);
-  return done(await confirmTwoFactor(session.user.id, parsed.data), ["/ajustes", "/equipe"]);
-}
-
-export async function disableTwoFactorAction(password: string): Promise<ActionResult<null>> {
-  const session = await requireSession();
-  const parsed = passwordSchema.safeParse(password);
-  if (!parsed.success) return invalid(parsed.error);
-  return done(await disableTwoFactor(session.user.id, parsed.data), ["/ajustes", "/equipe"]);
 }
 
 export async function updateNotificationsAction(input: unknown): Promise<ActionResult<null>> {

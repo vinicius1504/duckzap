@@ -1,4 +1,5 @@
 import type { TaskPriority } from "@duckzap/contracts/home";
+import { businessHoursSchema } from "@duckzap/contracts/settings";
 import { shiftDay, todayIn, zonedDay, zonedTime, zonedToUtc } from "../appointments/time";
 
 // Regras puras do Início: período, rótulos de prazo, percentuais. Sem banco.
@@ -83,6 +84,12 @@ export function assigneeLabel(assigneeId: string, viewerId: string, assigneeName
 }
 
 export const TASK_PRIORITY_ORDER: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+/** Horário de atendimento "definido": o JSON gravado é válido e tem pelo menos um dia aberto. */
+export function hasOpenBusinessDay(hours: unknown): boolean {
+  const parsed = businessHoursSchema.safeParse(hours);
+  return parsed.success && parsed.data.some((d) => d.open);
+}
 
 /** "18 min" / "2 h" / "3 dias" para o detalhe da lista "Precisa de você". */
 export function ageLabel(from: Date, now: Date): string {

@@ -47,6 +47,8 @@ export const teamOverviewSchema = z.object({
   agents: z.array(z.object({ id: z.string(), name: z.string() })),
   /** Ativos + convites pendentes contam; inativos não. */
   userLimit: z.object({ used: z.number().int(), max: z.number().int().nullable() }),
+  /** Proprietário/Administrador precisam de 2FA (opção REQUIRE_2FA_FOR_ADMINS; padrão desligada: só recomendada). */
+  twoFactorRequired: z.boolean(),
 });
 export type TeamOverview = z.infer<typeof teamOverviewSchema>;
 

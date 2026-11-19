@@ -13,6 +13,8 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { z } from "zod";
 import type { AppBindings, Deps } from "../../lib/context";
+import { requireAuth } from "../../middleware/require-auth";
+import { activeMembership } from "../../middleware/two-factor";
 import { fail, parseBody, withActor, type ActorBindings } from "../team/http";
 import type { Res } from "../team/result";
 import * as account from "./account";
@@ -31,7 +33,10 @@ const passwordBodySchema = z.object({ password: z.string().min(1, "Informe sua s
  *                       GET|POST /v1/settings/webhooks · POST …/:id/test · PATCH …/:id · DELETE …/:id
  *   billing.manage      GET /v1/settings/billing · POST /v1/settings/billing/plan-change
  *   só sessão           GET /v1/settings/plans · GET /v1/account · PATCH /v1/account/profile · PUT /v1/account/notifications
- *                       POST /v1/account/password · POST /v1/account/two-factor/(setup|confirm|disable)
+ *                       POST /v1/account/password
+ *   só sessão, mesmo    POST /v1/account/two-factor/(setup|confirm)          app autenticador (recomendado)
+ *   sem empresa         POST /v1/account/two-factor/email/(setup|confirm)    código por e-mail
+ *   (cadastro)          POST /v1/account/two-factor/(recovery-codes|disable)
  */
 export function settingsRoutes(deps: Deps) {
   const app = new OpenAPIHono<ActorBindings>();
@@ -43,7 +48,9 @@ export function settingsRoutes(deps: Deps) {
   app.use("/settings/webhooks/*", withActor(deps, "integration.manage"));
   app.use("/settings/billing/*", withActor(deps, "billing.manage"));
   app.use("/settings/plans", withActor(deps));
-  app.use("/account/*", withActor(deps));
+  for (const path of ["/account", "/account/profile", "/account/notifications", "/account/password"]) app.use(path, withActor(deps));
+  // o 2FA também é configurado no cadastro (passo "Proteja sua conta"), antes de a empresa existir: só a sessão
+  app.use("/account/two-factor/*", requireAuth(deps));
 
   const send = <T>(c: Context, result: Res<T>, status: 200 | 201 = 200) =>
     result.ok ? c.json(result.data as object, status) : fail(c, result.error.status, result.error.code, result.error.message);
@@ -153,20 +160,48 @@ export function settingsRoutes(deps: Deps) {
     if (!body.ok) return body.response;
     return withCookies(c, await account.changePassword(ctx(c), body.data));
   });
+  // ---------- Verificação em duas etapas (só sessão) ----------
+  const twoFactorCtx = async (c: Context<ActorBindings>): Promise<account.TwoFactorCtx> => {
+    const authSession = c.get("authSession");
+    return {
+      deps,
+      userId: authSession.user.id,
+      email: authSession.user.email,
+      membership: await activeMembership(deps.db, authSession),
+      headers: c.req.raw.headers,
+    };
+  };
+  const codeBody = z.object({ code: z.string().transform((v) => v.replace(/\s/g, "")).pipe(totpCodeSchema) });
+
   app.post("/account/two-factor/setup", async (c) => {
     const body = await parseBody(c, passwordBodySchema);
     if (!body.ok) return body.response;
-    return withCookies(c, await account.startTwoFactorSetup(ctx(c), body.data.password));
+    return withCookies(c, await account.startTwoFactorSetup(await twoFactorCtx(c), body.data.password));
   });
   app.post("/account/two-factor/confirm", async (c) => {
-    const body = await parseBody(c, z.object({ code: totpCodeSchema }));
+    const body = await parseBody(c, codeBody);
     if (!body.ok) return body.response;
-    return withCookies(c, await account.confirmTwoFactor(ctx(c), body.data.code));
+    return withCookies(c, await account.confirmTwoFactor(await twoFactorCtx(c), body.data.code));
+  });
+  app.post("/account/two-factor/email/setup", async (c) => {
+    const body = await parseBody(c, passwordBodySchema);
+    if (!body.ok) return body.response;
+    return withCookies(c, await account.startEmailTwoFactor(await twoFactorCtx(c), body.data.password));
+  });
+  app.post("/account/two-factor/email/confirm", async (c) => {
+    const body = await parseBody(c, codeBody);
+    if (!body.ok) return body.response;
+    return withCookies(c, await account.confirmEmailTwoFactor(await twoFactorCtx(c), body.data.code));
+  });
+  app.post("/account/two-factor/recovery-codes", async (c) => {
+    const body = await parseBody(c, passwordBodySchema);
+    if (!body.ok) return body.response;
+    return withCookies(c, await account.regenerateRecoveryCodes(await twoFactorCtx(c), body.data.password));
   });
   app.post("/account/two-factor/disable", async (c) => {
     const body = await parseBody(c, passwordBodySchema);
     if (!body.ok) return body.response;
-    return withCookies(c, await account.disableTwoFactor(ctx(c), body.data.password));
+    return withCookies(c, await account.disableTwoFactor(await twoFactorCtx(c), body.data.password));
   });
 
   const outer = new OpenAPIHono<AppBindings>();

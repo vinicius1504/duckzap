@@ -26,9 +26,11 @@ import {
   skipWhatsapp,
   startQrSession,
 } from "./api";
-import { getCurrentDraft, ONBOARDING_COOKIE } from "./draft";
+import { signOut } from "@/features/auth/api";
+import { getCurrentDraft, LEGACY_ONBOARDING_COOKIE } from "./draft";
 
-// Server Actions finas: cadastro em andamento (cookie) → validação → api.ts → revalidar.
+// Server Actions finas: validação → api.ts → revalidar. Quem é a pessoa vem da SESSÃO (o api.ts fala com a API com o
+// cookie de sessão); a API recusa (401) quem não está logado e cada ação devolve "expirou".
 
 type ActionResult = { error: string } | null;
 
@@ -38,71 +40,54 @@ function firstIssue(error: { issues: { message: string }[] }) {
   return error.issues[0]?.message ?? "Confira os dados e tente de novo.";
 }
 
-async function currentId() {
-  return (await getCurrentDraft())?.id ?? null;
-}
-
 export async function signUpAction(input: SignUpInput): Promise<ActionResult> {
   const parsed = signUpSchema.safeParse(input);
   if (!parsed.success) return { error: firstIssue(parsed.error) };
   const result = await createSignUp(parsed.data);
   if (!result.ok) return { error: result.message };
-  (await cookies()).set(ONBOARDING_COOKIE, result.data.draftId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/comecar",
-    maxAge: 60 * 60 * 24,
-  });
+  // a conta já nasce logada (cookie de sessão repassado): o passo seguinte vem da sessão
   revalidatePath("/comecar");
   return null;
 }
 
 export async function saveCompanyAction(input: CompanyStepInput): Promise<ActionResult> {
-  const id = await currentId();
-  if (!id) return expired;
   const parsed = companyStepSchema.safeParse(input);
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const result = await saveCompany(id, parsed.data);
+  const result = await saveCompany(parsed.data);
+  if (!result.ok && result.error === "not_found") return expired;
   if (!result.ok) return { error: result.message };
   revalidatePath("/comecar");
   return null;
 }
 
 export async function startQrAction(): Promise<{ error: string } | { session: QrSession }> {
-  const id = await currentId();
-  if (!id) return expired;
-  const result = await startQrSession(id);
+  const result = await startQrSession();
   return result.ok ? { session: result.data } : { error: result.message };
 }
 
 export async function checkQrAction(
   sessionId: string,
 ): Promise<{ error: string } | { session: QrSession }> {
-  const id = await currentId();
-  if (!id) return expired;
-  const result = await getQrSession(id, z.string().min(1).max(100).parse(sessionId));
+  const parsed = z.string().min(1).max(100).safeParse(sessionId);
+  if (!parsed.success) return { error: "Código não encontrado. Gere um novo." };
+  const result = await getQrSession(parsed.data);
   return result.ok ? { session: result.data } : { error: result.message };
 }
 
 export async function connectOfficialApiAction(
   input: OfficialApiInput,
 ): Promise<{ error: string } | { phone: string }> {
-  const id = await currentId();
-  if (!id) return expired;
   const parsed = officialApiSchema.safeParse(input);
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const result = await connectOfficialApi(id, parsed.data);
+  const result = await connectOfficialApi(parsed.data);
   if (!result.ok) return { error: result.message };
   revalidatePath("/comecar");
   return { phone: result.data.phone };
 }
 
 export async function skipWhatsappAction(): Promise<ActionResult> {
-  const id = await currentId();
-  if (!id) return expired;
-  const result = await skipWhatsapp(id);
-  if (!result.ok) return { error: result.message };
+  const result = await skipWhatsapp();
+  if (!result.ok) return result.error === "not_found" ? expired : { error: result.message };
   revalidatePath("/comecar");
   return null;
 }
@@ -130,22 +115,24 @@ export async function previewReplyAction(
 }
 
 export async function completeOnboardingAction(agent: AgentDraft | null): Promise<ActionResult> {
-  const id = await currentId();
-  if (!id) return expired;
   let value: AgentDraft | null = null;
   if (agent) {
     const parsed = agentDraftSchema.safeParse(agent);
     if (!parsed.success) return { error: firstIssue(parsed.error) };
     value = parsed.data;
   }
-  const result = await completeOnboarding(id, value);
+  const result = await completeOnboarding(value);
   if (!result.ok) return { error: result.message };
   revalidatePath("/comecar");
   return null;
 }
 
-/** "Criar outra conta": descarta o cadastro em andamento. */
+/**
+ * "Criar outra conta" (tela "pronto"): o cadastro vem da sessão, então trocar de conta é SAIR. A conta e a empresa
+ * criadas continuam salvas (entrar de novo leva ao app). Apaga também o cookie legado do cadastro.
+ */
 export async function resetOnboardingAction() {
-  (await cookies()).delete({ name: ONBOARDING_COOKIE, path: "/comecar" });
+  await signOut();
+  (await cookies()).delete({ name: LEGACY_ONBOARDING_COOKIE, path: "/comecar" });
   revalidatePath("/comecar");
 }

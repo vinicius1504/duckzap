@@ -3,15 +3,22 @@ import type { Database } from "@duckzap/db";
 import { schema } from "@duckzap/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { organization, twoFactor } from "better-auth/plugins";
 import { v7 as uuidv7 } from "uuid";
 import type { Env } from "./env";
 import type { Mailer } from "./lib/mailer";
+import {
+  createOtpEmailLimiter,
+  DEFAULT_OTP_EMAIL_LIMIT,
+  OTP_PERIOD_MINUTES,
+  twoFactorEmailMessage,
+  type OtpEmailLimit,
+} from "./lib/two-factor-email";
 import { CLIENT_IP_HEADER, guardAuthHandler, type LoginThrottle } from "./middleware/auth-handler";
 import { loadSecurityConfig } from "./middleware/security-config";
 import { hasOnlyInactiveMemberships } from "./modules/team/access";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 /** O navegador chega na API por `<origem>/api/...` (proxy do front); o proxy tira o `/api` antes de chegar aqui. */
 export function publicApiParts(env: Env) {
@@ -40,20 +47,28 @@ Se foi você, entre com a sua senha (ou use "Esqueci minha senha"). Se não foi,
   };
 }
 
+/** Cookie (assinado) do desafio de 2FA no login; mesmo nome que o plugin twoFactor usa. */
+const TWO_FACTOR_CHALLENGE_COOKIE = "two_factor";
+
 export function createAuth({
   env,
   db,
   sendMail,
   loginThrottle,
+  otpEmailLimit = DEFAULT_OTP_EMAIL_LIMIT,
 }: {
   env: Env;
   db: Database;
   sendMail: Mailer;
   loginThrottle?: LoginThrottle;
+  /** Anti-abuso do código por e-mail (testes afrouxam a espera entre envios). */
+  otpEmailLimit?: OtpEmailLimit;
 }) {
   const { origin, prefix } = publicApiParts(env);
   const security = loadSecurityConfig();
   const notifyExistingAccount = createExistingAccountNotifier(sendMail);
+  const otpEmailLimiter = createOtpEmailLimiter(otpEmailLimit);
+
   const auth = betterAuth({
     appName: brand.name,
     baseURL: origin,
@@ -87,8 +102,45 @@ export function createAuth({
       customRules: { "/sign-up/email": { window: 60, max: 5 } },
     },
     hooks: {
-      // Cadastro: não revela se o e-mail já tem conta (resposta igual a qualquer outra falha de cadastro; o dono é avisado por e-mail)
       before: createAuthMiddleware(async (ctx) => {
+        // Código do 2FA por e-mail (`/two-factor/send-otp`): quem é a pessoa (sessão, ao configurar; ou o cookie do desafio,
+        // no login) e (1) no LOGIN, quem usa app autenticador não recebe código por e-mail (o e-mail não vira um 2º caminho
+        // mais fraco que o app); (2) limite de envios por pessoa. Sem pessoa, o próprio plugin responde (desafio inválido).
+        // `enable` com method "otp" liga o e-mail na hora, sem conferir código nem gerar códigos de recuperação: o produto
+        // usa só o fluxo de settings/account.ts (prepara a linha de two_factor e liga ao conferir o código do e-mail)
+        if (ctx.path === "/two-factor/enable" && ctx.body?.method === "otp") {
+          throw new APIError("BAD_REQUEST", { code: "USE_ACCOUNT_SETUP", message: "Ative o código por e-mail em Ajustes › Minha conta." });
+        }
+        if (ctx.path === "/two-factor/send-otp") {
+          let userId: string | null = null;
+          let signingIn = false;
+          const session = await getSessionFromCtx(ctx).catch(() => null);
+          if (session) userId = session.user.id;
+          else {
+            const challenge = ctx.context.createAuthCookie(TWO_FACTOR_CHALLENGE_COOKIE);
+            const identifier = await ctx.getSignedCookie(challenge.name, ctx.context.secret);
+            const pending = identifier ? await ctx.context.internalAdapter.findVerificationValue(identifier) : null;
+            if (pending && pending.expiresAt > new Date()) {
+              userId = pending.value;
+              signingIn = true;
+            }
+          }
+          if (!userId) return;
+          if (signingIn) {
+            const [totp] = await db
+              .select({ verified: schema.twoFactor.verified })
+              .from(schema.twoFactor)
+              .where(eq(schema.twoFactor.userId, userId))
+              .limit(1);
+            if (totp?.verified === true) {
+              throw new APIError("BAD_REQUEST", { code: "USE_AUTHENTICATOR_APP", message: "Use o código do app autenticador." });
+            }
+          }
+          const limited = otpEmailLimiter.take(userId);
+          if (limited) throw new APIError("TOO_MANY_REQUESTS", { code: "OTP_RATE_LIMITED", message: limited });
+          return;
+        }
+        // Cadastro: não revela se o e-mail já tem conta (resposta igual a qualquer outra falha de cadastro; o dono é avisado por e-mail)
         if (ctx.path !== "/sign-up/email") return;
         const email = typeof ctx.body?.email === "string" ? ctx.body.email.trim().toLowerCase() : "";
         if (!email) return;
@@ -138,7 +190,20 @@ export function createAuth({
           },
         },
       }),
-      twoFactor({ issuer: brand.name }),
+      // Dois métodos. App autenticador (TOTP, recomendado): segredo em two_factor, `verified=true` depois de conferir o
+      // código. Código por e-mail (OTP): `sendOTP` abaixo; a pessoa que escolhe e-mail também ganha uma linha em
+      // two_factor (com `verified=false`, ou seja, sem app) só para guardar os códigos de recuperação. Ver settings/account.ts.
+      twoFactor({
+        issuer: brand.name,
+        otpOptions: {
+          period: OTP_PERIOD_MINUTES,
+          storeOTP: "hashed",
+          allowedAttempts: 5,
+          sendOTP: async ({ user, otp }) => {
+            await sendMail({ to: user.email, ...twoFactorEmailMessage(user.name, otp) });
+          },
+        },
+      }),
     ],
   });
 

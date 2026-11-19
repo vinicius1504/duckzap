@@ -26,8 +26,14 @@ export type LinkComponent = ComponentType<{
   children?: ReactNode;
   "aria-current"?: "page";
   "aria-label"?: string;
+  "data-tour"?: string;
 }>;
 
 export function isActive(currentPath: string, href: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+
+/** Âncora estável do item de menu para o tour guiado (`data-tour="nav-conversas"`), derivada da rota. */
+export function navTourAnchor(href: string) {
+  return `nav-${href.replace(/^\/+|\/+$/g, "").replace(/\//g, "-")}`;
 }

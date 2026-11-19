@@ -13,6 +13,8 @@ import { getHomeOverview } from "@/features/home/api";
 import { FunnelDonut, funnelColors } from "@/features/home/components/charts";
 import { ConversationsLine } from "@/features/home/components/conversations-line";
 import { PeriodFilter } from "@/features/home/components/period-filter";
+import { SetupChecklistCard } from "@/features/home/components/setup-checklist-card";
+import { buildSetupChecklist } from "@/features/home/setup-checklist";
 import { TasksCard } from "@/features/home/components/tasks-card";
 import { firstName, formatDate, formatDuration, formatNumber, formatPlural, greeting } from "@/lib/format";
 
@@ -65,6 +67,12 @@ export default async function HomePage({
 
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex min-w-0 flex-[2_1_620px] flex-col gap-6">
+          {data.setup ? (
+            <SetupChecklistCard
+              list={buildSetupChecklist(data.setup, session.user.role)}
+              organizationId={session.organization.id}
+            />
+          ) : null}
           <Card className="px-5 pb-2 pt-5">
             <div className="mb-1.5 flex items-center justify-between">
               <CardTitle>Precisa de você</CardTitle>

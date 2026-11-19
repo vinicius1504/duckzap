@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageLabel, assigneeLabel, distributePercent, dueLabel, lastDays, percentOf, periodRange } from "./logic";
+import { ageLabel, assigneeLabel, distributePercent, dueLabel, hasOpenBusinessDay, lastDays, percentOf, periodRange } from "./logic";
 
 const TZ = "America/Sao_Paulo";
 // 26/10/2026 14:00 em São Paulo (UTC-3)
@@ -78,5 +78,16 @@ describe("textos", () => {
     expect(ageLabel(new Date(now.getTime() - 18 * 60_000), now)).toBe("18 min");
     expect(ageLabel(new Date(now.getTime() - 3 * 3_600_000), now)).toBe("3 h");
     expect(ageLabel(new Date(now.getTime() - 72 * 3_600_000), now)).toBe("3 dias");
+  });
+});
+
+describe("horário de atendimento definido", () => {
+  const week = (open: boolean[]) => open.map((o, day) => ({ day, open: o, start: "09:00", end: "18:00" }));
+  it("precisa de JSON válido com pelo menos um dia aberto", () => {
+    expect(hasOpenBusinessDay(week([false, true, true, true, true, true, false]))).toBe(true);
+    expect(hasOpenBusinessDay(week([false, false, false, false, false, false, false]))).toBe(false);
+    expect(hasOpenBusinessDay(null)).toBe(false);
+    expect(hasOpenBusinessDay(undefined)).toBe(false);
+    expect(hasOpenBusinessDay([{ day: 1, open: true }])).toBe(false);
   });
 });

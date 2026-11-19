@@ -34,6 +34,11 @@ export const sessionSchema = z.object({
     maxAgents: z.number().int().nullable().default(null),
     subscriptionStatus: subscriptionStatusSchema,
     timeZone: z.string(),
+    /**
+     * Cadastro (/comecar) da empresa concluído. `false` = o DONO volta para /comecar até concluir; convidados nunca.
+     * Padrão `true`: resposta antiga sem o campo não prende ninguém no cadastro.
+     */
+    onboardingCompleted: z.boolean().default(true),
   }),
 });
 

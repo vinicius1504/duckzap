@@ -175,7 +175,7 @@ describe.skipIf(!allowed)("Better Auth real: superfície, cadastro e 2FA obrigat
     });
   });
 
-  describe("A1: 2FA obrigatório para Proprietário/Administrador", () => {
+  describe("A1: 2FA obrigatório para Proprietário/Administrador (só com REQUIRE_2FA_FOR_ADMINS=true; padrão: desligado)", () => {
     const build = (require2fa: "true" | "false") => {
       process.env.REQUIRE_2FA_FOR_ADMINS = require2fa;
       const api = new OpenAPIHono<AppBindings>();
@@ -207,7 +207,7 @@ describe.skipIf(!allowed)("Better Auth real: superfície, cadastro e 2FA obrigat
       expect(me.user).toMatchObject({ role: "agent", twoFactorRequired: false });
     });
 
-    it("com REQUIRE_2FA_FOR_ADMINS=false (dev/test) o owner passa", async () => {
+    it("com REQUIRE_2FA_FOR_ADMINS=false (o padrão) o owner passa", async () => {
       expect((await get(build("false"), "/v1/protegido/x", bossCookie)).status).toBe(200);
     });
 

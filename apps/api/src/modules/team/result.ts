@@ -1,7 +1,7 @@
 import { createMailer, type Mailer } from "../../lib/mailer";
 import type { Env } from "../../env";
 
-export type ServiceStatus = 400 | 401 | 403 | 404 | 409 | 422;
+export type ServiceStatus = 400 | 401 | 403 | 404 | 409 | 422 | 429;
 export type ServiceError = { code: string; message: string; status: ServiceStatus };
 export type Res<T> = { ok: true; data: T } | { ok: false; error: ServiceError };
 

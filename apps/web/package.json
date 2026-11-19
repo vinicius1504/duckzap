@@ -19,6 +19,7 @@
     "@duckzap/ui": "workspace:*",
     "@hookform/resolvers": "6.0.0",
     "date-fns": "4.4.0",
+    "driver.js": "1.10.2",
     "next": "16.4.3",
     "nuqs": "2.10.2",
     "react": "19.3.1",

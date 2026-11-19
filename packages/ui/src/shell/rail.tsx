@@ -1,13 +1,14 @@
 import { Icon } from "../components/icon";
 import { LogoMark } from "../components/logo";
 import { cn } from "../lib/cn";
-import { isActive, type LinkComponent, type NavConfig, type NavItem } from "./types";
+import { isActive, navTourAnchor, type LinkComponent, type NavConfig, type NavItem } from "./types";
 
 function RailLink({ item, active, Link }: { item: NavItem; active: boolean; Link: LinkComponent }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
+      data-tour={navTourAnchor(item.href)}
       className={cn(
         "flex w-[72px] flex-col items-center gap-[3px] rounded-xl py-[9px] text-[11px] font-semibold text-rail-fg hover:bg-rail-hover hover:text-white",
         active && "bg-duck text-on-duck hover:bg-duck hover:text-on-duck",

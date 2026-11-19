@@ -11,10 +11,15 @@ import {
 import { Alert, Spinner } from "@duckzap/ui/components/feedback";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { signOutAction } from "@/features/auth/actions";
 import { completeOnboardingAction } from "../actions";
 
-/** "Fazer depois": encerra o onboarding agora; o resto se configura dentro do app. */
-export function FinishLaterButton() {
+/**
+ * "Fazer depois". O cadastro é obrigatório, mas só a empresa é indispensável:
+ *  - com a empresa criada (`canFinish`): conclui agora (gravado no banco) e o WhatsApp e o agente ficam para Canais e Agentes de IA;
+ *  - sem empresa ainda: não há o que concluir, então SAI. O progresso fica salvo e, ao entrar de novo, a pessoa volta para cá.
+ */
+export function FinishLaterButton({ canFinish }: { canFinish: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +36,9 @@ export function FinishLaterButton() {
           </Alert>
         ) : null}
         <p className="text-ink-2">
-          Sua conta já está criada. Você pode conectar o WhatsApp e criar o agente depois, em Canais
-          e em Agentes de IA.
+          {canFinish
+            ? "Sua conta e sua empresa já estão criadas. Você pode conectar o WhatsApp e criar o agente depois, em Canais e em Agentes de IA."
+            : "Sua conta já está criada, falta só a empresa. Você sai agora e, quando entrar de novo, continua daqui."}
         </p>
         <DialogFooter>
           <DialogClose asChild>
@@ -43,6 +49,10 @@ export function FinishLaterButton() {
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
+                if (!canFinish) {
+                  await signOutAction();
+                  return;
+                }
                 const result = await completeOnboardingAction(null);
                 if (result) {
                   setError(result.error);
@@ -54,7 +64,7 @@ export function FinishLaterButton() {
             }
           >
             {pending ? <Spinner size={16} /> : null}
-            Terminar depois
+            {canFinish ? "Terminar depois" : "Sair e terminar depois"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -73,6 +73,8 @@ export async function buildSession(
         maxAgents: planRow ? planRow.maxAgents : 1,
         subscriptionStatus: status,
         timeZone: active.org.timeZone ?? "America/Sao_Paulo",
+        // durável (coluna da 0016; empresas anteriores vieram concluídas no backfill)
+        onboardingCompleted: active.org.onboardingCompletedAt !== null,
       },
     },
   };

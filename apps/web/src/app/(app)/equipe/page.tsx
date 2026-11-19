@@ -39,7 +39,12 @@ export default async function TeamPage() {
       Convidar pessoa
     </Button>
   ) : (
-    <MemberDialog trigger={<Button variant="primary">Convidar pessoa</Button>} actorRole={actor.role} teams={teamOptions} />
+    <MemberDialog
+      trigger={<Button variant="primary">Convidar pessoa</Button>}
+      actorRole={actor.role}
+      teams={teamOptions}
+      twoFactorRequired={data.twoFactorRequired}
+    />
   );
   const newTeamButton = (
     <TeamDialog
@@ -52,7 +57,7 @@ export default async function TeamPage() {
   );
 
   const people = members.length ? (
-    <MembersTable members={members} teams={teamOptions} actor={actor} limitReached={limitReached} />
+    <MembersTable members={members} teams={teamOptions} actor={actor} limitReached={limitReached} twoFactorRequired={data.twoFactorRequired} />
   ) : (
     <Card>
       <EmptyState icon="users" title="Ninguém na equipe ainda" description="Convide quem vai atender as conversas com você." action={inviteButton} />

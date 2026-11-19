@@ -41,7 +41,7 @@ export function SignUpForm() {
       setServerError(result.error);
       return;
     }
-    router.replace("/comecar?passo=empresa");
+    router.replace("/comecar?passo=seguranca");
     router.refresh();
   }
 

@@ -17,5 +17,5 @@ export function canManageMember(actor: MemberRole, target: { role: MemberRole })
   return actor === "admin" && target.role === "agent";
 }
 
-/** 2FA obrigatório para Proprietário e Administrador. */
-export const requiresTwoFactor = (role: MemberRole) => role === "owner" || role === "admin";
+/** 2FA obrigatório para Proprietário e Administrador, só quando a opção do servidor está ligada (padrão: recomendado). */
+export const requiresTwoFactor = (role: MemberRole, required: boolean) => required && (role === "owner" || role === "admin");

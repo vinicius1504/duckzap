@@ -4,7 +4,7 @@ import type { AuthSession } from "../lib/context";
 import { loadSecurityConfig } from "./security-config";
 import { isTwoFactorExemptPath, mustSetUpTwoFactor, needsTwoFactor } from "./two-factor";
 
-describe("2FA obrigatório para Proprietário/Administrador (§5.1)", () => {
+describe("2FA obrigatório para Proprietário/Administrador (§5.1, só com REQUIRE_2FA_FOR_ADMINS=true)", () => {
   it("exige de owner e admin sem 2FA; não exige de atendente nem de quem já ativou", () => {
     expect(needsTwoFactor({ role: "owner", twoFactorEnabled: false, required: true })).toBe(true);
     expect(needsTwoFactor({ role: "admin", twoFactorEnabled: false, required: true })).toBe(true);
@@ -22,12 +22,13 @@ describe("2FA obrigatório para Proprietário/Administrador (§5.1)", () => {
     }
   });
 
-  it("padrão: ligado em produção, desligado em dev/test; a variável manda", () => {
-    expect(loadSecurityConfig({ NODE_ENV: "production" }).require2faForAdmins).toBe(true);
+  it("padrão: DESLIGADO em qualquer ambiente (2FA recomendado, não obrigatório); a variável liga", () => {
+    expect(loadSecurityConfig({ NODE_ENV: "production" }).require2faForAdmins).toBe(false);
     expect(loadSecurityConfig({ NODE_ENV: "development" }).require2faForAdmins).toBe(false);
     expect(loadSecurityConfig({ NODE_ENV: "test" }).require2faForAdmins).toBe(false);
     expect(loadSecurityConfig({ NODE_ENV: "production", REQUIRE_2FA_FOR_ADMINS: "false" }).require2faForAdmins).toBe(false);
     expect(loadSecurityConfig({ NODE_ENV: "development", REQUIRE_2FA_FOR_ADMINS: "true" }).require2faForAdmins).toBe(true);
+    expect(loadSecurityConfig({ NODE_ENV: "production", REQUIRE_2FA_FOR_ADMINS: "true" }).require2faForAdmins).toBe(true);
     expect(loadSecurityConfig({}).trustProxy).toBe(false);
   });
 

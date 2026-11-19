@@ -72,13 +72,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   );
 }
 
+/** Chaves de API e webhooks ficam ocultos por enquanto (o código e a API continuam; mude para true para voltar a mostrar). */
+const SHOW_DEVELOPER_SECTIONS = false;
+
 async function IntegrationsTab({ timeZone }: { timeZone: string }) {
-  const [integrations, apiKeys, webhooks] = await Promise.all([getIntegrations(), listApiKeys(), listWebhooks()]);
+  const [integrations, apiKeys, webhooks] = await Promise.all([
+    getIntegrations(),
+    SHOW_DEVELOPER_SECTIONS ? listApiKeys() : [],
+    SHOW_DEVELOPER_SECTIONS ? listWebhooks() : [],
+  ]);
   return (
     <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">
       <IntegrationCards integrations={integrations} timeZone={timeZone} />
-      <ApiKeysSection apiKeys={apiKeys} timeZone={timeZone} />
-      <WebhooksSection webhooks={webhooks} timeZone={timeZone} />
+      {SHOW_DEVELOPER_SECTIONS ? <ApiKeysSection apiKeys={apiKeys} timeZone={timeZone} /> : null}
+      {SHOW_DEVELOPER_SECTIONS ? <WebhooksSection webhooks={webhooks} timeZone={timeZone} /> : null}
     </div>
   );
 }

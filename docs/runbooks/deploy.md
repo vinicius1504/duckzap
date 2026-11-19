@@ -299,7 +299,7 @@ Marque tudo. Item não marcado = não abra.
 - [ ] HSTS presente (`Strict-Transport-Security`).
 
 **Acesso e abuso**
-- [ ] `REQUIRE_2FA_FOR_ADMINS=true` e `ADMIN_REQUIRE_ACTIVATION_CODE=true`; o primeiro admin criado com senha forte (16+ caracteres) e **2FA cadastrado**; o código de ativação foi entregue por outro canal.
+- [ ] `ADMIN_REQUIRE_ACTIVATION_CODE=true` (`REQUIRE_2FA_FOR_ADMINS` é opcional: `false` = 2FA das empresas recomendado, `true` = exigido de dono/administrador); o primeiro admin criado com senha forte (16+ caracteres) e **2FA cadastrado**; o código de ativação foi entregue por outro canal.
 - [ ] Painel admin atrás de **Cloudflare Access** e/ou `ADMIN_IP_ALLOWLIST` preenchido.
 - [ ] **Rate limits**: regras da Cloudflare para `/api/v1/auth/*` e para o admin (passo 3.7); os limites da própria API (`AGENTS_*_PER_MINUTE`, `CONVERSATIONS_*`, `CHANNELS_*`) conferidos com o plano de gasto da IA.
 - [ ] Limite de gasto configurado no console da Anthropic.

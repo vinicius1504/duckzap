@@ -38,16 +38,17 @@ export const faq: FaqItem[] = [
   },
   {
     id: "faq_2fa",
-    question: "Por que preciso ativar a verificação em duas etapas?",
+    question: "Por que ativar a verificação em duas etapas?",
     answer:
-      "Ela é obrigatória para Proprietário e Administrador, porque essas contas mexem em canais, cobrança e chaves de API. Ative em Ajustes › Minha conta com um app autenticador.",
+      "Ela é recomendada, principalmente para Proprietário e Administrador, que mexem em canais, cobrança e chaves de API: além da senha, pedimos um código ao entrar. Ative em Ajustes › Minha conta pelo app Google Authenticator (recomendado) ou recebendo o código por e-mail.",
   },
-  {
-    id: "faq_api",
-    question: "Como integro o Duckzap com meu site ou sistema?",
-    answer:
-      "Em Ajustes › Integrações, crie uma chave de API (ela aparece uma única vez) e cadastre webhooks para receber eventos. Cada entrega vem assinada no header X-Duckzap-Signature.",
-  },
+  // oculta junto com as seções de chaves de API e webhooks em Ajustes › Integrações (volte a incluir quando reaparecerem):
+  // {
+  //   id: "faq_api",
+  //   question: "Como integro o Duckzap com meu site ou sistema?",
+  //   answer:
+  //     "Em Ajustes › Integrações, crie uma chave de API (ela aparece uma única vez) e cadastre webhooks para receber eventos. Cada entrega vem assinada no header X-Duckzap-Signature.",
+  // },
 ];
 
 export const videos: HelpVideo[] = [

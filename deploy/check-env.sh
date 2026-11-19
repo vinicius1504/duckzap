@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Confere o .env de produção ANTES de subir. Recusa (exit 1) se faltar variável obrigatória, se algum segredo ainda for
-# o valor de exemplo/marcador, se uma configuração for perigosa em produção (Mailpit, IA "fake", 2FA desligado…) ou
+# o valor de exemplo/marcador, se uma configuração for perigosa em produção (Mailpit, IA "fake", código de ativação do painel admin desligado…) ou
 # incompleta. Nunca imprime VALORES, só nomes de variáveis.
 #
 # Uso:  ./check-env.sh [arquivo]      (padrão: .env ao lado deste script)
@@ -140,11 +140,13 @@ has MAIL_FROM && [[ "$(val MAIL_FROM)" == *duckchat.local* ]] && err "MAIL_FROM 
 has SUPPORT_EMAIL && [[ "$(val SUPPORT_EMAIL)" != *@*.* ]] && err "SUPPORT_EMAIL não parece um e-mail."
 
 # ── segurança ──
-for k in REQUIRE_2FA_FOR_ADMINS ADMIN_REQUIRE_ACTIVATION_CODE; do
-  if has "$k"; then
-    [[ "$(val "$k")" == "true" ]] || err "$k precisa ser true em produção."
-  fi
-done
+if has ADMIN_REQUIRE_ACTIVATION_CODE; then
+  [[ "$(val ADMIN_REQUIRE_ACTIVATION_CODE)" == "true" ]] || err "ADMIN_REQUIRE_ACTIVATION_CODE precisa ser true em produção."
+fi
+# 2FA das empresas: opcional (recomendado no cadastro); só confere o formato
+if has REQUIRE_2FA_FOR_ADMINS; then
+  [[ "$(val REQUIRE_2FA_FOR_ADMINS)" =~ ^(true|false)$ ]] || err "REQUIRE_2FA_FOR_ADMINS precisa ser true ou false."
+fi
 [[ "$(val OPENAPI_PUBLIC)" == "true" ]] && err "OPENAPI_PUBLIC=true expõe a superfície da API; não use em produção."
 [[ "$(val CAMPAIGNS_SCHEDULER)" == "off" ]] && warn "CAMPAIGNS_SCHEDULER=off: ninguém dispara as campanhas (não existe worker dedicado ainda). Deixe inline."
 has ADMIN_IP_ALLOWLIST || warn "ADMIN_IP_ALLOWLIST vazio: o painel admin aceita qualquer IP (a Cloudflare Access ou a lista de IPs é fortemente recomendada)."

@@ -84,8 +84,9 @@ export function DoneStep({ draft }: { draft: OnboardingDraft }) {
           ))}
         </ul>
       </Card>
+      {/* a pessoa já está logada e o cadastro está concluído no banco: vai direto ao app */}
       <Link
-        href="/entrar"
+        href="/inicio"
         className={buttonVariants({ variant: "primary", size: "lg", className: "w-full max-w-xs" })}
       >
         Entrar no {brand.name}

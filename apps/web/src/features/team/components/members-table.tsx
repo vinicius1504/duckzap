@@ -22,11 +22,14 @@ export function MembersTable({
   teams,
   actor,
   limitReached,
+  twoFactorRequired,
 }: {
   members: Member[];
   teams: { id: string; name: string }[];
   actor: { id: string; role: MemberRole };
   limitReached: boolean;
+  /** A opção do servidor exige 2FA de Proprietário/Administrador (padrão: não, só recomendado). */
+  twoFactorRequired: boolean;
 }) {
   const [notice, setNotice] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -90,7 +93,7 @@ export function MembersTable({
                     <span className="text-ink-2">—</span>
                   ) : member.twoFactorEnabled ? (
                     <Chip tone="ok">Ativa</Chip>
-                  ) : requiresTwoFactor(member.role) ? (
+                  ) : requiresTwoFactor(member.role, twoFactorRequired) ? (
                     <Chip tone="err">Obrigatória, pendente</Chip>
                   ) : (
                     <Chip>Desativada</Chip>
@@ -136,6 +139,7 @@ export function MembersTable({
                           actorRole={actor.role}
                           teams={teams}
                           lastOwner={lastOwner}
+                          twoFactorRequired={twoFactorRequired}
                         />
                         {member.id !== actor.id ? (
                           <ConfirmDialog

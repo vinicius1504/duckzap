@@ -1,4 +1,4 @@
-import type { AttentionItem, HomeOverview, TaskPriority } from "@duckzap/contracts/home";
+import type { AttentionItem, HomeOverview, HomeSetup, TaskPriority } from "@duckzap/contracts/home";
 import { schema, type Transaction } from "@duckzap/db";
 import { and, asc, count, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -8,9 +8,9 @@ import { isGuid } from "../contacts/http";
 import { fail, newId, ok, type Result, type ServiceCtx } from "../contacts/result";
 import { OPEN_STATUSES } from "../conversations/logic";
 import { loadTags, loadViewer, visibilitySql, type ConvCtx } from "../conversations/queries";
-import { ageLabel, assigneeLabel, distributePercent, dueLabel, lastDays, percentOf, periodRange, TASK_PRIORITY_ORDER, type Period } from "./logic";
+import { ageLabel, assigneeLabel, distributePercent, dueLabel, hasOpenBusinessDay, lastDays, percentOf, periodRange, TASK_PRIORITY_ORDER, type Period } from "./logic";
 
-const { conversations, contacts, contactTags, tags, appointments, channels, messages, tasks, agents, agentVersions, user } = schema;
+const { conversations, contacts, contactTags, tags, appointments, channels, messages, tasks, agents, agentVersions, user, products, member, invitation, organizationSettings } = schema;
 
 export type HomeCtx = ConvCtx & { canViewTeamMetrics: boolean };
 type TaskRow = typeof tasks.$inferSelect;
@@ -178,6 +178,38 @@ export async function getHomeOverview(tx: Transaction, ctx: HomeCtx, period: Per
     weeklyConversion,
     tasks: await listTasks(tx, ctx, now),
     conversationsByAgent: ctx.canViewTeamMetrics ? await byAgent(tx, ctx, range) : [],
+    setup: await setupStatus(tx, ctx),
+  };
+}
+
+// ── "Primeiros passos" ──────────────────────────────────────────────────────
+
+/** Existe ao menos uma linha? (`select 1 … limit 1`, usa os índices por empresa.) */
+async function hasRow(query: Promise<unknown[]>) {
+  return (await query).length > 0;
+}
+
+/**
+ * Fatos da configuração para o checklist do Início. Cada um é um `limit 1` (ou uma linha) por empresa; a tela filtra
+ * por papel. `member`/`invitation` são do Better Auth SEM RLS: o filtro por empresa é explícito.
+ */
+export async function setupStatus(tx: Transaction, ctx: HomeCtx): Promise<HomeSetup> {
+  const org = ctx.organizationId;
+  const one = { one: sql`1` };
+  const [settings] = await tx.select({ hours: organizationSettings.businessHours }).from(organizationSettings).where(eq(organizationSettings.organizationId, org)).limit(1);
+  const [me] = await tx.select({ twoFactor: user.twoFactorEnabled }).from(user).where(eq(user.id, ctx.userId)).limit(1);
+  return {
+    whatsappConnected: await hasRow(
+      tx.select(one).from(channels).where(and(eq(channels.organizationId, org), inArray(channels.type, ["whatsapp_qr", "whatsapp_official"]), eq(channels.status, "connected"))).limit(1),
+    ),
+    activeAgent: await hasRow(tx.select(one).from(agents).where(and(eq(agents.organizationId, org), eq(agents.status, "active"))).limit(1)),
+    businessHours: hasOpenBusinessDay(settings?.hours),
+    hasProduct: await hasRow(tx.select(one).from(products).where(eq(products.organizationId, org)).limit(1)),
+    teamInvited:
+      (await hasRow(tx.select(one).from(member).where(and(eq(member.organizationId, org), ne(member.userId, ctx.userId))).limit(1))) ||
+      (await hasRow(tx.select(one).from(invitation).where(and(eq(invitation.organizationId, org), eq(invitation.status, "pending"))).limit(1))),
+    hasConversation: await hasRow(tx.select(one).from(conversations).where(eq(conversations.organizationId, org)).limit(1)),
+    twoFactorEnabled: Boolean(me?.twoFactor),
   };
 }
 

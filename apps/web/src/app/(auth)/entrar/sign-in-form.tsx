@@ -9,9 +9,10 @@ import { FieldError, Input, Label } from "@duckzap/ui/components/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import type { TwoFactorMethod } from "@duckzap/contracts/settings";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { signInAction, verifyTwoFactorAction } from "@/features/auth/actions";
+import { sendTwoFactorEmailAction, signInAction, verifyTwoFactorAction } from "@/features/auth/actions";
 import { safeNext } from "@/lib/safe-next";
 
 export function SignInForm() {
@@ -19,8 +20,8 @@ export function SignInForm() {
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  // senha ok e conta com 2FA: pede o código do app autenticador antes de abrir a sessão
-  const [twoFactor, setTwoFactor] = useState(false);
+  // senha ok e conta com 2FA: pede o código (do app autenticador ou enviado por e-mail) antes de abrir a sessão
+  const [twoFactor, setTwoFactor] = useState<TwoFactorMethod | null>(null);
   const {
     register,
     handleSubmit,
@@ -38,7 +39,7 @@ export function SignInForm() {
       return;
     }
     if (result && "twoFactor" in result) {
-      setTwoFactor(true);
+      setTwoFactor(result.twoFactor);
       return;
     }
     finish();
@@ -49,7 +50,17 @@ export function SignInForm() {
     router.refresh();
   }
 
-  if (twoFactor) return <TwoFactorStep onDone={finish} onRestart={() => setTwoFactor(false)} />;
+  if (twoFactor) {
+    return (
+      <TwoFactorStep
+        key={twoFactor}
+        method={twoFactor}
+        onDone={finish}
+        onRestart={() => setTwoFactor(null)}
+        onUseApp={() => setTwoFactor("app")}
+      />
+    );
+  }
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -121,25 +132,63 @@ export function SignInForm() {
   );
 }
 
-/** Segundo passo do login: código do app autenticador (ou código de recuperação). */
-function TwoFactorStep({ onDone, onRestart }: { onDone: () => void; onRestart: () => void }) {
+/**
+ * Segundo passo do login: código do app autenticador, ou código enviado por e-mail (pedido sozinho ao abrir), ou um
+ * código de recuperação (os dois métodos aceitam).
+ */
+function TwoFactorStep({
+  method,
+  onDone,
+  onRestart,
+  onUseApp,
+}: {
+  method: TwoFactorMethod;
+  onDone: () => void;
+  onRestart: () => void;
+  onUseApp: () => void;
+}) {
   const [code, setCode] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [sending, setSending] = useState(false);
+  // o e-mail sai UMA vez ao abrir (o React em dev roda o efeito duas vezes; o servidor também limita os envios)
+  const sentOnce = useRef(false);
+
+  async function sendEmail(again: boolean) {
+    setError(null);
+    setNotice(null);
+    setSending(true);
+    const result = await sendTwoFactorEmailAction();
+    setSending(false);
+    if (!result) return setNotice(again ? "Enviamos um código novo. Use o mais recente." : null);
+    if (result.restart) return onRestart();
+    if (result.useApp) return onUseApp();
+    setError(result.error);
+  }
+
+  useEffect(() => {
+    if (method !== "email" || sentOnce.current) return;
+    sentOnce.current = true;
+    void sendEmail(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só ao abrir o passo
+  }, [method]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setNotice(null);
     setPending(true);
-    const result = await verifyTwoFactorAction({ code, recovery, trustDevice });
+    const result = await verifyTwoFactorAction({ code, recovery, trustDevice, method });
     setPending(false);
     if (!result) return onDone();
     if (result.restart) return onRestart();
     setError(result.error);
   }
 
+  const email = method === "email";
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-4">
       <div>
@@ -147,7 +196,11 @@ function TwoFactorStep({ onDone, onRestart }: { onDone: () => void; onRestart: (
         <p className="mt-1 text-ink-2">
           {recovery
             ? "Digite um dos seus códigos de recuperação. Cada um vale uma vez."
-            : "Digite o código de 6 dígitos do seu app autenticador."}
+            : email
+              ? sending
+                ? "Enviando um código para o seu e-mail…"
+                : "Enviamos um código de 6 números para o seu e-mail. Ele vale por 5 minutos."
+              : "Digite o código de 6 dígitos do seu app autenticador."}
         </p>
       </div>
       {error ? (
@@ -155,8 +208,13 @@ function TwoFactorStep({ onDone, onRestart }: { onDone: () => void; onRestart: (
           {error}
         </Alert>
       ) : null}
+      {notice ? (
+        <Alert tone="ok" live>
+          {notice}
+        </Alert>
+      ) : null}
       <div>
-        <Label htmlFor="codigo">{recovery ? "Código de recuperação" : "Código do app"}</Label>
+        <Label htmlFor="codigo">{recovery ? "Código de recuperação" : email ? "Código do e-mail" : "Código do app"}</Label>
         <Input
           id="codigo"
           inputMode={recovery ? "text" : "numeric"}
@@ -182,8 +240,13 @@ function TwoFactorStep({ onDone, onRestart }: { onDone: () => void; onRestart: (
       </Button>
       <div className="flex flex-wrap justify-between gap-3 text-[13px] font-bold">
         <button type="button" className="underline" onClick={() => setRecovery((value) => !value)}>
-          {recovery ? "Usar o código do app" : "Usar código de recuperação"}
+          {recovery ? (email ? "Usar o código do e-mail" : "Usar o código do app") : "Usar código de recuperação"}
         </button>
+        {email && !recovery ? (
+          <button type="button" className="underline disabled:opacity-60" disabled={sending} onClick={() => void sendEmail(true)}>
+            Reenviar código
+          </button>
+        ) : null}
         <button type="button" className="underline" onClick={onRestart}>
           Voltar
         </button>

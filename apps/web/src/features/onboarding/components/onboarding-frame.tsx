@@ -2,13 +2,22 @@ import type { OnboardingStep } from "@duckzap/contracts/onboarding";
 import { Steps } from "@duckzap/ui/components/layout";
 import { Logo } from "@duckzap/ui/components/logo";
 import type { ReactNode } from "react";
+import { stepOrder, wizardSteps } from "../steps";
 import { FinishLaterButton } from "./finish-later-button";
 
-export const wizardSteps = ["Empresa", "WhatsApp", "Primeiro agente"] as const;
-export const stepOrder: readonly OnboardingStep[] = ["empresa", "whatsapp", "agente", "pronto"];
-
-/** Cabeçalho com os passos + barra de progresso, como no design. */
-export function OnboardingFrame({ step, children }: { step: OnboardingStep; children: ReactNode }) {
+/**
+ * Cabeçalho com os passos + barra de progresso, como no design. `canFinishLater`: a empresa já existe, então dá para
+ * concluir agora e deixar WhatsApp/agente para depois; antes disso o botão só sai (o progresso fica salvo).
+ */
+export function OnboardingFrame({
+  step,
+  canFinishLater,
+  children,
+}: {
+  step: OnboardingStep;
+  canFinishLater: boolean;
+  children: ReactNode;
+}) {
   const index = stepOrder.indexOf(step);
   const done = step === "pronto";
   const progress = done ? 100 : ((index + 1) / wizardSteps.length) * 100;
@@ -22,7 +31,7 @@ export function OnboardingFrame({ step, children }: { step: OnboardingStep; chil
           current={done ? wizardSteps.length : index}
           label="Etapas da configuração"
         />
-        {done ? <span className="max-sm:hidden" /> : <FinishLaterButton />}
+        {done ? <span className="max-sm:hidden" /> : <FinishLaterButton canFinish={canFinishLater} />}
       </header>
       <div className="h-1 bg-surface-2" aria-hidden="true">
         <div className="h-1 bg-duck transition-[width]" style={{ width: `${progress}%` }} />

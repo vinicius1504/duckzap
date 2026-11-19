@@ -8,11 +8,11 @@ import {
   type SupportTicket,
   type SupportTicketInput,
 } from "@duckzap/contracts/help";
-import { callApi, callApiVoid, readApi } from "@/lib/api-call";
+import { callApi, readApi } from "@/lib/api-call";
 import type { Result } from "@/lib/mock";
 
-// Ligado ao back (apps/api/src/modules/help): GET /v1/help?q=, POST /v1/help/ask, POST /v1/support/tickets,
-// POST /v1/me/tour/restart. Conteúdo (FAQ, vídeos, textos do assistente) vive em apps/api/src/modules/help/content.ts.
+// Ligado ao back (apps/api/src/modules/help): GET /v1/help?q=, POST /v1/help/ask, POST /v1/support/tickets.
+// Conteúdo (FAQ, vídeos, textos do assistente) vive em apps/api/src/modules/help/content.ts.
 
 type HelpError = "rate_limited" | "support_unavailable" | "unavailable";
 const helpErrors = ["rate_limited", "support_unavailable"] as const satisfies readonly HelpError[];
@@ -31,9 +31,4 @@ export async function askHelpAssistant(question: string): Promise<Result<Assista
 /** `userId` fica na assinatura por compatibilidade: a API usa a pessoa da sessão. */
 export async function createSupportTicket(_userId: string, input: SupportTicketInput): Promise<Result<SupportTicket>> {
   return callApi("/v1/support/tickets", supportTicketSchema, { method: "POST", body: input, errors: helpErrors, fallback: "unavailable" });
-}
-
-/** Marca o tour guiado para aparecer de novo no próximo acesso ao Início. */
-export async function restartProductTour(_userId: string): Promise<Result<null>> {
-  return callApiVoid("/v1/me/tour/restart", { method: "POST", body: {}, errors: helpErrors, fallback: "unavailable" });
 }

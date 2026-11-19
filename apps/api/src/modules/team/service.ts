@@ -6,6 +6,7 @@ import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { agentIdByTeam, channelIdsByTeam, dbLinks, setTeamAgent, setTeamChannels } from "../channels/links";
 import type { Deps } from "../../lib/context";
+import { loadSecurityConfig } from "../../middleware/security-config";
 import type { Actor } from "./http";
 import { makeInviteToken } from "./invite-token";
 import {
@@ -105,6 +106,7 @@ export async function getTeamOverview({ deps, actor }: Omit<Ctx, "headers">): Pr
       channels: channelRows,
       agents: agentOptions,
       userLimit: { used: members.filter((m) => m.active).length + invites.length, max: maxUsers },
+      twoFactorRequired: loadSecurityConfig().require2faForAdmins,
     };
   });
 }

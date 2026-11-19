@@ -1,27 +1,21 @@
 "use client";
 
-import type { Account, NotificationPrefs, TwoFactorSetup } from "@duckzap/contracts/settings";
+import type { Account, NotificationPrefs, TwoFactorMethod } from "@duckzap/contracts/settings";
 import { Button } from "@duckzap/ui/components/button";
 import { Card, CardTitle } from "@duckzap/ui/components/card";
 import { Chip } from "@duckzap/ui/components/chip";
 import { ConfirmDialog } from "@duckzap/ui/components/confirm-dialog";
 import { Alert } from "@duckzap/ui/components/feedback";
 import { Checkbox } from "@duckzap/ui/components/form-controls";
-import { FieldError, Input, Label } from "@duckzap/ui/components/input";
+import { Input, Label } from "@duckzap/ui/components/input";
 import { emailError, phoneError } from "@duckzap/contracts/validation";
 import { useState, useTransition } from "react";
 import { EmailField, PhoneField } from "@/components/form-fields";
 import { DATE_FORMATS, formatDate } from "@/lib/format";
-import {
-  changePasswordAction,
-  confirmTwoFactorAction,
-  disableTwoFactorAction,
-  startTwoFactorAction,
-  updateNotificationsAction,
-  updateProfileAction,
-} from "../actions";
-import { CopyField } from "./copy-field";
-import { FakeQr } from "./fake-qr";
+import { disableTwoFactorAction, regenerateRecoveryCodesAction } from "@/features/security/actions";
+import { MethodOptions, RecoveryCodesView, TwoFactorSetupFlow } from "@/features/security/components/two-factor-setup";
+import { methodLabels, methodSignInHint, otherMethod } from "@/features/security/rules";
+import { changePasswordAction, updateNotificationsAction, updateProfileAction } from "../actions";
 
 type Feedback = { tone: "ok" | "err"; text: string } | null;
 
@@ -133,153 +127,164 @@ function PasswordForm() {
   );
 }
 
+type TwoFactorView =
+  | { kind: "idle" }
+  | { kind: "setup"; method: TwoFactorMethod }
+  | { kind: "codes"; codes: string[]; title: string }
+  | { kind: "regenerate" };
+
+/**
+ * Verificação em duas etapas: RECOMENDADA (obrigatória só se a empresa ligar a opção REQUIRE_2FA_FOR_ADMINS).
+ * Dois métodos: app autenticador (recomendado) ou código por e-mail. Ativa: trocar de método, gerar novos códigos de
+ * recuperação e desativar (menos quando é obrigatória).
+ */
 function TwoFactorSection({ account, timeZone }: { account: Account; timeZone: string }) {
-  const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
-  const [code, setCode] = useState("");
-  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
-  // o Better Auth pede a senha para ligar e para desligar a verificação em duas etapas
+  const { enabled, enabledAt, method } = account.twoFactor;
+  const [view, setView] = useState<TwoFactorView>({ kind: "idle" });
+  const [choice, setChoice] = useState<TwoFactorMethod>("app");
+  const [notice, setNotice] = useState<string | null>(null);
+  // o Better Auth pede a senha para desligar e para gerar novos códigos de recuperação
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const { enabled, enabledAt } = account.twoFactor;
+
+  function openRegenerate() {
+    setPassword("");
+    setError(null);
+    setView({ kind: "regenerate" });
+  }
+
+  function enabledWith(codes: string[] | null, target: TwoFactorMethod) {
+    setNotice(null);
+    if (codes) setView({ kind: "codes", codes, title: enabled ? "Método trocado!" : "Ativada!" });
+    else {
+      setView({ kind: "idle" });
+      setNotice(`Pronto: agora você usa ${methodLabels[target].toLowerCase()}. Seus códigos de recuperação continuam os mesmos.`);
+    }
+  }
 
   return (
     <section aria-labelledby="dois-fatores-titulo" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle id="dois-fatores-titulo">Verificação em duas etapas</CardTitle>
-        {enabled ? <Chip tone="ok">Ativa</Chip> : account.twoFactorRequired ? <Chip tone="err">Obrigatória</Chip> : <Chip>Desativada</Chip>}
+        {enabled ? (
+          <Chip tone="ok">Ativa{method ? ` · ${methodLabels[method]}` : ""}</Chip>
+        ) : account.twoFactorRequired ? (
+          <Chip tone="err">Obrigatória</Chip>
+        ) : (
+          <Chip>Recomendada</Chip>
+        )}
       </div>
 
-      {recoveryCodes ? (
+      {notice ? (
+        <Alert tone="ok" live>
+          {notice}
+        </Alert>
+      ) : null}
+
+      {view.kind === "codes" ? (
+        <RecoveryCodesView codes={view.codes} title={view.title} onDone={() => setView({ kind: "idle" })} />
+      ) : view.kind === "setup" ? (
         <div className="flex flex-col gap-3">
-          <Alert tone="ok" live title="Ativada!">
-            Guarde estes códigos de recuperação. Cada um funciona uma vez se você perder o celular. Não mostramos de novo.
-          </Alert>
-          <ul className="grid grid-cols-2 gap-2 rounded-control border border-line bg-bg p-3 font-mono text-[13px] max-[360px]:grid-cols-1">
-            {recoveryCodes.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-          <CopyField id="codigos-recuperacao" label="Todos os códigos" value={recoveryCodes.join(" ")} mono />
-          <Button className="self-start" onClick={() => setRecoveryCodes(null)}>
-            Já guardei
-          </Button>
+          <p className="font-semibold">{enabled ? `Trocar para ${methodLabels[view.method].toLowerCase()}` : methodLabels[view.method]}</p>
+          {enabled && view.method === "app" ? (
+            <p className="text-[13px] text-ink-2">Ao trocar para o app, você recebe códigos de recuperação novos.</p>
+          ) : null}
+          <TwoFactorSetupFlow
+            method={view.method}
+            onEnabled={(codes) => enabledWith(codes, view.method)}
+            onCancel={() => setView({ kind: "idle" })}
+          />
         </div>
-      ) : enabled ? (
-        <>
-          <p className="text-ink-2">
-            Ativa desde {enabledAt ? formatDate(enabledAt, DATE_FORMATS.day, timeZone) : "—"}. Ao entrar,
-            pedimos o código do app autenticador.
-          </p>
-          {account.twoFactorRequired ? (
-            <p className="text-[13px] text-ink-2">Obrigatória para Proprietário e Administrador, por isso não pode ser desativada.</p>
-          ) : (
-            <ConfirmDialog
-              trigger={<Button size="sm" variant="danger-ghost" className="self-start">Desativar</Button>}
-              title="Desativar a verificação em duas etapas?"
-              description="Sua conta fica protegida só pela senha."
-              confirmLabel="Desativar"
-              pendingLabel="Desativando…"
-              danger
-              onConfirm={() => disableTwoFactorAction(password)}
-            >
-              <div>
-                <Label htmlFor="dois-fatores-senha-desativar">Confirme sua senha</Label>
-                <Input
-                  id="dois-fatores-senha-desativar"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </ConfirmDialog>
-          )}
-        </>
-      ) : setup ? (
+      ) : view.kind === "regenerate" ? (
         <form
           className="flex flex-col gap-3"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
+            setError(null);
             startTransition(async () => {
-              const result = await confirmTwoFactorAction(code);
-              if (result.ok) {
-                setSetup(null);
-                setCode("");
-                setError(null);
-                setRecoveryCodes(result.data.recoveryCodes);
-              } else setError(result.error);
+              const result = await regenerateRecoveryCodesAction(password);
+              if (!result.ok) return setError(result.error);
+              setPassword("");
+              setView({ kind: "codes", codes: result.data.recoveryCodes, title: "Códigos novos gerados." });
             });
           }}
         >
-          <div className="flex flex-wrap items-center gap-5">
-            <FakeQr payload={setup.otpauthUrl} label="QR Code para o app autenticador" size={168} />
-            <ol className="flex flex-[1_1_220px] list-decimal flex-col gap-1.5 pl-5 text-ink-2">
-              <li>Abra um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…).</li>
-              <li>Leia o QR Code ou digite a chave abaixo.</li>
-              <li>Informe o código de 6 números que aparece no app.</li>
-            </ol>
-          </div>
-          <CopyField id="totp-chave" label="Chave para digitar" value={setup.secret} mono />
-          <div className="max-w-60">
-            <Label htmlFor="totp-codigo">Código do app</Label>
-            <Input
-              id="totp-codigo"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={7}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="font-mono tracking-widest"
-              aria-describedby={error ? "totp-erro" : undefined}
-              invalid={Boolean(error)}
-            />
-            <FieldError id="totp-erro" message={error ?? undefined} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? "Conferindo…" : "Ativar"}
-            </Button>
-            <Button onClick={() => setSetup(null)}>Cancelar</Button>
-          </div>
-        </form>
-      ) : (
-        <>
-          <p className="text-ink-2">Proteja sua conta com um código do celular além da senha.</p>
-          {account.twoFactorRequired ? (
-            <Alert tone="warn">Seu papel exige a verificação em duas etapas. Ative agora para não perder o acesso.</Alert>
-          ) : null}
+          <p className="text-ink-2">Os códigos de recuperação antigos deixam de funcionar.</p>
           {error ? (
             <Alert tone="err" live>
               {error}
             </Alert>
           ) : null}
-          <div className="max-w-60">
-            <Label htmlFor="dois-fatores-senha">Confirme sua senha</Label>
+          <div className="max-w-72">
+            <Label htmlFor="dois-fatores-senha-codigos">Confirme sua senha</Label>
             <Input
-              id="dois-fatores-senha"
+              id="dois-fatores-senha-codigos"
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <Button
-            variant="primary"
-            className="self-start"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await startTwoFactorAction(password);
-                if (result.ok) {
-                  setError(null);
-                  setPassword("");
-                  setSetup(result.data);
-                } else setError(result.error);
-              })
-            }
-          >
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="primary" disabled={pending || password.length === 0}>
+              {pending ? "Gerando…" : "Gerar novos códigos"}
+            </Button>
+            <Button onClick={() => setView({ kind: "idle" })} disabled={pending}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      ) : enabled && method ? (
+        <>
+          <p className="text-ink-2">
+            Ativa{enabledAt ? ` desde ${formatDate(enabledAt, DATE_FORMATS.day, timeZone)}` : ""}. {methodSignInHint[method]}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setView({ kind: "setup", method: otherMethod(method) })}>
+              {method === "app" ? "Trocar para código por e-mail" : "Trocar para app autenticador (recomendado)"}
+            </Button>
+            <Button size="sm" onClick={openRegenerate}>
+              Gerar novos códigos de recuperação
+            </Button>
+            {account.twoFactorRequired ? null : (
+              <ConfirmDialog
+                trigger={<Button size="sm" variant="danger-ghost">Desativar</Button>}
+                title="Desativar a verificação em duas etapas?"
+                description="Sua conta fica protegida só pela senha."
+                confirmLabel="Desativar"
+                pendingLabel="Desativando…"
+                danger
+                onConfirm={() => disableTwoFactorAction(password)}
+              >
+                <div>
+                  <Label htmlFor="dois-fatores-senha-desativar">Confirme sua senha</Label>
+                  <Input
+                    id="dois-fatores-senha-desativar"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </ConfirmDialog>
+            )}
+          </div>
+          {account.twoFactorRequired ? (
+            <p className="text-[13px] text-ink-2">
+              Sua empresa exige a verificação para Proprietário e Administrador: dá para trocar de método, mas não desativar.
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <p className="text-ink-2">Proteja sua conta com um código além da senha. Recomendamos o app autenticador.</p>
+          {account.twoFactorRequired ? (
+            <Alert tone="warn">Seu papel exige a verificação em duas etapas. Ative agora para não perder o acesso.</Alert>
+          ) : null}
+          <MethodOptions value={choice} onChange={setChoice} />
+          <Button variant="primary" className="self-start" onClick={() => setView({ kind: "setup", method: choice })}>
             Ativar verificação em duas etapas
           </Button>
         </>

@@ -9,11 +9,12 @@ import { Icon } from "@duckzap/ui/components/icon";
 import { AppShell, UserMenu } from "@duckzap/ui/shell";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTransition, type ReactNode } from "react";
+import { Suspense, useTransition, type ReactNode } from "react";
 import { navFor } from "@/config/nav";
 import { signOutAction } from "@/features/auth/actions";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import type { ShellStatus } from "@/features/shell/api";
+import { ProductTour } from "@/features/tour/components/product-tour";
 import { formatPlural } from "@/lib/format";
 import { BrowserNotifyToggle, RealtimeStatusChip, SoundToggle } from "@/lib/realtime/controls";
 
@@ -32,6 +33,8 @@ export function ShellFrame({
   const pathname = usePathname();
   const router = useRouter();
   const [, startTransition] = useTransition();
+  // tour guiado só com a conta liberada (suspensa ou com 2FA pendente fica presa em Ajustes)
+  const tourEnabled = !suspended && !session.user.twoFactorRequired;
   const user = { name: session.user.name, email: session.user.email, initials: initialsOf(session.user.name) };
 
   const actions = (
@@ -94,6 +97,12 @@ export function ShellFrame({
       }
     >
       {children}
+      {tourEnabled ? (
+        // useSearchParams (o ?tour=1) pede Suspense
+        <Suspense fallback={null}>
+          <ProductTour userId={session.user.id} role={session.user.role} />
+        </Suspense>
+      ) : null}
     </AppShell>
   );
 }

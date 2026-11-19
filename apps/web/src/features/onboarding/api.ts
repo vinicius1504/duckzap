@@ -1,16 +1,19 @@
 import "server-only";
 import {
-  companyStepSchema,
+  onboardingStateSchema,
   type AgentDraft,
   type AgentSetup,
   type CompanyStepInput,
   type OfficialApiInput,
   type OnboardingDraft,
+  type OnboardingState,
   type PreviewMessage,
   type QrSession,
   type SignUpInput,
 } from "@duckzap/contracts/onboarding";
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
+import { getAgent, listAppointmentTypes } from "@/features/agents/api";
 import {
   connectOfficialChannel,
   createChannel,
@@ -24,47 +27,23 @@ import { describeHours } from "@/lib/onboarding-agent";
 import { setupOnboardingAgent } from "./agent-setup";
 import { defaultAgent, defaultCompany, sampleQuestion } from "./mock-data";
 
-// Ligado ao back:
+// Ligado ao back. O estado do cadastro é DURÁVEL e vem do banco pela sessão (nada na memória do front, nem cookie):
 //   createSignUp  → POST /v1/auth/sign-up/email (Better Auth cria o usuário e já entra; o cookie de sessão é repassado)
-//   getDraft      → GET  /v1/onboarding           (conta + dados da empresa, se já criada)
+//   getDraft      → GET  /v1/onboarding (conta, segurança/2FA, empresa, WhatsApp conectado/pulado, canal, agente e conclusão)
+//   Segurança     → 2FA em /v1/account/two-factor/* (features/security); "pular" → POST /v1/onboarding/security/skip
 //   saveCompany   → POST /v1/onboarding/organization (1ª vez) ou PUT /v1/onboarding/company (voltou para editar)
-//   WhatsApp      → módulo Canais (canal real; o id fica no progresso em memória, chaveado pelo id da pessoa)
-//   completeOnboarding → cria/atualiza o agente REAL (módulo Agentes) e liga ao canal: ver agent-setup.ts
-// Continua em memória do servidor do front (chaveado pelo id da pessoa): o progresso do passo do WhatsApp, o rascunho do
-// agente e o `completedAt`. Continuam de exemplo: skipWhatsapp (só marca o passo), simulateAgentReply e getSampleConversation
-// (a PRÉVIA do agente, que nunca grava nada).
+//   WhatsApp      → módulo Canais (canal real); "pular" → POST /v1/onboarding/whatsapp/skip
+//   completeOnboarding → cria/atualiza o agente REAL (módulo Agentes, ver agent-setup.ts) e POST /v1/onboarding/complete
+// Continuam de exemplo: simulateAgentReply e getSampleConversation (a PRÉVIA do agente, que nunca grava nada).
 
-type MockProgress = {
-  whatsapp: OnboardingDraft["whatsapp"];
-  agent: AgentDraft | null;
-  /** O agente real criado ao concluir, e o id dele (para refazer o passo atualizar o mesmo agente). */
-  agentSetup: AgentSetup | null;
-  agentId?: string;
-  completedAt: string | null;
-  qr: (QrSession & { createdAt: number }) | null;
-  /** Canal real criado no passo de WhatsApp (QR ou API oficial). */
-  channelId?: string;
-};
-
-const store = globalThis as typeof globalThis & { __duckchatOnboarding?: Map<string, MockProgress> };
-const progress = (store.__duckchatOnboarding ??= new Map<string, MockProgress>());
-
-function progressOf(id: string): MockProgress {
-  let entry = progress.get(id);
-  if (!entry) {
-    entry = { whatsapp: null, agent: null, agentSetup: null, completedAt: null, qr: null };
-    progress.set(id, entry);
-  }
-  return entry;
-}
+/**
+ * Só para a tela "pronto" logo depois de concluir: o motivo de o agente não ter sido ligado (ex.: limite do plano) não
+ * existe no banco. É cosmético; sem ele (outro servidor, reinício) a tela mostra o estado real do agente, só sem o motivo.
+ */
+const store = globalThis as typeof globalThis & { __duckchatActivationError?: Map<string, string> };
+const activationErrors = (store.__duckchatActivationError ??= new Map<string, string>());
 
 const expiredMessage = "Seu cadastro expirou. Comece de novo.";
-
-const onboardingResponseSchema = z.object({
-  account: z.object({ id: z.string(), name: z.string(), email: z.email() }),
-  company: companyStepSchema.nullable(),
-  hasOrganization: z.boolean(),
-});
 
 const signUpResponseSchema = z.object({ user: z.object({ id: z.string() }) });
 
@@ -92,7 +71,8 @@ export async function createSignUp(input: SignUpInput): Promise<Result<{ draftId
   return ok({ draftId: parsed.data.user.id });
 }
 
-export async function getDraft(id: string): Promise<OnboardingDraft | null> {
+/** Estado do cadastro da pessoa logada (null = sem sessão ou API fora do ar). */
+async function getState(): Promise<OnboardingState | null> {
   let response: Response;
   try {
     response = await apiFetch("/v1/onboarding");
@@ -100,18 +80,51 @@ export async function getDraft(id: string): Promise<OnboardingDraft | null> {
     return null;
   }
   if (!response.ok) return null;
-  const parsed = onboardingResponseSchema.safeParse(await response.json().catch(() => null));
-  // o rascunho só vale para a pessoa logada (o cookie do cadastro guarda o id dela)
-  if (!parsed.success || parsed.data.account.id !== id) return null;
-  const mock = progressOf(id);
+  const parsed = onboardingStateSchema.safeParse(await response.json().catch(() => null));
+  return parsed.success ? parsed.data : null;
+}
+
+/** O agente real da empresa, como a tela "pronto" mostra (derivado de Agentes e Canais; falha = sem resumo). */
+async function agentSetupOf(state: OnboardingState): Promise<AgentSetup | null> {
+  if (!state.agentId) return null;
+  try {
+    const agent = await getAgent(state.agentId);
+    if (!agent) return null;
+    const overview = await getChannelsOverview();
+    const channel =
+      overview.channels.find((c) => c.agentId === agent.id) ?? overview.channels.find((c) => c.id === state.channelId);
+    const channelLinked = channel?.agentId === agent.id;
+    const channelConnected = channel?.status === "connected";
+    const needsAppointmentTypes =
+      agent.job === "scheduling" && (await listAppointmentTypes().catch(() => [])).filter((t) => !t.staffOnly).length === 0;
+    return {
+      agentId: agent.id,
+      name: agent.config.name,
+      active: agent.status === "active" && channelLinked && channelConnected,
+      channelLinked,
+      channelConnected,
+      needsAppointmentTypes,
+      activationError: activationErrors.get(agent.id) ?? null,
+    };
+  } catch (error) {
+    unstable_rethrow(error); // sessão expirada / portão de acesso redirecionam
+    return null;
+  }
+}
+
+/** Rascunho da pessoa logada, todo derivado do banco (null = sem sessão). O resumo do agente só depois de concluir ("pronto"). */
+export async function getDraft(): Promise<OnboardingDraft | null> {
+  const state = await getState();
+  if (!state) return null;
   return {
-    id,
-    account: { name: parsed.data.account.name, email: parsed.data.account.email },
-    company: parsed.data.company,
-    whatsapp: mock.whatsapp,
-    agent: mock.agent,
-    agentSetup: mock.agentSetup,
-    completedAt: mock.completedAt,
+    id: state.account.id,
+    account: { name: state.account.name, email: state.account.email },
+    security: state.security,
+    company: state.company,
+    role: state.role,
+    whatsapp: state.whatsapp,
+    agentSetup: state.completedAt ? await agentSetupOf(state) : null,
+    completedAt: state.completedAt,
   };
 }
 
@@ -121,14 +134,11 @@ export async function getStepDefaults(
 ): Promise<{ company: CompanyStepInput; agent: AgentDraft }> {
   return {
     company: draft.company ?? defaultCompany(),
-    agent: draft.agent ?? defaultAgent,
+    agent: defaultAgent,
   };
 }
 
-export async function saveCompany(
-  _id: string,
-  input: CompanyStepInput,
-): Promise<Result<null, "not_found" | "unavailable">> {
+export async function saveCompany(input: CompanyStepInput): Promise<Result<null, "not_found" | "unavailable">> {
   let response: Response;
   try {
     response = await apiFetch("/v1/onboarding/organization", { method: "POST", body: JSON.stringify(input) });
@@ -144,7 +154,7 @@ export async function saveCompany(
   return ok(null);
 }
 
-// ───────────── WhatsApp REAL (módulo Canais) · agente de teste ainda MOCK ─────────────
+// ───────────── WhatsApp REAL (módulo Canais) ─────────────
 
 /** Nome do canal criado pelo cadastro. Se a pessoa voltar ao passo, reaproveita o mesmo canal. */
 const ONBOARDING_CHANNEL_NAME = "WhatsApp principal";
@@ -167,13 +177,11 @@ async function phoneOf(channelId: string): Promise<string | null> {
 }
 
 /** QR REAL: cria o canal pelo módulo Canais e pede o QR à Evolution. Só vira "conectado" quando o celular lê de verdade. */
-export async function startQrSession(id: string): Promise<Result<QrSession, "not_found" | "unavailable">> {
-  const draft = progressOf(id);
+export async function startQrSession(): Promise<Result<QrSession, "not_found" | "unavailable">> {
   const channel = await ensureChannel("whatsapp_qr");
   if (!channel.ok) return channel;
   const started = await startChannelQr(channel.data.id);
   if (!started.ok) return fail("unavailable", "Não conseguimos gerar o QR Code agora. Tente de novo ou conecte depois, em Canais.");
-  draft.channelId = channel.data.id;
   return ok({
     id: channel.data.id,
     payload: started.data.payload,
@@ -183,26 +191,20 @@ export async function startQrSession(id: string): Promise<Result<QrSession, "not
   });
 }
 
-export async function getQrSession(id: string, _sessionId: string): Promise<Result<QrSession, "not_found">> {
-  const draft = progressOf(id);
-  if (!draft.channelId) return fail("not_found", "Código não encontrado. Gere um novo.");
-  const current = await getChannelQr(draft.channelId);
+/**
+ * Estado do QR. O id da sessão de QR É o id do canal (devolvido por `startQrSession`); a API só acha canais da empresa
+ * da sessão (RLS), então um id de outra empresa responde "não encontrado". Conectado = passo feito (quem diz é o banco).
+ */
+export async function getQrSession(channelId: string): Promise<Result<QrSession, "not_found">> {
+  const current = await getChannelQr(channelId);
   if (!current.ok) return fail("not_found", "Código não encontrado. Gere um novo.");
   const status = current.data.status === "waiting" ? "pending" : current.data.status;
-  let phone: string | null = null;
-  if (status === "connected") {
-    phone = await phoneOf(draft.channelId);
-    draft.whatsapp = { method: "qr_code", status: "connected", phone };
-  }
-  return ok({ id: draft.channelId, payload: current.data.payload, expiresAt: current.data.expiresAt, status, phone });
+  const phone = status === "connected" ? await phoneOf(channelId) : null;
+  return ok({ id: channelId, payload: current.data.payload, expiresAt: current.data.expiresAt, status, phone });
 }
 
 /** API oficial REAL: cria o canal e valida as credenciais com a Meta (módulo Canais). */
-export async function connectOfficialApi(
-  id: string,
-  input: OfficialApiInput,
-): Promise<Result<{ phone: string }, "not_found" | "invalid_credentials">> {
-  const draft = progressOf(id);
+export async function connectOfficialApi(input: OfficialApiInput): Promise<Result<{ phone: string }, "invalid_credentials">> {
   const channel = await ensureChannel("whatsapp_official");
   if (!channel.ok) return fail("invalid_credentials", channel.message);
   const connected = await connectOfficialChannel(channel.data.id, {
@@ -218,54 +220,56 @@ export async function connectOfficialApi(
         : connected.message,
     );
   }
-  draft.channelId = channel.data.id;
-  const phone = connected.data.address ?? "";
-  draft.whatsapp = { method: "official_api", status: "connected", phone: connected.data.address };
-  return ok({ phone });
+  return ok({ phone: connected.data.address ?? "" });
 }
 
-export async function skipWhatsapp(id: string): Promise<Result<null, "not_found">> {
-  await mockDelay(150);
-  const draft = progressOf(id);
-  if (draft.whatsapp?.status !== "connected")
-    draft.whatsapp = { method: "qr_code", status: "skipped", phone: null };
+/** POST sem corpo de resposta útil nas rotas do cadastro (`/v1/onboarding/*`). */
+async function postOnboarding(path: string, failure: string): Promise<Result<null, "not_found" | "unavailable">> {
+  let response: Response;
+  try {
+    response = await apiFetch(path, { method: "POST", body: "{}" });
+  } catch {
+    return fail("unavailable", "Não conseguimos falar com o servidor. Tente de novo em instantes.");
+  }
+  if (response.status === 401) return fail("not_found", expiredMessage);
+  if (response.status === 403) {
+    const body = (await response.json().catch(() => null)) as { error?: { code?: unknown } } | null;
+    if (body?.error?.code === "no_organization") return fail("not_found", "Preencha os dados da empresa antes de continuar.");
+    return fail("unavailable", "Só quem administra a empresa pode fazer o cadastro.");
+  }
+  if (!response.ok) return fail("unavailable", failure);
+  await response.body?.cancel();
   return ok(null);
+}
+
+/** "Pular" o WhatsApp: guardado na empresa (sobrevive a recarregar e a deploy). */
+export async function skipWhatsapp(): Promise<Result<null, "not_found" | "unavailable">> {
+  return postOnboarding("/v1/onboarding/whatsapp/skip", "Não foi possível pular esta etapa. Tente de novo.");
 }
 
 /**
  * Conclui o cadastro. Com um rascunho de agente, cria (ou atualiza, se a pessoa voltou) o agente REAL, com o que a empresa
  * vende no conhecimento e ligado ao canal do WhatsApp (ativo só se o canal estiver conectado). Se isso falhar, o cadastro
  * NÃO é marcado como concluído: a empresa e o canal continuam salvos e a pessoa tenta de novo no mesmo passo.
+ * Sem agente ("Fazer depois"), só conclui. A conclusão é gravada no banco (POST /v1/onboarding/complete, idempotente).
  */
-export async function completeOnboarding(
-  id: string,
-  agent: AgentDraft | null,
-): Promise<Result<OnboardingDraft, "not_found" | "unavailable">> {
-  const progressEntry = progressOf(id);
-  const current = await getDraft(id);
+export async function completeOnboarding(agent: AgentDraft | null): Promise<Result<null, "not_found" | "unavailable">> {
+  const current = await getState();
   if (!current) return fail("not_found", expiredMessage);
+  if (!current.company) return fail("not_found", "Preencha os dados da empresa antes de continuar.");
 
-  progressEntry.agent = agent; // guardado já: se der erro abaixo, o formulário volta preenchido
   if (agent) {
-    if (!current.company) return fail("not_found", "Preencha os dados da empresa antes de criar o agente.");
     const setup = await setupOnboardingAgent({
       draft: agent,
       company: current.company,
-      channelId: progressEntry.channelId,
-      knownAgentId: progressEntry.agentId,
-      onAgentId: (agentId) => {
-        progressEntry.agentId = agentId;
-      },
+      channelId: current.channelId ?? undefined,
+      knownAgentId: current.agentId ?? undefined,
     });
     if (!setup.ok) return fail("unavailable", setup.message);
-    progressEntry.agentSetup = setup.data;
-  } else {
-    progressEntry.agentSetup = null;
+    if (setup.data.activationError) activationErrors.set(setup.data.agentId, setup.data.activationError);
+    else activationErrors.delete(setup.data.agentId);
   }
-  progressEntry.completedAt = new Date().toISOString();
-  const full = await getDraft(id);
-  if (!full) return fail("not_found", expiredMessage);
-  return ok(full);
+  return postOnboarding("/v1/onboarding/complete", "Não foi possível concluir o cadastro. Tente de novo em instantes.");
 }
 
 /* ───────────── Simulador do agente (mock simples por palavras-chave) ───────────── */

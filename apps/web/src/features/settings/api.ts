@@ -10,7 +10,6 @@ import {
   integrationsSchema,
   planSchema,
   serviceSettingsSchema,
-  twoFactorSetupSchema,
   webhookSchema,
   webhookTestResultSchema,
   type Account,
@@ -26,7 +25,6 @@ import {
   type NotificationPrefs,
   type Plan,
   type ServiceSettings,
-  type TwoFactorSetup,
   type UpdateCompanyInput,
   type UpdateProfileInput,
   type Webhook,
@@ -214,41 +212,6 @@ export async function changePassword(
     body: input,
     errors: ["wrong_password", "same_password"],
     fallback: "wrong_password",
-    forwardCookies: true,
-  });
-}
-
-/** O Better Auth exige a senha para começar a configurar o 2FA. */
-export async function startTwoFactorSetup(_userId: string, password: string): Promise<Result<TwoFactorSetup>> {
-  return callApi("/v1/account/two-factor/setup", twoFactorSetupSchema, {
-    method: "POST",
-    body: { password },
-    errors: [],
-    fallback: "invalid",
-    forwardCookies: true,
-  });
-}
-
-/** Confere o código do app, liga o 2FA e devolve os códigos de recuperação (mostrados uma vez). */
-export async function confirmTwoFactor(
-  _userId: string,
-  code: string,
-): Promise<Result<{ recoveryCodes: string[] }, "no_setup" | "invalid_code">> {
-  return callApi("/v1/account/two-factor/confirm", z.object({ recoveryCodes: z.array(z.string()) }), {
-    method: "POST",
-    body: { code },
-    errors: ["no_setup", "invalid_code"],
-    fallback: "invalid_code",
-    forwardCookies: true,
-  });
-}
-
-export async function disableTwoFactor(_userId: string, password: string): Promise<Result<null, "required">> {
-  return callApiVoid("/v1/account/two-factor/disable", {
-    method: "POST",
-    body: { password },
-    errors: ["required"],
-    fallback: "required",
     forwardCookies: true,
   });
 }

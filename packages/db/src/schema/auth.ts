@@ -22,6 +22,9 @@ export const user = pgTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  // NÃO é do Better Auth (manter ao regenerar): "Pular por enquanto" no passo "Proteja sua conta" do cadastro (0017).
+  // Fica na pessoa, não na empresa: o passo vem antes de a empresa existir e o 2FA é de cada conta.
+  onboardingSecuritySkippedAt: timestamp("onboarding_security_skipped_at", { withTimezone: true }),
 });
 
 export const session = pgTable(
@@ -92,6 +95,13 @@ export const organization = pgTable("organization", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   metadata: text("metadata"),
   timeZone: text("time_zone").default("America/Sao_Paulo"),
+  // Estado DURÁVEL do cadastro (/comecar). Fica aqui, e não em `organization_settings`, porque `/v1/me` já lê esta
+  // linha a cada pedido (zero consulta extra) e toda empresa tem uma (o backfill da 0016 cobre todas). NÃO são
+  // `additionalFields` do Better Auth de propósito: o cliente não grava; só a API do cadastro (`/v1/onboarding/*`).
+  /** Cadastro concluído (null = em andamento: o dono é levado de volta a /comecar). */
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+  /** A pessoa escolheu "pular" o passo do WhatsApp (conecta depois, em Canais). */
+  onboardingWhatsappSkippedAt: timestamp("onboarding_whatsapp_skipped_at", { withTimezone: true }),
 });
 
 export const member = pgTable(

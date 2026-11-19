@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ShellFrame } from "@/components/shell-frame";
 import { SuspendedScreen } from "@/components/suspended-screen";
 import { requireSession } from "@/features/auth/session";
+import { needsOnboarding } from "@/features/onboarding/steps";
 import { getShellStatus } from "@/features/shell/api";
 import { currentPathname, isSettingsPath } from "@/lib/access-gate";
 import { RealtimeProvider } from "@/lib/realtime/provider";
@@ -16,6 +17,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   // Conta suspensa: bloqueio total, salvo Ajustes (o dono precisa chegar em Plano e cobrança).
   if (suspended && !onSettings) return <SuspendedScreen session={session} />;
+  // Cadastro obrigatório: o DONO com o cadastro da empresa em aberto volta para /comecar (convidados e empresas antigas,
+  // concluídas no backfill, nunca). Exceção: Ajustes quando o portão exige estar lá (pagar a conta suspensa / ativar o 2FA).
+  if (needsOnboarding(session) && !(onSettings && (suspended || session.user.twoFactorRequired))) redirect("/comecar");
   // 2FA obrigatório pendente (dono/admin): só Ajustes → Minha conta, para ativar.
   if (session.user.twoFactorRequired && !onSettings) redirect("/ajustes?aba=conta");
 

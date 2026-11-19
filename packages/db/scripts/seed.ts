@@ -55,7 +55,8 @@ await db.transaction(async (tx) => {
   for (const org of orgs) {
     await tx
       .insert(schema.organization)
-      .values({ id: org.id, name: org.name, slug: org.slug, createdAt: now, timeZone: "America/Sao_Paulo" })
+      // empresas de exemplo já configuradas: cadastro concluído (senão a dona cairia em /comecar)
+      .values({ id: org.id, name: org.name, slug: org.slug, createdAt: now, timeZone: "America/Sao_Paulo", onboardingCompletedAt: now })
       .onConflictDoNothing();
     await tx
       .insert(schema.subscriptions)

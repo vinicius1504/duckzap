@@ -18,14 +18,14 @@ import { fail, ok, type Result } from "@/lib/mock";
 
 // Ao concluir o cadastro, o rascunho do agente vira um agente REAL (módulo Agentes), com o que a pessoa vende como documento
 // de conhecimento, ligado ao canal criado no passo do WhatsApp (`channels.agent_id`) e ligado só se esse canal estiver conectado.
-// Refazer o passo (voltar e concluir de novo, ou o servidor do front reiniciar) ATUALIZA o mesmo agente: ele é achado pelo id
-// guardado no progresso do cadastro ou, na falta dele, pelo nome "Agente <empresa>".
+// Refazer o passo (concluir de novo depois de uma falha, mesmo em outro servidor/deploy) ATUALIZA o mesmo agente: ele é achado
+// pelo id que GET /v1/onboarding devolve (o agente mais antigo da empresa, já no banco) ou, na falta dele, pelo nome "Agente <empresa>".
 // Qualquer falha devolve uma mensagem clara; a empresa e o canal já salvos não são tocados e a pessoa tenta de novo.
 
 const RETRY = "Sua empresa e o WhatsApp já estão salvos. Tente concluir de novo em instantes.";
 const unavailable = (detail: string) => fail("unavailable" as const, `${detail} ${RETRY}`);
 
-/** Agente do cadastro: o do progresso (se ainda existe) ou o que tem o nome esperado. */
+/** Agente do cadastro: o que o banco aponta (se ainda existe) ou o que tem o nome esperado. */
 async function findOnboardingAgent(knownId: string | undefined, name: string): Promise<Agent | null> {
   if (knownId) {
     const known = await getAgent(knownId);
@@ -40,8 +40,6 @@ export async function setupOnboardingAgent(input: {
   company: CompanyStepInput;
   channelId: string | undefined;
   knownAgentId: string | undefined;
-  /** Chamado assim que o id do agente existe, para um novo clique em "concluir" reaproveitá-lo mesmo se algo falhar depois. */
-  onAgentId: (agentId: string) => void;
 }): Promise<Result<AgentSetup, "unavailable">> {
   const { draft, company, channelId } = input;
   try {
@@ -57,9 +55,9 @@ export async function setupOnboardingAgent(input: {
     if (!agent) {
       const created = await createAgent({ name: mapped.name, job: mapped.job, channelIds: [] }, "");
       if (!created.ok) return unavailable(`Não foi possível criar o agente: ${created.message}`);
+      // já fica no banco: se algo falhar abaixo, o próximo "concluir" acha este agente e o atualiza
       agent = created.data;
     }
-    input.onAgentId(agent.id);
 
     // 2. configuração (nome, tom, prompt, conhecimento). Sem mudança, não cria versão nova.
     const nextConfig = keepExamples(mapped.config, agent.config);

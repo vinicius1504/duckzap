@@ -13,7 +13,7 @@ export const TWO_FACTOR_REQUIRED = {
 const EXEMPT_PATH = /^\/v1\/(me|onboarding|account)(\/|$)/;
 export const isTwoFactorExemptPath = (path: string) => EXEMPT_PATH.test(path);
 
-/** Regra pura (§5.1): só Proprietário e Administrador precisam; Atendente não é afetado. */
+/** Regra pura (§5.1): com a opção ligada, só Proprietário e Administrador precisam; Atendente não é afetado. */
 export function needsTwoFactor(input: { role: MemberRole; twoFactorEnabled: boolean; required: boolean }) {
   return input.required && !input.twoFactorEnabled && (input.role === "owner" || input.role === "admin");
 }
@@ -22,6 +22,23 @@ export const isTwoFactorEnabled = (auth: AuthSession) => Boolean((auth.user as {
 
 function toRole(role: string): MemberRole {
   return role === "owner" || role === "admin" ? role : "agent";
+}
+
+/** O papel exige 2FA SE a opção `REQUIRE_2FA_FOR_ADMINS` estiver ligada (padrão: desligada; o 2FA é recomendado). */
+export const roleRequiresTwoFactor = (role: MemberRole | null, required = loadSecurityConfig().require2faForAdmins) =>
+  required && (role === "owner" || role === "admin");
+
+/** Empresa ativa da sessão (igual a `buildSession`), senão a primeira; null = conta ainda sem empresa (cadastro). */
+export async function activeMembership(
+  db: Database,
+  auth: Pick<AuthSession, "user" | "session">,
+): Promise<{ organizationId: string; role: MemberRole } | null> {
+  const memberships = await db
+    .select({ role: schema.member.role, organizationId: schema.member.organizationId })
+    .from(schema.member)
+    .where(eq(schema.member.userId, auth.user.id));
+  const active = memberships.find((m) => m.organizationId === auth.session.activeOrganizationId) ?? memberships[0];
+  return active ? { organizationId: active.organizationId, role: toRole(active.role) } : null;
 }
 
 /**
@@ -34,11 +51,7 @@ export async function mustSetUpTwoFactor(
   required = loadSecurityConfig().require2faForAdmins,
 ): Promise<boolean> {
   if (!required || isTwoFactorEnabled(auth)) return false;
-  const memberships = await db
-    .select({ role: schema.member.role, organizationId: schema.member.organizationId })
-    .from(schema.member)
-    .where(eq(schema.member.userId, auth.user.id));
-  const active = memberships.find((m) => m.organizationId === auth.session.activeOrganizationId) ?? memberships[0];
+  const active = await activeMembership(db, auth);
   if (!active) return false;
-  return needsTwoFactor({ role: toRole(active.role), twoFactorEnabled: false, required });
+  return needsTwoFactor({ role: active.role, twoFactorEnabled: false, required });
 }

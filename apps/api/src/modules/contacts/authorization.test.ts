@@ -18,7 +18,7 @@ import { contactsRoutes, WHATSAPP_PREVIEWS_PER_MINUTE } from "./routes";
 function sessionFor(role: MemberRole, status: Session["organization"]["subscriptionStatus"] = "active"): Session {
   return {
     user: { id: "user_1", name: "Pessoa", email: "pessoa@exemplo.com", role },
-    organization: { id: "org_a", name: "Casa Alvorada", plan: "pro", subscriptionStatus: status, timeZone: "America/Sao_Paulo", features: ["campaigns", "instagram"], maxAgents: null },
+    organization: { id: "org_a", name: "Casa Alvorada", plan: "pro", subscriptionStatus: status, timeZone: "America/Sao_Paulo", features: ["campaigns", "instagram"], maxAgents: null, onboardingCompleted: true },
   };
 }
 

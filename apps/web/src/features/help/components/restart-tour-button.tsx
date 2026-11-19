@@ -1,36 +1,12 @@
-"use client";
+import { buttonVariants } from "@duckzap/ui/components/button";
+import Link from "next/link";
+import { TOUR_HOME_PATH, TOUR_QUERY } from "@/features/tour/steps";
 
-import { Button } from "@duckzap/ui/components/button";
-import { Alert } from "@duckzap/ui/components/feedback";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { restartTourAction } from "../actions";
-
+/** Leva ao Início com `?tour=1`: o tour roda de novo mesmo já visto (o estado do tour é do navegador). */
 export function RestartTourButton() {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
   return (
-    <div>
-      <Button
-        size="lg"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await restartTourAction();
-            if (result.ok) router.push("/inicio?tour=1");
-            else setError(result.error);
-          })
-        }
-      >
-        {pending ? "Preparando…" : "Refazer tour guiado"}
-      </Button>
-      {error ? (
-        <Alert tone="err" live className="mt-1.5">
-          {error}
-        </Alert>
-      ) : null}
-    </div>
+    <Link href={`${TOUR_HOME_PATH}?${TOUR_QUERY}=1`} className={buttonVariants({ size: "lg" })}>
+      Fazer o tour de novo
+    </Link>
   );
 }

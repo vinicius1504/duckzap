@@ -1,4 +1,4 @@
-import { companyStepSchema, type CompanyStepInput } from "@duckzap/contracts/onboarding";
+import { companyStepSchema, type CompanyStepInput, type OnboardingState } from "@duckzap/contracts/onboarding";
 import { businessHoursSchema } from "@duckzap/contracts/settings";
 import { schema, withOrg } from "@duckzap/db";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -9,6 +9,7 @@ import { requireAuth } from "../../middleware/require-auth";
 import { parseBody, withActor, type ActorBindings } from "../team/http";
 import { defaultBusinessHours, defaultServiceSettings, isValidTimeZone } from "../settings/defaults";
 import { fromSettingsHours, toSettingsHours } from "./hours";
+import { loadProgress, loadSecurityStep, markCompleted, markSecuritySkipped, markWhatsappSkipped } from "./progress";
 
 /** Período e plano do teste grátis. Valores comerciais `[A DEFINIR]` (§1.2); ajustar aqui. */
 const TRIAL_PLAN = "pro";
@@ -51,8 +52,12 @@ function slugify(name: string) {
 
 /**
  *   POST /v1/onboarding/organization   cria empresa + Proprietária + teste grátis + horário e boas-vindas (sessão)
- *   GET  /v1/onboarding                rascunho: conta e, se já criada, os dados da empresa (sessão)
+ *   GET  /v1/onboarding                estado durável: conta, segurança, empresa, WhatsApp, agente e conclusão (sessão; ver progress.ts)
+ *   POST /v1/onboarding/security/skip  "pular" o passo opcional do 2FA, guardado na pessoa (sessão; idempotente). Ativar o 2FA
+ *                                      é em /v1/account/two-factor/* (também só sessão)
  *   PUT  /v1/onboarding/company        volta e edita o passo Empresa depois de criada (settings.manage)
+ *   POST /v1/onboarding/whatsapp/skip  "pular" o passo do WhatsApp, guardado na empresa (settings.manage; idempotente)
+ *   POST /v1/onboarding/complete       conclui o cadastro (settings.manage; idempotente: devolve a mesma data)
  * O cadastro da conta em si é o do Better Auth: POST /v1/auth/sign-up/email (entra já logado).
  */
 export function onboardingRoutes(deps: Deps) {
@@ -105,13 +110,15 @@ export function onboardingRoutes(deps: Deps) {
   });
 
   app.get("/onboarding", async (c) => {
-    const { user } = c.get("authSession");
-    const [membership] = await deps.db
-      .select({ organizationId: schema.member.organizationId, name: schema.organization.name })
+    const { user, session } = c.get("authSession");
+    // a empresa ATIVA da sessão (mesma regra de /v1/me), senão a primeira
+    const memberships = await deps.db
+      .select({ role: schema.member.role, org: schema.organization })
       .from(schema.member)
       .innerJoin(schema.organization, eq(schema.member.organizationId, schema.organization.id))
-      .where(eq(schema.member.userId, user.id))
-      .limit(1);
+      .where(eq(schema.member.userId, user.id));
+    const active = memberships.find((m) => m.org.id === session.activeOrganizationId) ?? memberships[0];
+    const membership = active ? { organizationId: active.org.id, name: active.org.name } : undefined;
 
     let company: CompanyStepInput | null = null;
     if (membership) {
@@ -127,7 +134,25 @@ export function onboardingRoutes(deps: Deps) {
       // a boas-vindas deixou de ser obrigatória (conta nova é "Somente IA"): só nome e horário definem o passo
       company = candidate.success ? candidate.data : null;
     }
-    return c.json({ account: { id: user.id, name: user.name, email: user.email }, company, hasOrganization: Boolean(membership) });
+    const progress = active
+      ? await loadProgress(deps.db, active.org)
+      : { whatsapp: null, channelId: null, agentId: null, completedAt: null };
+    const body: OnboardingState = {
+      account: { id: user.id, name: user.name, email: user.email },
+      security: await loadSecurityStep(deps.db, user.id),
+      company,
+      hasOrganization: Boolean(active),
+      role: active ? (active.role === "owner" || active.role === "admin" ? active.role : "agent") : null,
+      ...progress,
+    };
+    return c.json(body);
+  });
+
+  // "Pular por enquanto" no passo "Proteja sua conta": é da PESSOA e vem antes da empresa, então basta a sessão
+  app.use("/onboarding/security/skip", requireAuth(deps));
+  app.post("/onboarding/security/skip", async (c) => {
+    await markSecuritySkipped(deps.db, c.get("authSession").user.id);
+    return c.json({ ok: true });
   });
 
   // edição do passo depois de criado: precisa de empresa e de permissão (a Proprietária recém-criada tem)
@@ -151,6 +176,19 @@ export function onboardingRoutes(deps: Deps) {
         .onConflictDoUpdate({ target: schema.organizationSettings.organizationId, set: values });
     });
     return c.json({ ok: true });
+  });
+
+  editor.use("/onboarding/whatsapp/skip", withActor(deps, "settings.manage"));
+  editor.post("/onboarding/whatsapp/skip", async (c) => {
+    await markWhatsappSkipped(deps.db, c.get("actor").organizationId);
+    return c.json({ ok: true });
+  });
+
+  // concluir não exige agente nem WhatsApp (dá para fazer depois, em Agentes e Canais); a empresa já existe (actor)
+  editor.use("/onboarding/complete", withActor(deps, "settings.manage"));
+  editor.post("/onboarding/complete", async (c) => {
+    const completedAt = await markCompleted(deps.db, c.get("actor").organizationId);
+    return c.json({ completedAt: completedAt.toISOString() });
   });
   app.route("/", editor);
 

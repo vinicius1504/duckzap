@@ -191,12 +191,21 @@ export type Billing = z.infer<typeof billingSchema>;
 
 // ---------- Minha conta ----------
 
+/** Como a pessoa recebe o código do 2FA: app autenticador (TOTP, recomendado) ou código no e-mail. */
+export const twoFactorMethodSchema = z.enum(["app", "email"]);
+export type TwoFactorMethod = z.infer<typeof twoFactorMethodSchema>;
+
 export const accountSchema = z.object({
   name: z.string(),
   email: z.email(),
   phone: z.string(),
-  twoFactor: z.object({ enabled: z.boolean(), enabledAt: z.iso.datetime().nullable() }),
-  /** 2FA obrigatório para Proprietário e Administrador (§5.1). */
+  twoFactor: z.object({
+    enabled: z.boolean(),
+    enabledAt: z.iso.datetime().nullable(),
+    /** null = desativada. */
+    method: twoFactorMethodSchema.nullable(),
+  }),
+  /** O papel exige 2FA porque a opção REQUIRE_2FA_FOR_ADMINS está ligada (padrão: desligada; o 2FA é recomendado). */
   twoFactorRequired: z.boolean(),
   notifications: z.object({ sound: z.boolean(), browser: z.boolean(), emailSummary: z.boolean() }),
 });
@@ -225,3 +234,11 @@ export const twoFactorSetupSchema = z.object({ secret: z.string(), otpauthUrl: z
 export type TwoFactorSetup = z.infer<typeof twoFactorSetupSchema>;
 
 export const totpCodeSchema = z.string().regex(/^\d{6}$/, "O código tem 6 números.");
+
+/** 2FA por e-mail, passo 1: o código foi enviado para este e-mail (o da própria conta). */
+export const twoFactorEmailSetupSchema = z.object({ email: z.email() });
+export type TwoFactorEmailSetup = z.infer<typeof twoFactorEmailSetupSchema>;
+
+/** Códigos de recuperação, mostrados uma vez. `null` = continuam os mesmos de antes (trocou de app para e-mail). */
+export const recoveryCodesSchema = z.object({ recoveryCodes: z.array(z.string()).nullable() });
+export type RecoveryCodes = z.infer<typeof recoveryCodesSchema>;

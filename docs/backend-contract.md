@@ -21,7 +21,7 @@ Ordem sugerida (segue o roadmap §8): auth → equipe/canais → conversas → c
 | channels | `getChannelsOverview`, `createChannel`, `startQrSession`, `getQrSession`, `getOfficialWebhookInfo`, `connectOfficialChannel`, `authorizeInstagram`, `disconnectChannel`, `setDefaultChannel`, `updateChannelSettings`, `deleteChannel`, `assignTeamChannels` |
 | team | `getTeamOverview`, `inviteMember`, `resendInvite`, `cancelInvite`, `updateMember`, `resetMemberPassword`, `setMemberActive`, `createTeam`, `updateTeam`, `deleteTeam` |
 | settings | `getPlan`, `getPlanCatalog`, `getCompany`, `updateCompany`, `getServiceSettings`, `updateServiceSettings`, `getIntegrations`, `connectGoogleCalendar`, `disconnectGoogleCalendar`, `authorizeInstagramIntegration`, `updateWhatsappOfficialToken`, `listApiKeys`, `createApiKey`, `revokeApiKey`, `listWebhooks`, `createWebhook`, `testWebhook`, `setWebhookActive`, `deleteWebhook`, `getBilling`, `requestPlanChange`, `getAccount`, `updateProfile`, `changePassword`, `startTwoFactorSetup`, `confirmTwoFactor`, `disableTwoFactor`, `updateNotifications` |
-| help | `getHelpCenter` (`GET /v1/help?q=`), `askHelpAssistant` (`POST /v1/help/ask`, IA tier fast; sem IA responde por palavras-chave), `createSupportTicket` (`POST /v1/support/tickets`, e-mail para `SUPPORT_EMAIL`), `restartProductTour` (`POST /v1/me/tour/restart`) |
+| help | `getHelpCenter` (`GET /v1/help?q=`), `askHelpAssistant` (`POST /v1/help/ask`, IA tier fast; sem IA responde por palavras-chave), `createSupportTicket` (`POST /v1/support/tickets`, e-mail para `SUPPORT_EMAIL`) |
 | onboarding | `createSignUp`, `getDraft`, `getStepDefaults`, `saveCompany`, `startQrSession`, `getQrSession`, `connectOfficialApi`, `skipWhatsapp`, `simulateAgentReply`, `getSampleConversation`, `completeOnboarding` |
 
 Regras puras já prontas para o worker reutilizar (em `contracts/campaigns.ts`): `warmupDailyLimit`, `splitIntoDays`, `scheduleDays`, `estimateDaySeconds`, `validateVariation`, `textSimilarity`. Permissões: `contracts/permissions.ts` (`can`).
@@ -151,7 +151,7 @@ Permissão `conversation.reply`; plano expirado = 403 `sending_paused` no pedido
 
 | Módulo | Funções (⚑ = grava em `audit_logs` na mesma transação) |
 |--------|---------|
-| auth | `startSignIn`, `getChallenge`, `verifyTwoFactor` (2FA obrigatório), `getSessionByToken`, `signOut` — logar tentativas e aplicar rate limit |
+| auth | `startSignIn`, `getChallenge`, `verifyTwoFactor` (2FA opcional e recomendado: app autenticador ou código por e-mail), `getSessionByToken`, `signOut` — logar tentativas e aplicar rate limit |
 | overview | `getPlatformOverview` |
 | companies | `listCompanies`, `getCompanyCounts`, `getCompanyDetail`, `changeCompanyPlan` ⚑, `extendCompany` ⚑, `setCompanyEnabled` ⚑ |
 | subscriptions | `listSubscriptions`, `getSubscriptionCounts`, `getSubscription`, `listInvoices` |
@@ -161,7 +161,7 @@ Permissão `conversation.reply`; plano expirado = 403 `sending_paused` no pedido
 ## Pendências conhecidas
 
 - **Onboarding (`/comecar`)**: o cadastro da conta e da empresa é real (Better Auth + `POST /v1/onboarding/organization`). Continuam em memória do servidor do front: `startQrSession`, `getQrSession`, `connectOfficialApi`, `skipWhatsapp`, `simulateAgentReply`, `getSampleConversation` e `completeOnboarding` (agente de teste). É decisão de produto: no cadastro a empresa ainda não tem canal nem agente reais; ligar exige criar o canal/agente a partir do rascunho (Canais e Agentes já têm as rotas).
-- **Ajuda**: FAQ, vídeos e textos do assistente vêm de `apps/api/src/modules/help/content.ts` (versionado no código). Os links `[LINK]` (WhatsApp do suporte, termos, privacidade, vídeos) ainda precisam ser definidos. Chamados saem por e-mail para `SUPPORT_EMAIL` (sem tabela); `POST /v1/me/tour/restart` só registra.
+- **Ajuda**: FAQ, vídeos e textos do assistente vêm de `apps/api/src/modules/help/content.ts` (versionado no código). Os links `[LINK]` (WhatsApp do suporte, termos, privacidade, vídeos) ainda precisam ser definidos. Chamados saem por e-mail para `SUPPORT_EMAIL` (sem tabela); `POST /v1/me/tour/restart` só registra e o web não chama mais: o tour guiado roda no navegador (driver.js; "visto" em localStorage por pessoa; rever pelo link `/inicio?tour=1` em Ajuda).
 - Upload de arquivos do **conhecimento dos agentes** e da **logo da empresa** ainda não guarda o arquivo (a mídia de conversa já usa o armazenamento S3/R2: seção "Mídia"; reaproveite `lib/storage.ts` e o mesmo fluxo de URL assinada).
 - Permissões sem entrada própria na matriz (os módulos usaram a mais próxima): resolver conversa, gerenciar etiquetas e listas, configurar tipos de atendimento e lembretes.
 - Tarefas de fundo (campanhas, IA vencida, reprocessar webhooks) rodam **dentro da API** (`apps/api/src/jobs.ts`) até existir o `apps/worker` com BullMQ.

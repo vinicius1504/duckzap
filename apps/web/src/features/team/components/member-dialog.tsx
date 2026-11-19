@@ -27,6 +27,7 @@ export function MemberDialog({
   actorRole,
   teams,
   lastOwner,
+  twoFactorRequired = false,
 }: {
   trigger: ReactElement;
   member?: Member;
@@ -34,6 +35,8 @@ export function MemberDialog({
   teams: { id: string; name: string }[];
   /** A pessoa é o único proprietário ativo: o papel não pode mudar. */
   lastOwner?: boolean;
+  /** A opção do servidor exige 2FA de Proprietário/Administrador (padrão: não, só recomendado). */
+  twoFactorRequired?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(member?.name ?? "");
@@ -138,7 +141,7 @@ export function MemberDialog({
             </p>
           </div>
 
-          {requiresTwoFactor(role) && !member?.twoFactorEnabled ? (
+          {requiresTwoFactor(role, twoFactorRequired) && !member?.twoFactorEnabled ? (
             <Alert tone="info">
               {roleLabels[role]} precisa ativar a verificação em duas etapas no próximo acesso.
             </Alert>

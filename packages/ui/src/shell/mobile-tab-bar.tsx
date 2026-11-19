@@ -1,6 +1,6 @@
 import { Icon } from "../components/icon";
 import { cn } from "../lib/cn";
-import { isActive, type LinkComponent, type NavConfig } from "./types";
+import { isActive, navTourAnchor, type LinkComponent, type NavConfig } from "./types";
 
 export function MobileTabBar({
   nav,
@@ -31,6 +31,7 @@ export function MobileTabBar({
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                data-tour={navTourAnchor(item.href)}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-ink-2",
                   active && "text-ink",

@@ -113,6 +113,20 @@
       "when": 1793797020228,
       "tag": "0015_contact_avatar",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795096154429,
+      "tag": "0016_onboarding_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795098124426,
+      "tag": "0017_onboarding_security",
+      "breakpoints": true
     }
   ]
 }
